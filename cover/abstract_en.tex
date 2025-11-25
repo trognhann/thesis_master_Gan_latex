@@ -1,18 +1,16 @@
 \clearpage
 \phantomsection
 
-\addcontentsline{toc}{chapter}{Tóm tắt}
-\chapter*{\fontsize{13}{13}\selectfont{Tóm tắt}}
+\addcontentsline{toc}{chapter}{Abstract}
+\chapter*{\fontsize{13}{13}\selectfont{Abstract}}
 \fontsize{12}{12}\selectfont{
-\noindent\textbf{Tóm tắt:}
-Các vật hình cầu là những vật trang trí đẹp mắt và độc đáo. Chúng có thể được sử dụng để tạo ra những không gian sống ấn tượng và sang trọng. Các vật hình cầu có thể được làm từ nhiều chất liệu khác nhau, như thủy tinh, kim loại, gỗ, đá, sứ hay nhựa, kim loại. Chúng có thể có nhiều kích thước, màu sắc và họa tiết khác nhau, phù hợp với nhiều phong cách và sở thích khác nhau.
+\noindent\textbf{Abstract:}
+The explosion of digital content and digital art, especially in the Anime/Manga field, has led to a strong demand for AI-powered creative tools. Among these, the task of converting real-person portraits to 2D anime style (photo-to-anime) offers significant application potential but also poses many challenges regarding image quality and the ability to retain facial identity features. Traditional methods based on style transfer or early-generation GAN architectures often suffer from noise, artifacts, and difficulty in ensuring training stability.
 
-Ngoài ra công nghệ chế tạo hình cầu bằng kim loại là một lĩnh vực quan trọng trong ngành công nghiệp và kỹ thuật. Hình cầu bằng kim loại có nhiều ứng dụng trong các lĩnh vực như máy bay, xe hơi, động cơ, thiết bị y tế, vũ khí hay trang sức. Tuy nhiên, chế tạo hình cầu bằng kim loại không phải là một quá trình đơn giản. Nó đòi hỏi sự kết hợp giữa các phương pháp thiết kế, tính toán, gia công và kiểm tra để đảm bảo chất lượng và hiệu quả của sản phẩm.
+This thesis proposes a model for converting real-person portraits to anime style based on the Generative Adversarial Network (GAN) architecture, specifically building upon the Double-Tail GAN (DTGAN) architecture of the new generation AnimeGAN. The model utilizes a ResNet-based encoder–decoder architecture with a double-tail generator, consisting of a branch that assists in generating rough anime images and a main branch that refines them to produce high-quality anime images. Additionally, the thesis applies the Linearly Adaptive Denormalization (LADE) technique to reduce noise and smooth color regions in anime style, while also developing a specialized loss function system that combines adversarial loss, content/identity loss (based on VGG19 features), style loss, and smoothing–detail adjustment losses to balance content preservation and style expression.
 
-Một trong những công nghệ tối ưu chế tạo hình cầu bằng kim loại là công nghệ sử dụng chất lỏng cao áp -Die-less Hydroforming. Công nghệ này cho phép chế tạo hình cầu bằng kim loại với độ chính xác cao và chi phí thấp. Công nghệ này dựa trên nguyên lý biến dạng của kim loại và sử dụng chất lỏng cao áp để biến đổi đều bên trong lòng hình cầu. Nội dung của Khóa luận sẽ tập trung trình bày những đặc điểm cơ bản về tính toán, tính ưu việt trong ứng dụng của Die-less Hydroforming, và các bước tiến hành chế tạo một hình cầu.
-
-
+The model was trained on two unpaired datasets of real-person portraits and 2D anime portraits, with preprocessing steps such as face detection and alignment, size normalization, and data augmentation. Experimental results show that the proposed model generates aesthetically pleasing anime images, preserves the facial characteristics of the original subject, and significantly reduces noise, as confirmed by quantitative metrics (FID, LPIPS) as well as qualitative evaluation from users. Finally, the thesis discusses limitations and proposes future development directions such as increasing the level of control over detailed styles (eye color, hairstyle, expression) and extending to the video-to-anime conversion problem.
 
 \vspace{0.5cm}
-\noindent\textit{\textbf{Từ khóa:}} \textit{Quả cầu kim loại, Dập thủy lực không cối, Polyhedral Preform, Hydro-bulging, Free Hydroforming Die-less Hydroforming.}
+\noindent\textit{\textbf{Keywords:}} \textit{GAN, AnimeGAN, DTGAN, image style transfer, portrait, anime style, LADE, VGG19.}
 }
