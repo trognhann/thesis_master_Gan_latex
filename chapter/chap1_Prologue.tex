@@ -40,8 +40,136 @@ Việc hình thức hóa mối quan hệ này giữa kiến trúc và tập dữ
 
 \subsection{Các Cột mốc phát triển và Ý nghĩa của Độ sâu Mạng}
 
-Sự trỗi dậy của CNN trong thị giác máy tính hiện đại được đánh dấu bằng các kiến trúc cột mốc. AlexNet, được phát triển vào năm 2012, là mô hình CNN sâu đầu tiên được công nhận rộng rãi, nổi bật qua thành tích trong Thử thách Nhận dạng Hình ảnh Quy mô Lớn ImageNet (ILSVRC).7 AlexNet đã chứng minh một cách dứt khoát rằng độ sâu của mô hình là yếu tố thiết yếu để đạt hiệu suất cao, điều này chỉ trở nên khả thi nhờ vào việc tận dụng đơn vị xử lý đồ họa (GPUs) để giảm chi phí tính toán khi huấn luyện.7
+Sự trỗi dậy của CNN trong thị giác máy tính hiện đại được đánh dấu bằng các kiến trúc cột mốc. AlexNet, được phát triển vào năm 2012, là mô hình CNN sâu đầu tiên được công nhận rộng rãi, nổi bật qua thành tích trong Thử thách Nhận dạng Hình ảnh Quy mô Lớn ImageNet (ILSVRC).7 AlexNet đã chứng minh một cách dứt khoát rằng độ sâu của mô hình là yếu tố thiết yếu để đạt hiệu suất cao, điều này chỉ trở nên khả thi nhờ vào việc tận dụng đơn vị xử lý đồ họa (GPUs) để giảm chi phí tính toán khi huấn luyện.
 
-Sau thành công ban đầu, các kiến trúc tiếp theo (như VGGNet) tiếp tục đẩy giới hạn về độ sâu. Đồng thời, nghiên cứu cũng tập trung vào việc tối ưu hóa hiệu suất và tham số. Việc đơn giản hóa các kiến trúc dựa trên LeNet đã đạt được những giảm thiểu đáng kể về độ phức tạp tính toán và số lượng tham số trong khi vẫn duy trì hiệu suất cạnh tranh.8 Điều này nhấn mạnh tiềm năng của các kiến trúc hiệu quả (efficient architectures) trong việc giải quyết các ràng buộc phần cứng trong ứng dụng thực tế.8
+Sau thành công ban đầu, các kiến trúc tiếp theo (như VGGNet) tiếp tục đẩy giới hạn về độ sâu. Đồng thời, nghiên cứu cũng tập trung vào việc tối ưu hóa hiệu suất và tham số. Việc đơn giản hóa các kiến trúc dựa trên LeNet đã đạt được những giảm thiểu đáng kể về độ phức tạp tính toán và số lượng tham số trong khi vẫn duy trì hiệu suất cạnh tranh.8 Điều này nhấn mạnh tiềm năng của các kiến trúc hiệu quả (efficient architectures) trong việc giải quyết các ràng buộc phần cứng trong ứng dụng thực tế.
+
+\subsection{Chiến lược Chống Tắt Dần Gradient: Inception và Residual Connections}
+
+Khi các mạng trở nên sâu hơn, vấn đề tắt dần gradient (vanishing gradients) và khó khăn trong tối ưu hóa đã thúc đẩy sự ra đời của các chiến lược kiến trúc mới.
+Kiến trúc Inception nổi bật vì khả năng đạt hiệu suất rất tốt với chi phí tính toán tương đối thấp.9 Sau đó, sự giới thiệu của kết nối residual (hay skip connections) trong ResNet đã mang lại hiệu suất dẫn đầu (state-of-the-art) vào năm 2015.9 Điều này đặt ra câu hỏi về lợi ích của việc kết hợp kiến trúc Inception với kết nối residual.
+Nghiên cứu về Inception-ResNet đã cung cấp bằng chứng thực nghiệm rõ ràng rằng việc huấn luyện với kết nối residual tăng tốc đáng kể quá trình huấn luyện của mạng Inception.9 Lợi ích này không chỉ là lý thuyết; kỹ thuật DropIn, một phương pháp dần dần cho phép đào tạo trực tiếp các mạng sâu và khó huấn luyện như VGG16, cho thấy sự cải thiện đáng kể trong độ chính xác của mạng.10
+Các biến thể Inception-ResNet (như v1 và v2) đã được thiết kế lại để sử dụng các khối Inception rẻ hơn.9 Để bù đ đắp cho việc giảm chiều (dimensionality reduction) do khối Inception gây ra trước khi thực hiện phép cộng residual, một lớp mở rộng bộ lọc (filter-expansion layer), sử dụng tích chập $1 \times 1$ không có hàm kích hoạt, đã được thêm vào sau mỗi khối Inception.9 Ngoài ra, việc sử dụng kỹ thuật Activation Scaling cũng được chứng minh là cần thiết để ổn định quá trình huấn luyện các mạng Inception residual rất rộng.9 Mặc dù các nhà nghiên cứu đã chứng minh rằng việc huấn luyện các mạng rất sâu mà không cần kết nối residual là khả thi, lợi thế về tốc độ tối ưu hóa mà kết nối residual mang lại là một lý do kỹ thuật mạnh mẽ để chúng được áp dụng rộng rãi.9
+
+\subsection{Nguyên tắc Thiết kế Kiến trúc dựa trên Dữ liệu và Tối ưu hóa FC}
+
+Việc lựa chọn kiến trúc CNN (sâu hay nông) không nên chỉ dựa trên kinh nghiệm mà phải tương quan với đặc điểm của tập dữ liệu đang được sử dụng. Các tập dữ liệu có thể được phân loại là sâu (deeper), nghĩa là chúng có số lượng mẫu lớn trên mỗi lớp (ví dụ: CIFAR-10), hoặc rộng (wider), nghĩa là chúng có nhiều lớp nhưng ít mẫu hơn trên mỗi lớp (ví dụ: CIFAR-100, Tiny ImageNet).
+Nghiên cứu đã chỉ ra các quy tắc thiết kế mang tính hướng dẫn như sau:
+
+\begin{enumerate}
+    \item Dữ liệu Sâu (Deeper Datasets): Các tập dữ liệu này phù hợp hơn với các kiến trúc CNN sâu (ví dụ: CNN-2 và CNN-3). Do các kiến trúc sâu có nhiều tham số có thể huấn luyện hơn, chúng cần số lượng hình ảnh lớn trên mỗi chủ thể để huấn luyện hiệu quả. Các kiến trúc sâu hơn đã chứng minh hiệu suất tốt hơn trên các tập dữ liệu sâu như CIFAR-10 và CRCHistoPhenotypes.
+    \item Dữ liệu Rộng (Wider Datasets): Các tập dữ liệu này hoạt động hiệu quả hơn với các kiến trúc CNN nông (ví dụ: CNN-1). Mạng nông có ít tham số hơn, điều này phù hợp hơn với các tập dữ liệu có sự đa dạng lớp lớn nhưng số lượng mẫu trên mỗi lớp bị hạn chế.
+\end{enumerate}
+
+Mối quan hệ giữa độ sâu kiến trúc và thiết kế lớp FC cũng tuân theo logic này. Mạng nông cần nhiều nơ-ron và lớp FC hơn để tổng hợp các đặc trưng, trong khi mạng sâu cần ít nơ-ron FC hơn. Việc xác định mối quan hệ qua lại này cung cấp một khuôn khổ khoa học giúp các nhà phát triển lựa chọn kiến trúc tối ưu hóa hiệu suất và chi phí tính toán ngay từ đầu, giảm thiểu quá trình thử và sai tốn thời gian.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Bảng danh sách chi tiết bộ phận} % Có thể đổi tên caption tùy ý
+    \label{tab:ds_bophan}
+    
+    % Cấu trúc cột: |c|c|c|c|c|p{...}|
+    % c: Căn giữa | p{3.5cm}: Cột kiểu paragraph với chiều rộng 3.5cm
+    \begin{tabular}{|c|c|c|p{3.5cm}|} 
+        \hline
+        \textbf{Kiến trúc CNN} & \textbf{Đặc điểm Tập dữ liệu Tối ưu} & \textbf{Yêu cầu Lớp FC} & \textbf{Lý do Kỹ thuật} \\
+        \hline
+        
+        Sâu (Deeper) & Sâu (Nhiều mẫu/lớp) & Thấp (Ít nơ-ron/lớp) &  Đặc trưng trừu tượng hóa cao, giảm gánh nặng tính toán trong giai đoạn quyết định. \\
+        \hline
+        
+        Nông (Shallow) & Rộng (Nhiều lớp, ít mẫu/lớp) & Cao (Nhiều nơ-ron/lớp) &  Bù đắp cho đặc trưng ít trừu tượng, mô hình có ít tham số hơn, phù hợp với sự đa dạng lớp. \\
+        \hline
+        
+    \end{tabular}
+\end{table}
+
+\section{Kiến trúc CNN cho Tác vụ Định vị và Phân đoạn Mật độ cao}
+
+\subsection{Phân đoạn Thực thể (Instance Segmentation) với Mask R-CNN}
+
+Trong khi các kiến trúc như AlexNet và ResNet tập trung vào phân loại, các tác vụ thị giác máy tính phức tạp hơn như phân đoạn thực thể đòi hỏi độ chính xác không gian cao. Mask R-CNN là một khung làm việc linh hoạt và đơn giản về mặt khái niệm, mở rộng Faster R-CNN để không chỉ phát hiện đối tượng mà còn đồng thời tạo ra mặt nạ phân đoạn chất lượng cao cho mỗi thực thể.
+
+Mask R-CNN duy trì quy trình hai giai đoạn của Faster R-CNN, nhưng ở giai đoạn thứ hai, nó bổ sung một nhánh thứ ba hoạt động song song với nhánh dự đoán hộp giới hạn (bounding-box) và phân loại.6 Nhánh này là một Mạng Tích chập Đầy đủ (Fully Convolutional Network – FCN) nhỏ, được áp dụng trên từng Vùng Quan tâm (Region of Interest – RoI) để dự đoán một mặt nạ phân đoạn $m \times m$ theo cách pixel-to-pixel.
+
+\textbf{Lớp RoIAlign và Căn chỉnh Chính xác}: 
+Thành phần kỹ thuật quan trọng nhất làm nên sự thành công của Mask R-CNN là việc giới thiệu lớp RoIAlign. Faster R-CNN sử dụng lớp RoIPooling, lớp này thực hiện lượng tử hóa (spatial quantization) thô, dẫn đến sự sai lệch (misalignment) giữa input của mạng và output pixel-to-pixel, gây ảnh hưởng tiêu cực đến độ chính xác không gian.
+
+RoIAlign khắc phục vấn đề này bằng cách là một lớp không lượng tử hóa (quantization-free), duy trì căn chỉnh vị trí chính xác. Nó tính toán giá trị của các điểm lấy mẫu bằng cách sử dụng nội suy song tuyến (bilinear interpolation) từ các điểm lưới gần kề trên bản đồ đặc trưng, loại bỏ hoàn toàn việc lượng tử hóa các tọa độ liên quan. Sự thay đổi dường như nhỏ này đã mang lại tác động lớn, cải thiện độ chính xác mặt nạ lên đến $10\%$ đến $50\%$, đặc biệt quan trọng dưới các tiêu chí định vị nghiêm ngặt.
+
+\textbf{Decoupling Mask Prediction}: Một yếu tố kỹ thuật khác là việc tách rời (decoupling) dự đoán mặt nạ và dự đoán lớp. Thay vì sử dụng softmax và loss đa thức (multinomial loss) khiến các mặt nạ cạnh tranh lẫn nhau (phổ biến trong semantic segmentation), Mask R-CNN sử dụng sigmoid per-pixel và định nghĩa loss mặt nạ ($L_{mask}$) chỉ trên mặt nạ lớp đúng của RoI đó.6 Cách tiếp cận này đã được chứng minh là chìa khóa để đạt được kết quả phân đoạn thực thể tốt.
+
+Sự thành công của Mask R-CNN chứng minh rằng các tác vụ định vị mật độ cao đòi hỏi mức độ chính xác không gian cao hơn nhiều so với các tác vụ phát hiện hộp giới hạn đơn thuần. Khung làm việc này cũng linh hoạt, dễ dàng tổng quát hóa sang các tác vụ khác như ước tính tư thế người (person keypoint detection) bằng cách xem mỗi điểm khóa (keypoint) là một mặt nạ nhị phân one-hot.
+
+\subsection{Mô hình Encoder-Decoder cho Tái tạo Hình ảnh Chất lượng cao (U-Net)}
+Các kiến trúc Encoder-Decoder, nổi bật là U-Net, là nền tảng cho nhiều bài toán dịch ảnh (image-to-image translation) và phân đoạn mật độ cao [User Query]. Phần encoder (sử dụng các lớp tích chập và pooling) nén ảnh gốc thành một vector đặc trưng ẩn, trong khi phần decoder tái tạo vector ẩn đó thành ảnh đầu ra mong muốn [User Query].
+
+Trong phần decoder, việc tái tạo độ phân giải không gian thường được thực hiện bằng cách sử dụng Transposed Convolution (còn gọi là deconvolution hoặc tích chập chuyển vị). Mặc dù Transposed Convolution là một lớp học được, nó có một hạn chế kỹ thuật lớn: dễ dẫn đến sự chồng lấp không đều (uneven overlap), tạo ra các tạo phẩm (artifacts) dưới dạng mẫu kẻ ô (checkerboard-like patterns) trên đầu ra.
+
+Để giải quyết vấn đề này, mô hình U-NetPlus, được thiết kế cho phân đoạn công cụ phẫu thuật, đã giới thiệu một sự thay thế quan trọng. U-NetPlus sử dụng các encoder tiền huấn luyện (pre-trained), cụ thể là VGG-11 hoặc VGG-16, để tăng tốc độ hội tụ và cải thiện kết quả. 
+
+Quan trọng hơn, trong phần decoder, U-NetPlus đã thay thế hoàn toàn Transposed Convolution bằng Nearest-Neighbor (NN) interpolation. Thao tác NN upsampling, theo sau là hai lớp tích chập, đã loại bỏ hiệu quả các tạo phẩm do Transposed Convolution gây ra, đồng thời giảm số lượng tham số của mô hình. Việc các nhà nghiên cứu lựa chọn một phương pháp nội suy không học được (NN) thay vì một lớp học được (Transposed Conv) để ổn định đầu ra decoder cho thấy rằng trong các miền ứng dụng nhạy cảm như y học, độ trung thực hình ảnh và tính ổn định đầu ra có thể được ưu tiên hơn khả năng học tối đa của mạng.
+
+\begin{center}
+\begin{tabular}{|p{3.5cm}|p{3cm}|p{4.5cm}|p{4.5cm}|}
+\hline
+\textbf{Kỹ thuật} & \textbf{Đặc điểm} & \textbf{Ưu điểm Kỹ thuật} & \textbf{Hạn chế Kỹ thuật Chính} \\
+\hline
+Transposed Convolution & Học được (Learnable) & Linh hoạt, có thể học được bộ lọc tái tạo tối ưu. & Dễ gây ra tạo phẩm kiểu checkerboard do uneven overlap. \\
+\hline
+Nearest-Neighbor Interpolation & Không học được (Non-Learnable) & Giảm thiểu tạo phẩm, giảm số lượng tham số, ổn định đầu ra. & Độ mịn không gian có thể thấp, không học được sự tinh chỉnh chi tiết. \\
+\hline
+\end{tabular}
+\end{center}
+
+\subsection{CNNs trong Dịch Ảnh và Thích ứng Miền}
+CNN không chỉ được sử dụng cho phân loại và phân đoạn, mà còn là nền tảng của các mô hình encoder-decoder dùng trong các bài toán dịch ảnh giữa các miền khác nhau (image-to-image translation).
+\subsection{Dịch Ảnh Không Giám sát và Giả định Không gian Ẩn Chung}
+Bài toán dịch ảnh không giám sát (Unsupervised Image-to-image translation) là một thách thức lớn vì chỉ có các bộ dữ liệu biên độc lập ($X_1, X_2$).13 Sự thiếu vắng các cặp ảnh tương ứng khiến việc suy luận về phân phối chung giữa hai miền trở nên không giải được (ill-posed problem) nếu không có các giả định bổ sung.
+
+Để giải quyết vấn đề này, khung làm việc UNIT (UNsupervised Image-to-image Translation) đã được đề xuất, kết hợp Variational Autoencoders (VAEs) và Generative Adversarial Networks (GANs), dựa trên Giả định Không gian Ẩn Chung (Shared-Latent Space Assumption).
+
+Giả định này khẳng định rằng một cặp ảnh tương ứng từ hai miền khác nhau ($\text{x}_1, \text{x}_2$) có thể được ánh xạ tới cùng một biểu diễn ẩn ($\text{z}$) trong một không gian ẩn chung ($\text{Z}$). Về mặt toán học, điều này ngụ ý rằng tồn tại các hàm mã hóa $\text{E}^*_1, \text{E}^*_2$ và hàm sinh $\text{G}^*_1, \text{G}^*_2$ sao cho $\text{z} = \text{E}^*_1(\text{x}_1) = \text{E}^*_2(\text{x}_2)$ và $\text{x}_1 = \text{G}^*_1(\text{z})$, $\text{x}_2 = \text{G}^*_2(\text{z})$.
+
+\subsection{Cơ chế Triển khai Không gian Ẩn Chung trong UNIT}
+
+Trong UNIT, giả định Shared-Latent Space được triển khai thông qua ràng buộc chia sẻ trọng số (weight-sharing constraint) giữa các mạng con. 
+\begin{enumerate}
+\item Encoders ($\text{E}_1, \text{E}_2$): Các trọng số của vài lớp cuối cùng (các lớp cấp cao) trong hai Encoders được ràng buộc chia sẻ. Những lớp này có trách nhiệm trích xuất các đặc trưng biểu diễn cấp cao.
+\item Generators ($\text{G}_1, \text{G}_2$): Tương tự, các trọng số của vài lớp đầu tiên (các lớp cấp cao) trong hai Generators được ràng buộc chia sẻ.
+\end{enumerate}
+Ràng buộc chia sẻ trọng số này là cơ chế vật lý hóa giả định không gian ẩn chung, buộc các Encoders phải ánh xạ các ảnh tương ứng vào cùng một mã ẩn. 
+
+Giả định không gian ẩn chung cũng ngầm định yêu cầu tính nhất quán vòng lặp (cycle-consistency constraint), đảm bảo rằng một hình ảnh được dịch từ miền $X_1$ sang $X_2$ và sau đó được dịch trở lại $X_1$ sẽ gần giống với hình ảnh gốc ($\text{x}_1 = \text{G}^*_1(\text{E}^*_2(\text{G}^*_2(\text{E}^*_1(\text{x}_1))))$).13 Sự kết hợp giữa VAEs (để tái tạo ảnh), GANs (để đảm bảo ảnh dịch là thực tế) và ràng buộc chia sẻ trọng số (để liên kết các miền) cho phép CNN hoạt động như một nền tảng trích xuất và tái tạo nội dung, thành công trong nhiều tác vụ dịch ảnh phức tạp.
+
+\subsection{Thích ứng Miền (Domain Adaptation) thông qua Style Transfer}
+
+Khả năng học đặc trưng trừu tượng của CNN cũng được sử dụng để giải quyết vấn đề thích ứng miền (domain adaptation), đặc biệt khi có sự dịch chuyển miền (domain shift) — tức là khi dữ liệu huấn luyện (nguồn) và dữ liệu thử nghiệm (đích) đến từ các phân phối khác nhau (ví dụ: ảnh chụp ban ngày so với ban đêm, hoặc ảnh không sương mù so với có sương mù).
+
+Sự dịch chuyển miền gây ra sự suy giảm hiệu suất đáng kể. Ví dụ, trong bài toán phân đoạn ảnh trên không (aerial image segmentation), sự dịch chuyển miền gây ra mức giảm trung bình $-5.22\%$ mIoU trên bộ dữ liệu Potsdam.14 Để chống lại sự suy giảm này, một mô hình chuyển phong cách trong không gian ẩn (latent space style transfer model) đã được đề xuất.14 Mô hình này sử dụng các biểu diễn đặc trưng ẩn của CNN để tạo ra các phiên bản dữ liệu tổng hợp với phong cách miền đích (ví dụ: thêm sương mù vào ảnh rõ nét).
+
+Cách tiếp cận này loại bỏ nhu cầu ghi chú bổ sung (annotation) trên dữ liệu miền dịch chuyển.14 Bằng cách áp dụng phương pháp này, hiệu suất trên miền dịch chuyển đã được cải thiện đáng kể (ví dụ: tăng $+3.97\%$ mIoU trên Potsdam), chứng minh rằng việc sử dụng CNN để trích xuất và thao túng các đặc trưng phong cách trừu tượng là một chiến lược hiệu quả để nâng cao tính tổng quát của mô hình trong môi trường thực tế.
+
+\section{Đánh giá và Xu hướng Tương lai của Kiến trúc Tích chập}
+
+\subsection{Vị thế của CNN và Sự Cộng sinh với Vision Transformer}
+
+Trong bối cảnh Vision Transformer (ViT) đang nổi lên như một đối thủ cạnh tranh mạnh mẽ, CNNs (như ResNet và ConvNeXt) vẫn duy trì vị thế là các mô hình nền tảng trong nghiên cứu thị giác máy tính. 
+
+Phân tích cho thấy CNNs vẫn thể hiện ưu thế hoặc hiệu suất tương đương với ViT, đặc biệt trong chế độ học ít mẫu (low-data few-shot regime) trong quá trình học chuyển giao (transfer learning). Điều này được cho là do CNNs sở hữu một thiên kiến quy nạp cục bộ (local inductive bias) vốn có, giúp chúng học ổn định hơn và cần ít dữ liệu hơn để khái quát hóa các mối quan hệ không gian cơ bản.
+
+Xu hướng nghiên cứu hiện đại đang hướng tới các mô hình hỗn hợp (Hybrid), kết hợp các thành phần của CNN và Transformer để tận dụng ưu điểm của cả hai. Ví dụ, kiến trúc CoAtNet kết hợp các khối tích chập của CNN với cơ chế tự chú ý (self-attention) của Transformer, đạt hiệu suất tối ưu bằng cách cân bằng giữa việc xử lý thông tin cục bộ và bắt ngữ cảnh toàn cục.
+
+\subsection{Ứng dụng trong Chẩn đoán Y tế và Ensemble Learning}
+
+Lĩnh vực chẩn đoán y tế, như phân tích X-quang ngực, là một ứng dụng quan trọng đòi hỏi độ tin cậy và độ chính xác cao. Việc sử dụng các kỹ thuật học sâu (bao gồm các CNNs tiền huấn luyện, Transformer và mô hình Hybrid) đã được chứng minh là có ý nghĩa quan trọng trong việc tự động chẩn đoán các bệnh lý lồng ngực.
+
+Trong các lĩnh vực có tính quyết định cao như y học, việc giảm thiểu rủi ro và tăng độ tin cậy là tối quan trọng. Nghiên cứu đã chứng minh rằng kỹ thuật tập hợp học sâu (Ensemble Deep Learning) có thể cải thiện đáng kể hiệu suất chẩn đoán.17 Bằng cách kết hợp dự đoán của nhiều mô hình đã huấn luyện (bao gồm cả CNNs truyền thống và mô hình hybrid như CoAtNet) thông qua trung bình có trọng số, hiệu suất đã được cải thiện, đạt AUROC $85.4\%$ trên bộ dữ liệu ChestX-ray14, vượt qua các phương pháp dẫn đầu khác.17 Điều này khẳng định rằng việc tổng hợp kết quả từ nhiều kiến trúc là một chiến lược quan trọng để tăng độ chính xác và độ tin cậy trong các ứng dụng thực tiễn.
+
+
+
+
+
+
 
 
