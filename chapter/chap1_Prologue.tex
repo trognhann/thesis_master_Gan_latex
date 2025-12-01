@@ -296,6 +296,158 @@ FID = \|\mu_r - \mu_g\|^2 + \operatorname{Tr}(\Sigma_r + \Sigma_g - 2(\Sigma_r \
 \]
 FID thấp hơn đồng nghĩa với việc hai phân phối gần nhau hơn. FID nhạy cảm hơn IS đối với nhiễu, mode collapse và biến dạng ảnh, cung cấp một đánh giá toàn diện hơn về chất lượng.
 
+\section{ Các mô hình GAN tiêu biểu cho chuyển đổi ảnh sang phong cách Anime}
+ Bài toán chuyển ảnh người thật sang tranh vẽ phong cách anime có tính đặc thù cao, đòi hỏi sự kết hợp
+ giữa bảo toàn nội dung gốc và thể hiện đúng phong cách anime (với đặc trưng là nét viền rõ ràng, màu
+ phẳng, chi tiết được tối giản).
+
+\subsection{CycleGAN và các biến thể (chuyển đổi với dữ liệu không cặp)}
+Kiến trúc CycleGAN (2017): CycleGAN do Zhu et al. đề xuất là mốc quan trọng cho dịch ảnh không cần dữ
+liệu ghép cặp . CycleGAN bao gồm hai bộ Generator song song: $G: X \to Y$ (chuyển ảnh từ miền
+nguồn X sang miền đích Y, ví dụ ảnh thật sang ảnh anime) và $F: Y \to X$ (chuyển ngược lại từ Y về X), cùng
+với hai Discriminator $D_X$ và $D_Y$ học phân biệt ảnh thuộc từng miền. Ý tưởng cốt lõi của CycleGAN là
+ràng buộc tính nhất quán vòng lặp (cycle consistency): một ảnh nguồn $x$ sau khi qua biến đổi $G(x)$ rồi
+chuyển ngược $F(G(x))$ phải gần giống chính $x$ ban đầu . Nhờ cycle consistency loss ($\mathcal{L}
+_{cyc}$), mô hình tránh được những phép biến đổi quá tùy ý, giúp bảo toàn nội dung gốc ở mức độ cao
+. Đồng thời, mỗi cặp $G$–$D_Y$ và $F$–$D_X$ hình thành hai chu trình GAN truyền thống để đảm bảo
+ảnh đầu ra khó phân biệt với ảnh thật miền tương ứng. Cách tiếp cận này cho phép huấn luyện với hai tập
+ảnh không ghép cặp (ví dụ một tập ảnh chân dung người thật và một tập tranh chân dung anime) mà vẫn
+học được phép biến đổi giữa chúng.
+ 
+Ưu điểm: CycleGAN rất linh hoạt do không cần các cặp ảnh trước-sau, nên có thể áp dụng cho nhiều bài
+toán chuyển kiểu dáng, chất liệu (ví dụ: ngựa <=> zebra, phong cảnh <=> tranh Monet) . Tính nhất quán
+vòng lặp giúp nội dung chính của ảnh (hình dáng khuôn mặt, bố cục) được giữ lại khá tốt sau khi chuyển
+đổi. 
+
+Nhược điểm: Mặc dù bảo toàn được cấu trúc tổng quát, CycleGAN vẫn khó đảm bảo chi tiết định danh
+(identity) của đối tượng, nhất là với khuôn mặt người – đôi khi các đặc trưng như ánh mắt, nụ cười có thể
+bị biến đổi hoặc mất đi trong ảnh anime kết quả. Ngoài ra, CycleGAN có thể sinh ra các artifact (tạo tác)
+không mong muốn, ví dụ như nhiễu màu hoặc đường viền thừa, do Generator cố gắng tối ưu adversarial
+loss mà không có ràng buộc trực tiếp về đặc trưng phong cách cụ thể. Nhiều biến thể sau này đã cải thiện
+điểm này: chẳng hạn U-GAT-IT (Kim et al., 2020) bổ sung module chú ý (attention) giúp tập trung vào
+những vùng quan trọng trên khuôn mặt và sử dụng cơ chế Adaptive Layer-Instance Normalization để
+giữ tốt hơn đặc điểm gốc . Kết quả U-GAT-IT cho thấy việc thêm thành phần nhận dạng đặc trưng khuôn
+mặt (như identity loss hoặc facial landmark loss) giúp khuôn mặt anime giữ được nét của ảnh gốc hơn so
+với CycleGAN thuần túy . Dù vậy, các phương pháp dựa trên cycle-consistency đôi khi vẫn tạo ra
+nhiễu hoặc vùng màu không tự nhiên, đặc biệt khi có sự chênh lệch lớn giữa hai miền ảnh (ví dụ màu da
+người và màu da nhân vật anime) 
+
+\subsection{StyleGAN và phương pháp dựa trên GAN inversion (kiểm soát chất lượng cao)}
+Kiến trúc StyleGAN (Karras et al., 2019): StyleGAN đại diện cho hướng tiếp cận khác, tập trung vào sinh
+ảnh chất lượng cao và khả năng điều khiển phong cách linh hoạt. Khác với mô hình GAN truyền thống,
+StyleGAN đưa ra kiến trúc Generator mới gồm hai thành phần: Mạng ánh xạ (Mapping Network) và Mạng
+tổng hợp (Synthesis Network) . Mạng ánh xạ lấy một vector ngẫu nhiên $z$ và ánh xạ nó thành vector
+trung gian $w$ trong không gian tiềm ẩn đã được phân tách (disentangled latent space); sau đó $w$
+được đưa vào từng tầng của mạng tổng hợp qua cơ chế Adaptive Instance Normalization (AdaIN) để
+điều chỉnh “phong cách” ở các mức độ khác nhau . Nhờ đó, StyleGAN có khả năng điều chỉnh các thuộc
+tính ảnh (như độ thô của hình, màu sắc chi tiết) ở từng tầng, cho phép sinh ra ảnh có độ chân thực cao và
+tách biệt được các yếu tố như bố cục và chi tiết bề mặt. Kết hợp thêm việc đưa nhiễu ngẫu nhiên ở các tầng
+để tạo tiểu tiết (ví dụ tóc, tàn nhang) , StyleGAN đã chứng tỏ khả năng sinh ảnh chân dung người đáng
+kinh ngạc, khó phân biệt với ảnh chụp thật . Nhiều người đã tận dụng mô hình này để huấn luyện trên
+các tập dữ liệu mới như chân dung nhân vật hoạt hình, tranh ukiyo-e hay Pokémon, và thu được kết quả ấn
+tượng về độ phân giải và tính thẩm mỹ.
+
+Chuyển ảnh thực sang anime qua StyleGAN: Một cách ứng dụng StyleGAN cho bài toán chuyển phong
+cách là sử dụng kỹ thuật GAN Inversion – chiếu một ảnh thực bất kỳ vào không gian tiềm ẩn của StyleGAN
+(đã huấn luyện trên ảnh anime) rồi dùng generator tạo ra ảnh tương ứng trong phong cách anime .
+Cụ thể, ta có thể huấn luyện trước một StyleGAN trên tập ảnh anime chất lượng cao (ví dụ các khuôn mặt
+anime độ phân giải cao). Sau đó, với một ảnh chân dung thực, ta tìm vector $w$ trong không gian phong
+cách của mạng sao cho ảnh tái tạo $G(w)$ giống với ảnh gốc nhất (thông qua tối ưu hóa hàm mất mát tái
+tạo hoặc huấn luyện một Encoder để dự đoán $w$ trực tiếp) . Quá trình này gọi là StyleGAN
+inversion – tức “phục hồi” ảnh vào latent của StyleGAN. Khi đó, ta có thể kết hợp vector latent thu được với
+các vector phong cách anime mong muốn, hoặc tinh chỉnh nó trong không gian $W$ hoặc $W^+$, để tạo
+ra ảnh cuối cùng vừa mang nội dung gốc vừa phủ phong cách anime một cách tự nhiên. Ưu điểm của
+phương pháp dựa trên StyleGAN là ảnh đầu ra thường có độ phân giải cao và chi tiết mượt mà, thống
+nhất, nhờ khả năng sinh ảnh ưu việt của StyleGAN . Đồng thời, do StyleGAN học được sự phân tách giữa
+nội dung và phong cách, ta có thể dễ dàng điều chỉnh mức độ giữ lại đặc điểm gốc: ví dụ kỹ thuật style
+mixing cho phép kết hợp phần thô (cấu trúc khuôn mặt) của ảnh gốc với phần tinh (màu sắc, nét vẽ) của
+phong cách anime . Thực tế, các nghiên cứu gần đây cho thấy phương pháp này giúp bảo toàn danh
+tính khuôn mặt tốt hơn so với các GAN truyền thống: ảnh anime tạo ra vẫn nhận ra được “ai” trong ảnh
+gốc, đồng thời mang phong cách vẽ rõ nét.
+
+Nhược điểm: Đổi lại, phương pháp dùng StyleGAN và GAN inversion có nhược điểm là quy trình thực hiện
+khá phức tạp và tốn kém tài nguyên. Việc huấn luyện StyleGAN trên dữ liệu anime chất lượng cao đòi hỏi
+lượng lớn ảnh và thời gian huấn luyện dài (StyleGAN thường có hàng chục triệu tham số). Quá trình invert
+ảnh cũng không đơn giản: tối ưu hóa latent cho từng ảnh có thể mất hàng trăm bước lặp, hoặc nếu dùng
+một encoder để dự đoán thì bản thân encoder đó cũng phải được huấn luyện với bộ dữ liệu phù hợp
+. Ngoài ra, do StyleGAN được huấn luyện theo chế độ sinh ảnh tự do, ảnh anime sinh ra có thể chưa sát
+với ảnh gốc về bố cục nếu quá trình inversion không tốt. Một số nghiên cứu đã mở rộng hướng này, chẳng
+hạn AgileGAN (Song et al., 2021) – tinh chỉnh StyleGAN bằng inversion-consistent transfer learning để
+chuyên cho tác vụ phong cách chân dung, hay DualStyleGAN (Yang et al., 2022) – bổ sung hai nhánh chỉnh
+phong cách toàn cục và cục bộ để linh hoạt điều khiển phong cách khi biến đổi ảnh chân dung . Nhìn
+chung, phương pháp dựa trên StyleGAN đạt chất lượng ảnh rất cao nhưng đòi hỏi nhiều bước xử lý, không
+“nhanh gọn” như các mô hình chuyển đổi trực tiếp kiểu CycleGAN.
+
+\subsection{AnimeGAN và kiến trúc Double-Tail GAN (AnimeGANv3)}
+
+Một hướng tiếp cận nổi bật khác đến từ loạt nghiên cứu AnimeGAN của Chen et al. và Liu et al., tập trung
+xây dựng mô hình GAN gọn nhẹ tối ưu cho ảnh phong cách anime. Phiên bản mới nhất AnimeGANv3
+(2023) đề xuất kiến trúc Double-Tail GAN (DTGAN) – một dạng encoder–decoder dựa trên ResNet được
+thiết kế đặc thù cho bài toán “photo animation” (chuyển ảnh chụp thành ảnh hoạt hình).
+
+Kiến trúc Generator “hai đuôi” (Double-tail): Điểm độc đáo của AnimeGANv3 là Generator có hai nhánh
+đầu ra (two output tails) . Cụ thể, ảnh đầu vào sau khi qua phần encoder và các khối ResNet sẽ được
+chia thành hai luồng xử lý song song ở đầu ra: - Nhánh hỗ trợ (Support tail): tạo ra một ảnh anime thô với
+phong cách cơ bản, nhưng có thể còn nhiễu và các lỗi nhỏ. - Nhánh chính (Main tail): nhận đầu vào chính
+là ảnh thô từ nhánh hỗ trợ, tiếp tục tinh chỉnh qua một số tầng mạng bổ sung để cho ra ảnh anime cuối
+cùng chất lượng cao.
+
+Ý tưởng ở đây là nhánh hỗ trợ đóng vai trò hướng dẫn ban đầu về tông màu và bố cục anime, sau đó
+nhánh chính sẽ hiệu chỉnh chi tiết và loại bỏ nhiễu. Trong giai đoạn suy luận (inference), nhánh hỗ trợ có
+thể được lược bỏ, chỉ giữ lại nhánh chính – nhờ đó mô hình triển khai rất nhẹ nhưng vẫn tạo ảnh tốt. Theo
+báo cáo, Generator của AnimeGANv3 chỉ có ~1.02 triệu tham số khi inference, nhỏ hơn nhiều so với các mô
+hình khác.
+
+Kỹ thuật chuẩn hóa mới – LADE: Để khắc phục hiện tượng phát sinh artifacts trong ảnh hoạt hình, nhóm
+tác giả đề xuất một phương pháp chuẩn hóa đặc thù gọi là Linearly Adaptive Denormalization (LADE)
+. Khác với các kỹ thuật chuẩn hóa thông dụng như BatchNorm, InstanceNorm hay LayerNorm (vốn tỏ ra
+chưa phù hợp cho phong cách anime do vẫn tạo ra nứt vỡ hoặc nhiễu ), LADE cho phép mô hình học
+tham số chuẩn hóa một cách linh hoạt, thích ứng tuyến tính với đặc trưng của ảnh hiện tại. Nhờ LADE,
+các vùng màu trong ảnh anime được làm mịn và nhất quán hơn, giảm thiểu vết nứt hay đốm loang thường
+thấy khi dùng IN/GN . Quan trọng là LADE được thiết kế dạng plug-and-play, có thể chèn vào thay thế
+các layer norm thông thường trong mô hình mà không làm tăng độ phức tạp đáng kể.
+
+Hệ thống hàm mất mát chuyên biệt: AnimeGANv3 đưa ra hai hàm mất mát mới tối ưu cho nhiệm vụ ảnh
+anime: (1) Region smoothing loss – hàm mất mát làm mịn vùng, nhằm làm yếu bớt chi tiết texture phức
+tạp trong ảnh gốc, hướng tới các vùng màu phẳng đặc trưng của hoạt hình . Loss này giúp ảnh đầu ra có
+độ chi tiết vừa phải, tránh hiện tượng “quá nét” hoặc lẫn nhiễu từ ảnh thật. (2) Fine-grained revision loss 
+hàm mất mát tinh chỉnh vi mô, tập trung loại bỏ các nhiễu và tạo tác nhỏ trong ảnh anime do Generator
+sinh ra, đồng thời giữ sắc nét các đường biên quan trọng . Sự kết hợp hai hàm mất mát này, cùng với
+mất mát đối nghịch truyền thống và có thể cả mất mát perceptual (tính trên đặc trưng VGG), giúp mô hình
+cân bằng giữa tính chân thực và tính nghệ thuật: ảnh tạo ra có màu sắc và nét vẽ mềm mại như anime,
+nhưng vẫn rõ ràng, không mờ nhòe. Kết quả thực nghiệm cho thấy mô hình huấn luyện với các loss trên
+cho ảnh chất lượng vượt trội so với các phiên bản trước đó.
+
+Ưu điểm: AnimeGANv3 (DTGAN) kế thừa các ưu điểm của phiên bản trước và cải tiến rõ rệt về mọi mặt.
+Chất lượng hình ảnh: ảnh anime xuất ra có độ phân giải cao, màu sắc hài hòa và ít lỗi (rõ nét hơn so với
+AnimeGANv2, vốn đã giảm nhiều nhiễu so với AnimeGANv1) . Tốc độ xử lý: nhờ mô hình gọn nhẹ (chỉ ~1
+triệu tham số), AnimeGANv3 đạt tốc độ xử lý ~115ms cho ảnh Full HD trên GPU, nhanh hơn các mô hình
+khác cùng nhiệm vụ . Hiệu suất cao trên dữ liệu không ghép cặp: tương tự các phiên bản trước,
+AnimeGANv3 được huấn luyện end-to-end trên dữ liệu không cặp và đạt hiệu quả tốt, không đòi hỏi ảnh đối
+chiếu thủ công . Ngoài ra, ưu điểm đặc biệt là dễ triển khai thực tế: mô hình nhẹ có thể tích hợp vào
+ứng dụng di động hoặc web để chuyển ảnh theo thời gian thực.
+
+Nhược điểm: Bên cạnh những điểm mạnh, mô hình cũng có vài hạn chế. Đầu tiên là độ phức tạp khi huấn
+luyện: việc phối hợp hai nhánh generator và các hàm mất mát mới đòi hỏi tinh chỉnh nhiều siêu tham số, dễ
+dẫn đến mất ổn định nếu không cài đặt cẩn thận. Thứ hai, AnimeGANv3 phần nào phụ thuộc vào các mô
+hình tiền huấn luyện cho hàm mất mát (ví dụ có thể dùng đặc trưng VGG19 để tính perceptual loss, hay
+NL-means, L0-smoothing để hậu xử lý ), điều này có thể làm tăng thời gian phát triển mô hình. Cuối
+cùng, mặc dù ảnh đầu ra đẹp mắt, phong cách anime thu được vẫn giới hạn trong phạm vi dữ liệu huấn
+luyện. Nếu muốn tổng quát sang nhiều phong cách vẽ anime khác nhau (ví dụ các tác giả anime khác hoặc
+phong cách truyện tranh khác nhau), cần bổ sung hoặc chuyển tiếp mô hình, điều chưa được kiểm chứng
+rộng trong nghiên cứu này.
+
+Các nghiên cứu gần đây cho thấy sự tiến bộ vượt bậc trong chuyển đổi ảnh chân dung sang
+phong cách anime. Từ CycleGAN đặt nền móng về học không ghép cặp, đến StyleGAN mở ra khả năng điều
+khiển phong cách mạnh mẽ, và AnimeGANv3 tối ưu chuyên biệt cho ảnh anime, mỗi hướng tiếp cận đều
+đóng góp những ý tưởng giá trị. Bảng so sánh sơ bộ cho thấy AnimeGANv3 hiện đạt FID thấp nhất về gần
+phân phối anime, trong khi AnimeGANv2 vẫn giữ FID thấp nhất về gần phân phối ảnh thật (tức bảo toàn nội
+dung tốt) . Điều này gợi ý việc kết hợp các ưu điểm – như dùng cơ chế double-tail và loss của
+AnimeGANv3 cùng biện pháp giữ danh tính của các mô hình trước – có thể là hướng đi tiềm năng để tiếp
+tục nâng cao chất lượng ảnh chuyển đổi.
+
+
+
 
 
 

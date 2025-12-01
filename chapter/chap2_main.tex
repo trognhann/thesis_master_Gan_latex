@@ -1,0 +1,121 @@
+\phantomsection
+
+\setcounter{chapter}{2}
+\chapter[{PHƯƠNG PHÁP NGHIÊN CỨU ĐỀ XUẤT}]{PHƯƠNG PHÁP NGHIÊN CỨU ĐỀ XUẤT}
+\section{Lựa chọn kiến trúc mô hình cơ sở}
+Dựa trên tổng quan ở chương 2, luận văn quyết định chọn AnimeGANv3 (DTGAN) làm kiến trúc nền tảng
+cho mô hình đề xuất. Lý do lựa chọn xuất phát từ việc AnimeGANv3 được thiết kế chuyên cho tác vụ chuyển
+ảnh thật sang phong cách hoạt hình, đã giải quyết nhiều hạn chế của các phương pháp trước. Cụ thể, so
+với CycleGAN hay các mô hình GAN cũ, AnimeGANv3 có kiến trúc generator ResNet encoder–decoder hai
+nhánh giúp cải thiện cả độ sắc nét lẫn tính mượt mà của ảnh anime . So với hướng StyleGAN,
+AnimeGANv3 đơn giản hơn nhiều trong huấn luyện (không đòi hỏi invert ảnh hay thao tác latent phức tạp)
+và có thể train end-to-end trên dữ liệu không cặp. Hơn nữa, kết quả từ nhóm tác giả Liu et al. cho thấy
+AnimeGANv3 cho chất lượng ảnh vượt trội các mô hình trước, đạt điểm FID/KID tốt hơn và tốc độ suy luận
+nhanh nhất . Vì vậy, việc chọn AnimeGANv3 làm cơ sở sẽ giúp tận dụng được những tiến bộ mới nhất
+(2023) trong lĩnh vực, đồng thời cung cấp một khung sườn vững chắc để thực hiện các cải tiến thêm (nếu
+cần) nhằm đạt mục tiêu của luận văn.
+
+\section{Cấu trúc mô hình đề xuất}
+\subsection{Kiến trúc Generator “Double-Tail” (Hai đuôi)}
+
+Trái tim của AnimeGANv3 là kiến trúc Generator "Double-Tail" (DTGAN). Đây là một sự khởi đầu mới mẻ so với thiết kế "Single-Stream" của hầu hết các mạng dịch ảnh trước đây. Thay vì cố gắng bắt mạng nơ-ron thực hiện đồng thời việc trừu tượng hóa hình ảnh và tinh chỉnh chi tiết trong cùng một luồng ra, DTGAN tách quy trình này thành hai giai đoạn song song và tuần tự.
+
+\subsubsection{Kiến trúc}
+
+Generator của DTGAN bao gồm một bộ mã hóa chung (Shared Encoder) và sau đó phân tách thành hai "đuôi" (tails) đầu ra riêng biệt. 
+Đầu tiên là Support Tail (Nhánh hỗ trợ), nó chịu trách nhiệm tạo ra một ảnh anime sơ bộ từ đặc trưng encoder, thông qua một số tầng tích chập và upsampling. 
+Thứ hai là Main Tail (Nhánh chính), nó chịu trách nhiệm tinh chỉnh  kết quả từ nhánh hỗ trợ để tạo ra ảnh chất lượng cao cuối cùng.
+
+Kiến trúc này được mô tả toán học như sau:
+\begin{align*}
+\mathbf{y} &= G_{\text{support}}(\mathbf{x}) \\
+\mathbf{y}_{\text{refined}} &= G_{\text{main}}(\mathbf{y}, \mathbf{x})
+\end{align*}
+
+Trong đó, $\mathbf{x}$ là ảnh đầu vào, $\mathbf{y}$ là ảnh sinh ra từ nhánh hỗ trợ, và $\mathbf{y}_{\text{refined}}$ là ảnh sinh ra từ nhánh chính.
+
+\subsubsection{Chức năng và Cơ chế của Support Tail}
+Support Tail đóng vai trò như một "họa sĩ phác thảo". Nhiệm vụ chính của nó là thực hiện bước chuyển đổi miền (domain adaptation) sơ cấp.
+Xử lý Nhiễu và Kết cấu, đầu ra của nhánh này tập trung vào việc làm mịn các kết cấu phức tạp của ảnh thực (như da người, thảm cỏ) thành các mảng màu đơn giản hơn đặc trưng của anime. Tuy nhiên, do tính chất "thô", đầu ra này thường chứa các nhiễu tần số cao cụ thể và các tạo tác chưa hoàn thiện.   
+Và định hình Cấu trúc, Support Tail đảm bảo rằng cấu trúc hình học tổng thể của khuôn mặt và vật thể được giữ nguyên, tạo nền tảng vững chắc cho quá trình tinh chỉnh sau này.
+
+\subsubsection{Chức năng và Cơ chế của Main Tail}
+Main Tail đóng vai trò như một "họa sĩ hoàn thiện". Nó nhận đầu vào là các đặc trưng từ Support Tail (và có thể cả thông tin từ Encoder gốc) để thực hiện quá trình tinh chỉnh.
+\begin{enumerate}
+    \item Cơ chế Khử nhiễu và Sửa lỗi: Main Tail được huấn luyện để nhận diện và loại bỏ các tạo tác sinh ra bởi Support Tail. Quá trình này tương tự như việc "inking" (đi nét) và "coloring" (tô màu) trong sản xuất phim hoạt hình, nơi các nét vẽ thô được làm sạch.
+    \item Tích hợp thuật toán làm mịn: Một điểm độc đáo được đề cập trong tài liệu là việc sử dụng các phương pháp lọc ảnh truyền thống như NL-means (Non-Local Means) và L0 Smoothing trong quá trình huấn luyện hoặc suy luận của mô-đun này để hướng dẫn mạng học cách tạo ra các bề mặt phẳng lì nhưng sắc cạnh. Điều này cho thấy sự kết hợp khéo léo giữa thị giác máy tính cổ điển và học sâu (Deep Learning).
+\end{enumerate}
+
+\subsubsection{Hiệu quả về Tài nguyên Tính toán}
+Một trong những thành tựu nổi bật nhất của kiến trúc Double-Tail chính là hiệu suất vượt trội. Nhờ việc chuyên biệt hóa nhiệm vụ cho từng nhánh, mạng không cần phải quá sâu hoặc quá rộng để có thể học được đầy đủ các biến thể dữ liệu. Đặc biệt, toàn bộ Generator của DTGAN chỉ chứa khoảng 1.02 triệu tham số trong giai đoạn suy luận, con số này thấp hơn đáng kể so với nhiều mô hình GAN khác, qua đó mang lại lợi thế triển khai nhẹ nhàng trên các ứng dụng di động. Bên cạnh đó, tốc độ suy luận cho một hình ảnh có độ phân giải cao, chẳng hạn như các khung hình video, diễn ra cực kỳ nhanh chóng, giúp DTGAN trở thành lựa chọn phù hợp cho những tác vụ yêu cầu xử lý thời gian thực.
+
+
+\subsection{Kỹ thuật chuẩn hóa Linearly Adaptive Denormalization (LADE)}
+Một thành phần then chốt khác giúp AnimeGANv3 vượt trội so với các phiên bản trước là kỹ thuật chuẩn hóa mới: Linearly Adaptive Denormalization (LADE).
+
+\subsubsection{Phân tích Nhược điểm của Các Chuẩn hóa Hiện hữu}
+Để thấy rõ sự cần thiết của LADE, trước hết cần phân tích những hạn chế của các phương pháp chuẩn hóa truyền thống trong bối cảnh anime style transfer. Với Batch Normalization (BN), việc chuẩn hóa dựa trên thống kê của toàn bộ mini-batch thường gây ra hiện tượng “vết nứt” hoặc sự không nhất quán giữa các vùng ảnh, đặc biệt khi kích thước batch nhỏ hoặc dữ liệu có tính đa dạng cao. Trong khi đó, Instance Normalization (IN) lại chuẩn hóa từng mẫu riêng biệt, giúp loại bỏ phong cách gốc để áp đặt phong cách mới. Tuy nhiên, đối với ảnh anime, cách tiếp cận này thường làm mất đi nhiều thông tin về độ tương phản và cấu trúc, dẫn đến các tạo tác dạng hạt hoặc khiến hình ảnh trở nên nhợt nhạt, thiếu chiều sâu.
+
+\subsubsection{Cơ chế Hoạt động của LADE}
+LADE được thiết kế như một kỹ thuật learnable normalization (chuẩn hóa có thể học) nhằm khắc phục những hạn chế của các phương pháp trước đó. Thay vì sử dụng các lớp chuẩn hóa truyền thống, LADE áp dụng cơ chế thích ứng tuyến tính (Linear Adaptivity), trong đó các đặc trưng được điều chỉnh dựa trên thống kê toàn cục thay vì chỉ dựa vào thống kê cục bộ như IN. Đồng thời, LADE thực hiện điều biến đặc trưng (Feature Modulation) thông qua các tham số tỷ lệ và dịch chuyển được học từ dữ liệu, giúp bảo tồn những kết cấu thiết yếu của ảnh chân dung (ví dụ: hình dáng mắt, khóe miệng) và hạn chế tình trạng phong cách hóa quá mức gây biến dạng. Đặc biệt, LADE sở hữu khả năng plug-and-play, cho phép tích hợp trực tiếp vào các kiến trúc mạng hiện có để thay thế BN, LN hoặc IN mà không cần thay đổi lớn về cấu trúc, nhờ đó mang lại sự linh hoạt và hiệu quả trong ứng dụng.
+
+\subsubsection{Tác động Thực tế}
+Việc áp dụng LADE trong DTGAN đã loại bỏ hiệu quả các tạo tác thị giác phổ biến. Các thí nghiệm định tính cho thấy vùng da mặt được xử lý bởi LADE mượt mà hơn, không bị nhiễu hạt, và các đường biên (edges) sắc nét hơn so với khi sử dụng IN hay AdaLIN (trong U-GAT-IT).
+
+\subsection{Hệ thống Hàm Mất mát (Loss Functions) chuyên biệt}
+Để huấn luyện kiến trúc Double-Tail và tận dụng tối đa LADE, các tác giả đã đề xuất một bộ các hàm mất mát mới. Các hàm này định hướng cho mạng Generator học cách cân bằng giữa việc loại bỏ chi tiết thừa và giữ lại cấu trúc quan trọng.
+
+\subsubsection{Region Smoothing Loss (Hàm Mất mát Làm mịn Vùng)}
+
+Mục đích của hàm mất mát này là giải quyết vấn đề "quá nhiều chi tiết" trong ảnh thực. 
+Ảnh anime đặc trưng bởi các vùng màu đồng nhất (flat regions). Ảnh thực tế lại chứa nhiều nhiễu kết cấu (texture noise).
+Do đó cơ chế Region Smoothing Loss được sử dụng để làm suy yếu các chi tiết kết cấu của hình ảnh sinh ra, hướng tới hiệu ứng anime với các chi tiết trừu tượng.
+Về mặt kỹ thuật, hàm này có thể dựa trên việc so sánh sai số giữa ảnh sinh ra và một phiên bản đã được làm mịn (smoothed version) của ảnh gốc. Các kỹ thuật như Superpixel Segmentation (phân đoạn siêu điểm ảnh) thường được sử dụng ở bước này để xác định các vùng cần làm phẳng.
+Công thức tổng quát (suy luận từ ngữ cảnh): $$ L_{smooth} = || G(x) - Smooth(x) ||_{region} $$
+Hàm này buộc mạng phải bỏ qua các biến thiên nhỏ về màu sắc (ví dụ: các nốt tàn nhang nhỏ, nhiễu ISO) và chỉ tập trung vào màu sắc chủ đạo của từng vùng.
+
+\subsubsection{Fine-grained Revision Loss (Hàm Mất mát Hiệu chỉnh Tinh)}
+Fine-grained Revision Loss là thành phần quan trọng nhằm đảm bảo chất lượng sắc nét cho ảnh đầu ra. Sau quá trình làm mịn, hình ảnh thường có nguy cơ bị mờ hoặc mất đi các đường biên, và hàm này được thiết kế để khôi phục cũng như làm rõ các cạnh. Cơ chế hoạt động của nó tập trung vào việc loại bỏ các tạo tác và nhiễu sinh ra từ nhánh Support Tail, đồng thời duy trì sự rõ ràng của các đường viền. Về cấu trúc, Fine-grained Revision Loss thường bao gồm hai thành phần: phạt nhiễu (noise penalty) và bảo tồn biên (edge preservation term). Nhờ khai thác thông tin từ các bộ lọc biên, mạng có thể phân biệt chính xác đâu là nét vẽ cần giữ lại (chẳng hạn như viền hàm, viền mắt) và đâu là nhiễu cần loại bỏ, từ đó tạo ra hình ảnh anime sắc nét và tự nhiên hơn.
+
+Ngoài hai hàm mới được đề xuất, DTGAN vẫn duy trì các hàm mất mát nền tảng vốn có trong bài toán style transfer. Cụ thể, Adversarial Loss được sử dụng để đánh lừa Discriminator, đảm bảo rằng ảnh sinh ra có vẻ “thật” trong miền anime. Bên cạnh đó, Content Loss (Perceptual Loss) khai thác mạng VGG19 đã được huấn luyện trước nhằm giữ lại nội dung ngữ nghĩa của ảnh gốc trong quá trình chuyển đổi phong cách. Cuối cùng, Color Reconstruction Loss được cải tiến để tái tạo màu sắc anime sống động hơn, khắc phục hiện tượng xỉn màu thường gặp khi chỉ áp dụng Grayscale Style Loss, từ đó nâng cao chất lượng hình ảnh đầu ra.
+
+
+\section{Tập dữ liệu và Tiền xử lý}
+
+Tập dữ liệu nguồn (ảnh chân dung người thật): Luận văn sử dụng tập ảnh chân dung khuôn mặt người
+đa dạng về tuổi tác, giới tính, sắc tộc để mô hình học được các đặc trưng phổ quát. Các ảnh nguồn được thu
+thập từ các dataset công khai (FFHQ) cũng như ảnh selfie từ Internet. Để tăng cường tính đa dạng, tôi bổ sung
+một số ảnh chụp ngoài trời, trong nhà, với các biểu cảm khác nhau. Tổng số ảnh thật sử dụng khoảng một nghìn ảnh.
+
+Tập dữ liệu đích (ảnh anime): Bao gồm các hình ảnh nhân vật anime 2D được sưu tầm từ phim hoạt hình
+và truyện tranh. Để phù hợp với ảnh chân dung, ta chọn các ảnh anime tập trung vào khuôn mặt nhân vật
+(các cảnh cận mặt). Nguồn ảnh anime có thể lấy từ các bộ phim nổi tiếng (Studio Ghibli, Shinkai Makoto)
+hoặc dataset có sẵn (VD: Danbooru2018 về tranh anime). Nhằm đảm bảo chất lượng, ta ưu tiên ảnh anime
+độ phân giải cao, nét vẽ rõ ràng. Theo kinh nghiệm từ AnimeGANv2, việc huấn luyện trên các frame phim
+anime chất lượng cao (Arcane Season 1) giúp cải thiện đáng kể kết quả – do đó dữ liệu đích của
+ta cũng bao gồm những frame chọn lọc từ các phim này. Tổng số ảnh anime sử dụng tương đương tập ảnh
+người (vài nghìn ảnh)
+
+Tiền xử lý khác: Cả hai tập X và Y sẽ được chuẩn hóa màu (vd: chuyển về không gian màu YUV và cân bằng
+histogram nếu cần) để giảm khác biệt domain. Đồng thời áp dụng data augmentation vừa phải trên tập X:
+các phép lật ngang, xoay nhẹ, thay đổi độ sáng, để mô hình tăng tính bất biến với những biến động này.
+Trên tập Y (anime), augmentation thường hạn chế hơn để không làm méo phong cách – có thể dùng lật ảnh
+và thay đổi nhẹ độ sáng/màu. Cuối cùng, ảnh được chuẩn hóa điểm ảnh (về khoảng [-1,1] nếu dùng Tanh ở
+output GAN, hoặc [0,1] nếu dùng Sigmoid) nhất quán ở cả hai miền.
+
+Sau khi xử lý, ta thu được hai tập dữ liệu cân bằng về số lượng (ví dụ mỗi tập khoảng vài nghìn ảnh). Như
+một ví dụ điển hình, selfie2anime dataset từng được sử dụng trong U-GAT-IT có 3400 ảnh selfie và 3400
+ảnh anime để huấn luyện – khối lượng này đủ để huấn luyện mô hình trung bình. Nếu có điều kiện,
+tăng số lượng ảnh sẽ giúp mô hình học phong phú hơn, nhưng cũng cần lưu ý chất lượng ảnh (độ phân
+giải, mức độ noise) vì ảnh kém chất lượng có thể làm GAN học những artifact không mong muốn
+
+
+
+
+
+
+
+
+
+
+
