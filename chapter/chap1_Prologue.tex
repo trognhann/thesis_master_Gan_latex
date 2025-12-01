@@ -166,8 +166,141 @@ Lĩnh vực chẩn đoán y tế, như phân tích X-quang ngực, là một ứ
 
 Trong các lĩnh vực có tính quyết định cao như y học, việc giảm thiểu rủi ro và tăng độ tin cậy là tối quan trọng. Nghiên cứu đã chứng minh rằng kỹ thuật tập hợp học sâu (Ensemble Deep Learning) có thể cải thiện đáng kể hiệu suất chẩn đoán.17 Bằng cách kết hợp dự đoán của nhiều mô hình đã huấn luyện (bao gồm cả CNNs truyền thống và mô hình hybrid như CoAtNet) thông qua trung bình có trọng số, hiệu suất đã được cải thiện, đạt AUROC $85.4\%$ trên bộ dữ liệu ChestX-ray14, vượt qua các phương pháp dẫn đầu khác.17 Điều này khẳng định rằng việc tổng hợp kết quả từ nhiều kiến trúc là một chiến lược quan trọng để tăng độ chính xác và độ tin cậy trong các ứng dụng thực tiễn.
 
-
+\newpage
 \section{Kiến trúc Mạng đối nghịch tạo sinh}
+Trong thập kỷ qua, Trí tuệ Nhân tạo (AI) đã chuyển dịch mạnh mẽ từ khả năng phân tích sang sáng tạo, với dấu mốc quan trọng là sự ra đời của Mạng Đối nghịch Tạo sinh (GAN) do Ian Goodfellow và cộng sự đề xuất năm 2014. Khác với các mô hình tạo sinh trước đây vốn dựa trên các phương pháp xác suất phức tạp như MCMC hay Deep Belief Networks, GAN đưa ra cách tiếp cận mới bằng trò chơi đối kháng giữa hai mạng nơ-ron, tận dụng lan truyền ngược để huấn luyện trực tiếp và tạo ra dữ liệu có độ trung thực cao.
+
+\subsection{Nguyên lý Hoạt động và Cơ sở Lý thuyết}
+\subsubsection{Khung Làm việc Đối kháng}
+
+GAN (Generative Adversarial Networks) là một hệ thống gồm hai mạng nơ-ron được huấn luyện đồng thời thông qua một trò chơi có tổng bằng không. Trong đó 
+Mạng Tạo sinh (Generator - G) đóng vai trò như một ``kẻ làm giả''. G nhận đầu vào là một vector nhiễu ngẫu nhiên $z$ từ một không gian tiềm ẩn (latent space) với phân phối $p_z(z)$, để tạo ra phân phối chuẩn hoặc giống như phân phối dữ liệu thật $p_{data}$. G cố gắng tạo ra những mẫu gần khớp với $G(z)$. Mục tiêu của G là đánh lừa D, nghĩa là tạo ra những mẫu mà D không thể phân biệt được với dữ liệu thật $p_{data}$.
+Ngược lại mạng Phân biệt (Discriminator - D) đóng vai trò như một ``cảnh sát'' hoặc chuyên gia giám định. D là một bộ phân loại nhị phân nhận đầu vào là dữ liệu $x$ và xuất ra một giá trị thể hiện hướng $D(x; \theta_D)$ biểu thị xác suất dữ liệu đó là dữ liệu thật ($p_{data}$) thay vì từ G.
+
+\subsubsection{Trò chơi Minimax và Hàm Mục tiêu}
+Quá trình huấn luyện GAN được mô hình hóa dưới dạng một bài toán tối ưu hóa Minimax, trong đó $D$ cố gắng tối đa hóa khả năng phân biệt đúng, còn $G$ cố gắng tối thiểu hóa khả năng bị phát hiện (tức là tối đa hóa sai sót của $D$). Hàm giá trị $V(D, G)$ được định nghĩa như sau:
+
+\[
+\min_G \max_D V(D, G) = \mathbb{E}_{x \sim p_{\text{data}}(x)}[\log D(x)] + \mathbb{E}_{z \sim p_z(z)}[\log(1 - D(G(z)))]
+\]
+Trong đó số hạng đầu tiên $\mathbb{E}_{x \sim p_{\text{data}}(x)}$ khuyến khích $D$ gán xác suất cao cho dữ liệu thật.
+Số hạng thứ hai $\mathbb{E}_{z \sim p_z(z)}$ khuyến khích $D$ gán xác suất thấp cho dữ liệu giả $G(z)$.
+
+\subsubsection{Phân tích Điểm Cân bằng Nash và Discriminator Tối ưu}
+Về mặt lý thuyết, mục tiêu cuối cùng của quá trình này là đạt được Điểm cân bằng Nash (Nash Equilibrium). Tại điểm này, không người chơi nào có thể cải thiện kết quả của mình bằng cách đơn phương thay đổi chiến lược.
+Đối với GAN, Discriminator không thể phân biệt được ảnh thật và ảnh giả tốt hơn việc đoán ngẫu nhiên (xác suất $D(x) = 0.5$ cho mọi $x$).
+Phân phối của Generator $p_g$ hoàn toàn trùng khớp với phân phối dữ liệu thật $p_{data}$.
+
+Goodfellow et al đã chứng minh rằng với một $G$ cố định, Discriminator tối ưu $D^*$ có dạng:
+\[
+D^*_G(x) = \frac{p_{\text{data}}(x)}{p_{\text{data}}(x) + p_g(x)}
+\]
+Khi thay thế $D^*_G(x)$ trở lại hàm mục tiêu $V(D, G)$, bài toán tối thiểu hóa của Generator trở thành việc tối thiểu hóa khoảng cách Jensen-Shannon (JS Divergence) giữa hai phân phối:
+\[
+C(G) = \max_D V(D, G) = -\log(4) + 2 \cdot D_{\text{JS}}(p_{\text{data}} \parallel p_g)
+\]
+Kết quả này rất quan trọng vì nó cung cấp cơ sở lý thuyết cho thấy việc tối ưu hóa hàm đối nghịch thực chất là việc kéo phân phối sinh $p_g$ về phía phân phối thật $p_{data}$ theo thước đo khoảng cách Jensen-Shannon.
+
+\subsection{Thách thức trong Huấn luyện GAN}
+Mặc dù lý thuyết rất chặt chẽ, việc áp dụng GAN trong thực tế gặp phải những vấn đề nghiêm trọng liên quan đến tính ổn định của gradient và động lực học của tối ưu hóa. Các nghiên cứu đã chỉ ra ba vấn đề kinh điển: Biến mất Gradient (Vanishing Gradients), Sụp đổ Mode (Mode Collapse), và Không hội tụ (Non-convergence).
+
+\subsubsection{Vấn đề Biến mất Gradient (Vanishing Gradients)}
+Vấn đề này xuất phát trực tiếp từ bản chất của khoảng cách Jensen-Shannon (JS) được sử dụng trong hàm loss gốc.
+Phân tích Toán học: Khi $p_{data}$ và $p_g$ có giá đỡ (support) rời rạc hoặc nằm trong các không gian con chiều thấp không giao nhau (điều rất phổ biến trong không gian dữ liệu nhiều chiều như ảnh), khoảng cách JS giữa chúng là một hằng số ($\log 2$).
+Hệ quả: Vì hàm loss là hằng số, đạo hàm (gradient) của nó bằng 0. Khi Discriminator trở nên quá chính xác (đạt tiệm cận tối ưu), nó phân tách hoàn hảo ảnh thật và ảnh giả. Lúc này, hàm loss của Generator bão hòa, và $G$ không nhận được bất kỳ tín hiệu gradient nào để cập nhật trọng số. $G$ "không biết" hướng nào để di chuyển nhằm cải thiện chất lượng ảnh.
+Goodfellow đã đề xuất một giải pháp tình thế là thay đổi hàm mục tiêu của $G$ từ $\min \log(1 - D(G(z)))$ sang $\max \log D(G(z))$ (gọi là hàm non-saturating loss). Mặc dù giải quyết được vấn đề biến mất gradient ban đầu, hàm này lại gây ra sự dao động mạnh và không ổn định trong giai đoạn sau của quá trình huấn luyện.
+
+\subsubsection{Hiện tượng Sụp đổ Mode (Mode Collapse)}
+
+Mode collapse là một trong những thất bại phổ biến và khó chịu nhất của GAN. Nó xảy ra khi Generator học được cách tạo ra một hoặc một vài mẫu ảnh (modes) mà Discriminator tin là thật, và sau đó liên tục sinh ra các mẫu này bất kể đầu vào $z$ là gì.
+
+Cơ chế của hiện tượng này thường xảy ra khi Generator quá "tham lam" tối ưu hóa cho Discriminator hiện tại mà không quan tâm đến sự đa dạng. Ví dụ, nếu $D$ yếu kém trong việc phát hiện các chữ số "1", $G$ sẽ dồn toàn bộ trọng số để chỉ tạo ra số "1".
+Vòng lặp không hồi kết, khi $D$ học được rằng số "1" là giả, $G$ sẽ chuyển sang một mode khác, ví dụ số "8". Hai mạng cứ thế đuổi bắt nhau quanh các mode mà không bao giờ hội tụ về một phân phối đa dạng bao phủ toàn bộ dữ liệu. Điều này dẫn đến kết quả đầu ra thiếu tính sáng tạo và lặp lại.
+
+\subsubsection{Sự Không Hội tụ (Non-Convergence)}
+Việc tìm kiếm điểm cân bằng Nash trong trò chơi liên tục, nhiều chiều và không lồi (non-convex) là cực kỳ khó khăn. Các thuật toán tối ưu dựa trên gradient descent được thiết kế để tìm cực tiểu cục bộ của hàm chi phí, chứ không phải điểm yên ngựa (saddle point) cần thiết cho GAN.4
+Nhiều nghiên cứu lý thuyết 16 chỉ ra rằng động lực học của gradient descent trong các trò chơi song tuyến tính (bilinear games) thường dẫn đến các quỹ đạo xoay tròn (rotational dynamics) thay vì hội tụ vào tâm. Điều này giải thích tại sao loss của $G$ và $D$ thường dao động mạnh và không bao giờ ổn định.
+
+\begin{longtable}{>{\bfseries}m{4cm} | m{5cm} | m{6cm}}
+\caption{Bảng 1: Tóm tắt Các Chế độ Thất bại của GAN} \\
+\toprule
+Vấn đề & Biểu hiện & Nguyên nhân Toán học \\
+\midrule
+Vanishing Gradients & \textit{G} ngừng học, loss không đổi & Discriminator quá mạnh, JS divergence bảo toàn độ đo. \\
+\midrule
+Mode Collapse & Ảnh sinh ra giống hệt nhau, thiếu đa dạng & \textit{G} tối ưu hóa cục bộ (greedy), \textit{D} không bắt buộc tính đa dạng. \\
+\midrule
+Non-Convergence & Loss dao động mạnh, không ổn định & Quá trình học lặp lại không quay quanh điểm cân bằng Nash, không ổn định. \\
+\bottomrule
+\end{longtable}
+
+\subsection{Các Giải pháp về Hàm Mục tiêu và Toán học}
+\subsubsection{Wasserstein GAN (WGAN) và Khoảng cách Earth-Mover}
+Công thức Wasserstein distance:
+\[
+W(p_{\text{data}}, p_g) = \inf_{\gamma \in \Pi(p_{\text{data}}, p_g)} \mathbb{E}_{(x,y) \sim \gamma} \left[ \|x - y\| \right]
+\]
+Ưu điểm vượt trội Gradient liên tục khoảng cách Wasserstein liên tục và khả vi hầu khắp mọi nơi, ngay cả khi hai phân phối $p_{data}$ và $p_g$ không giao nhau. Điều này cung cấp các gradient có ý nghĩa và mượt mà cho Generator trong suốt quá trình huấn luyện, loại bỏ hoàn toàn vấn đề biến mất gradient.
+Tương quan với chất lượng, giá trị loss của WGAN tương quan tốt với chất lượng ảnh sinh ra (loss thấp hơn đồng nghĩa ảnh tốt hơn), điều mà GAN gốc không làm được.
+
+Để tính toán được khoảng cách này, sử dụng tính đối ngẫu Kantorovich-Rubinstein, yêu cầu Discriminator (lúc này gọi là Critic) phải thỏa mãn ràng buộc 1-Lipschitz continuity: $|f(x_1) - f(x_2)| \le |x_1 - x_2|$.
+
+\subsubsection{WGAN-GP: Từ Weight Clipping đến Gradient Penalty}
+Ban đầu, để thỏa mãn ràng buộc Lipschitz, WGAN sử dụng Weight Clipping (cắt trọng số) để ép các tham số mạng nằm trong khoảng $[-c, c]$. Tuy nhiên, phương pháp này quá thô bạo, dẫn đến việc mạng hoặc sử dụng không hết khả năng (capacity underuse) hoặc gây bùng nổ gradient.
+
+Cải tiến mô hình này bằng phương pháp Gradient Penalty (WGAN-GP). Thay vì cắt trọng số, họ thêm một số hạng phạt vào hàm loss để khuyến khích norm của gradient của Critic xấp xỉ bằng 1 trên các điểm mẫu nội suy $\hat{x}$:
+\[
+L_{\text{WGAN-GP}} = 
+\underbrace{\mathbb{E}_{\tilde{x} \sim p_g} - \mathbb{E}_{x \sim p_{\text{data}}}}_{\text{Original WGAN Loss}} 
++ 
+\underbrace{\lambda \mathbb{E}_{\hat{x}}}_{\text{Gradient Penalty}}
+\]
+Kỹ thuật này đã giúp ổn định đáng kể quá trình huấn luyện và cho phép huấn luyện các kiến trúc phức tạp hơn (như ResNet) mà không bị mất ổn định.
+
+
+\subsubsection{Spectral Normalization (SN-GAN)}
+
+Một phương pháp khác để kiểm soát tính ổn định của Discriminator là Spectral Normalization. Thay vì phạt gradient (tốn kém tính toán), SN chuẩn hóa trực tiếp ma trận trọng số $W$ của mỗi lớp mạng bằng cách chia cho giá trị kỳ dị lớn nhất (spectral norm $\sigma(W)$) của nó:
+\[
+W_{SN} = \frac{W}{\sigma(W)}
+\]
+
+Phương pháp này đảm bảo rằng hằng số Lipschitz của toàn bộ mạng bị chặn bởi 1 một cách toàn cục. SN rất hiệu quả về mặt tính toán và đã trở thành tiêu chuẩn cho hầu hết các kiến trúc GAN hiện đại (như SAGAN, BigGAN) vì nó ngăn chặn sự bùng nổ gradient mà không làm giảm khả năng biểu diễn của mạng quá nhiều.
+
+\subsection{Các Kỹ thuật Ổn định Huấn luyện}
+Bên cạnh việc thay đổi hàm loss, các chiến lược huấn luyện cũng đóng vai trò quan trọng trong việc đạt được sự hội tụ.
+
+\subsubsection{Minibatch Discrimination}
+
+Để giải quyết vấn đề mode collapse, kỹ thuật Minibatch Discrimination  cho phép Discriminator xem xét mối quan hệ giữa các mẫu trong cùng một batch thay vì xử lý chúng độc lập.
+Cơ chế mạng tính toán thống kê về khoảng cách (L1 distance) giữa các đặc trưng của các mẫu trong batch. Nếu Generator bị sụp đổ mode, các mẫu sinh ra sẽ rất giống nhau, dẫn đến khoảng cách giữa chúng rất nhỏ.
+Tác động discriminator sử dụng thông tin này để dễ dàng phát hiện ra các batch "giả" có độ đa dạng thấp, từ đó buộc Generator phải tạo ra các mẫu đa dạng hơn để đánh lừa Discriminator.
+
+\subsubsection{Two Time-Scale Update Rule (TTUR)}
+Quy tắc cập nhật hai thang thời gian (TTUR), trong đó Generator và Discriminator có tốc độ học (learning rate) riêng biệt. Thông thường, Discriminator được gán tốc độ học cao hơn để nó có thể hội tụ nhanh chóng về cực tiểu cục bộ mỗi khi Generator thay đổi phân phối.
+
+Ý nghĩa lý thuyết: TTUR đảm bảo rằng quá trình huấn luyện sẽ hội tụ về điểm cân bằng Nash ổn định cục bộ, điều mà tốc độ học đồng nhất thường thất bại. Đây cũng là bài báo giới thiệu chỉ số đánh giá FID nổi tiếng.
+
+\subsection{Đánh giá Chất lượng}
+Vì không có hàm mục tiêu tường minh để kiểm tra trên tập test, việc đánh giá GAN dựa vào các chỉ số thống kê trên tập đặc trưng.
+
+\subsubsection{Inception Score (IS)}
+IS  sử dụng mạng Inception v3 để đánh giá hai tiêu chí. Một là độ sắc nét, mỗi ảnh sinh ra phải được phân loại tự tin vào một lớp cụ thể (Entropy có điều kiện thấp).
+Và độ đa dạng: Tập hợp các ảnh sinh ra phải bao phủ tất cả các lớp (Entropy biên cao).
+Công thức dựa trên độ phân kỳ KL, $IS = \exp(\mathbb{E}_{x \sim p_g} [KL(p(y|x) \parallel p(y))])$.
+
+\subsubsection{Frechet Inception Distance (FID)}
+FID  hiện là tiêu chuẩn vàng. Nó so sánh phân phối của các vector đặc trưng (từ lớp pool3 của Inception v3) giữa ảnh thật và ảnh giả, giả định chúng tuân theo phân phối chuẩn đa biến.
+\[
+FID = \|\mu_r - \mu_g\|^2 + \operatorname{Tr}(\Sigma_r + \Sigma_g - 2(\Sigma_r \Sigma_g)^{1/2})
+\]
+FID thấp hơn đồng nghĩa với việc hai phân phối gần nhau hơn. FID nhạy cảm hơn IS đối với nhiễu, mode collapse và biến dạng ảnh, cung cấp một đánh giá toàn diện hơn về chất lượng.
+
+
+
+
+
+
 
 
 
