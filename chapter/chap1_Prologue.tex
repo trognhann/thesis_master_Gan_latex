@@ -7,65 +7,159 @@
 
 \section{Mạng Nơ-ron Tích chập}
 
-Mạng Nơ-ron Tích chập (Convolutional Neural Networks – CNNs) đã củng cố vị thế là kiến trúc nền tảng trong lĩnh vực thị giác máy tính, tạo ra những bước tiến lớn trong các tác vụ từ phân loại ảnh đơn giản đến phân đoạn thực thể phức tạp. Sự thành công của CNN bắt nguồn từ khả năng học hỏi các biểu diễn đặc trưng phân cấp, tự động trích xuất các thông tin hình học ngày càng trừu tượng từ dữ liệu đầu vào thô. \cite{Basha2020}
+Mạng Nơ-ron Tích chập (Convolutional Neural Networks – CNNs) đã củng cố vị thế
+là kiến trúc nền tảng trong lĩnh vực thị giác máy tính, tạo ra những bước tiến lớn trong 
+các tác vụ từ phân loại ảnh đơn giản đến phân đoạn thực thể phức tạp. Sự thành công của CNN bắt 
+nguồn từ khả năng học hỏi các biểu diễn đặc trưng phân cấp, tự động trích xuất các thông tin hình 
+học ngày càng trừu tượng từ dữ liệu đầu vào thô. \cite{Basha2020} 
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{figChap1/CNN_kien_truc.png}
+    \caption{Mạng Nơ-ron Tích chập cơ bản}
+    \label{fig:convolutional_neural_network}
+\end{figure}
+
 \subsection{Hoạt động của Lớp Tích chập}
 
-Lớp tích chập là khối xây dựng cơ bản của mọi kiến trúc CNN hiện đại. Cơ chế hoạt động của lớp này được thiết kế đặc biệt để xử lý dữ liệu ảnh bằng cách khai thác tính cục bộ và tính bất biến dịch chuyển thống kê của đặc trưng hình ảnh.
+Lớp tích chập là khối xây dựng cơ bản của mọi kiến trúc CNN hiện đại. Cơ chế hoạt động của lớp này được 
+thiết kế đặc biệt để xử lý dữ liệu ảnh bằng cách khai thác tính cục bộ và tính bất biến dịch chuyển 
+thống kê của đặc trưng hình ảnh.
 
-Lớp tích chập vận hành thông qua các kernel nhỏ (hay còn gọi là bộ lọc).3 Các kernel này trượt (slide) trên ảnh đầu vào, thực hiện phép nhân tích chập với từng phần của ảnh để tính toán tích vô hướng cục bộ.3 Điều này cho phép lớp tích chập hoạt động như các bộ lọc cục bộ, chuyên trách trích xuất các đặc trưng hình học cơ bản, chẳng hạn như các cạnh (edges), đường cong (curves), hoặc các kết cấu (textures) [User Query].
+Lớp tích chập vận hành thông qua các kernel nhỏ (hay còn gọi là bộ lọc). 
+Các kernel này trượt (slide) trên ảnh đầu vào, thực hiện phép nhân tích chập với từng phần của 
+ảnh để tính toán tích vô hướng cục bộ. Điều này cho phép lớp tích chập hoạt động như các bộ lọc 
+cục bộ, chuyên trách trích xuất các đặc trưng hình học cơ bản, chẳng hạn như các cạnh (edges), 
+đường cong (curves), hoặc các kết cấu (textures).\cite{Girshick2014}
 
-Mỗi kernel trong lớp tích chập được học để phát hiện một loại đặc trưng cụ thể và áp dụng phát hiện đó trên toàn bộ ảnh [User Query]. Khả năng học các bộ lọc cục bộ này, thay vì dựa vào các đặc trưng được thiết kế thủ công (handcrafted features) như SIFT hay HOG trong các mô hình thị giác máy tính truyền thống, là một đổi mới cốt lõi của CNN.1 Sự thay đổi này đã giúp các mô hình CNN giảm đáng kể nhu cầu về kinh nghiệm chuyên môn trong việc tiền xử lý dữ liệu đầu vào.1 Quá trình này tạo tiền đề cho việc xây dựng các đặc trưng phân cấp phong phú (rich hierarchy of image features), nơi các lớp sâu hơn dần dần kết hợp các đặc trưng cấp thấp thành các biểu diễn trừu tượng và ngữ nghĩa hơn.2
+Mỗi kernel trong lớp tích chập được học để phát hiện một loại đặc trưng cụ thể và áp dụng phát hiện 
+đó trên toàn bộ ảnh. Khả năng học các bộ lọc cục bộ này, thay vì dựa vào các đặc trưng được thiết kế 
+thủ công (handcrafted features) như SIFT hay HOG trong các mô hình thị giác máy tính truyền thống, 
+là một đổi mới cốt lõi của CNN. Sự thay đổi này đã giúp các mô hình CNN giảm đáng kể nhu cầu về kinh 
+nghiệm chuyên môn trong việc tiền xử lý dữ liệu đầu vào.\cite{Basha2020} Quá trình này tạo tiền đề cho việc xây dựng 
+các đặc trưng phân cấp phong phú (rich hierarchy of image features), nơi các lớp sâu hơn dần dần 
+kết hợp các đặc trưng cấp thấp thành các biểu diễn trừu tượng và ngữ nghĩa hơn.\cite{Girshick2014}
 
 \subsection{Lớp Pooling và Tối ưu hóa Bản đồ Đặc trưng}
 
-Thông thường, lớp Pooling được thêm vào ngay sau một lớp tích chập.4 Chức năng chính của lớp Pooling là giảm độ phân giải không gian của bản đồ đặc trưng (feature maps) bằng cách chia chúng thành các vùng con hình chữ nhật và giảm mẫu các đặc trưng trong mỗi vùng con thành một giá trị duy nhất, thường là giá trị trung bình (average) hoặc giá trị cực đại (maximum).5
+Thông thường, lớp Pooling được thêm vào ngay sau một lớp tích chập. Chức năng chính của lớp Pooling 
+là giảm độ phân giải không gian của bản đồ đặc trưng (feature maps) bằng cách chia chúng thành các 
+vùng con hình chữ nhật và giảm mẫu các đặc trưng trong mỗi vùng con thành một giá trị duy nhất, 
+thường là giá trị trung bình (average) hoặc giá trị cực đại (maximum). \cite{WikiCNN}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{figChap1/maxPooling.png}
+    \caption{Lớp Pooling}
+    \label{fig:pooling}
+\end{figure}
 
-Quá trình giảm mẫu này thực hiện hai mục đích quan trọng. Thứ nhất, nó giảm kích thước dữ liệu, làm giảm chi phí tính toán trong các lớp sau [User Query]. Thứ hai, và quan trọng hơn về mặt lý thuyết, hoạt động pooling mang lại một mức độ bất biến dịch chuyển cục bộ (local translational invariance) cho các đặc trưng.5 Tính bất biến này giúp CNN trở nên vững vàng hơn (robust) đối với các biến thể nhỏ trong vị trí hoặc biến dạng của các đặc trưng, cho phép mô hình nhận dạng các đối tượng ngay cả khi chúng hơi bị dịch chuyển trong ảnh.5
+Quá trình giảm mẫu này thực hiện hai mục đích quan trọng. Thứ nhất, nó giảm kích thước dữ liệu, 
+làm giảm chi phí tính toán trong các lớp sau. Thứ hai, và quan trọng hơn về mặt lý thuyết, hoạt động 
+pooling mang lại một mức độ bất biến dịch chuyển cục bộ (local translational invariance) cho các đặc 
+trưng. Tính bất biến này giúp CNN trở nên vững vàng hơn (robust) đối với các biến thể nhỏ trong vị 
+trí hoặc biến dạng của các đặc trưng, cho phép mô hình nhận dạng các đối tượng ngay cả khi chúng hơi 
+bị dịch chuyển trong ảnh.\cite{WikiCNN}
 
-Tuy nhiên, việc giảm độ phân giải không gian thông qua pooling là một sự đánh đổi. Mặc dù pooling tạo ra tính bất biến, nó cũng dẫn đến sự mất mát thông tin vị trí chính xác (spatial location). Sự mất mát này không đáng kể trong các tác vụ phân loại hình ảnh cấp độ toàn cục, nhưng lại trở thành một rào cản kỹ thuật nghiêm trọng đối với các tác vụ định vị mật độ cao (dense prediction tasks) như phân đoạn thực thể, đòi hỏi sự căn chỉnh pixel-to-pixel.6
+Tuy nhiên, việc giảm độ phân giải không gian thông qua pooling là một sự đánh đổi. 
+Mặc dù pooling tạo ra tính bất biến, nó cũng dẫn đến sự mất mát thông tin vị trí chính xác 
+(spatial location). Sự mất mát này không đáng kể trong các tác vụ phân loại hình ảnh cấp độ toàn cục, 
+nhưng lại trở thành một rào cản kỹ thuật nghiêm trọng đối với các tác vụ định vị mật độ cao 
+(dense prediction tasks) như phân đoạn thực thể, đòi hỏi sự căn chỉnh pixel-to-pixel.\cite{He2017}
 
 \subsection{Lớp Kết nối Đầy đủ và Phân loại Quyết định}
 
-Các lớp tích chập và pooling hoạt động như các khối trích xuất đặc trưng (feature extractors). Để hoàn thành tác vụ phân loại, CNN cần các lớp kết nối đầy đủ (FC layers) ở phần cuối của kiến trúc.3
+Các lớp tích chập và pooling hoạt động như các khối trích xuất đặc trưng (feature extractors). 
+Để hoàn thành tác vụ phân loại, CNN cần các lớp kết nối đầy đủ (FC layers) ở phần cuối của kiến trúc. \cite{Basha2020}
 
-Trước khi đi vào lớp FC, bản đồ đặc trưng 2D/3D cuối cùng được làm phẳng (flattened) thành một vector 1D.4 Lớp FC là lớp cuối cùng của mạng, có chức năng tổng hợp toàn bộ các đặc trưng trừu tượng đã được trích xuất bởi các khối xử lý trước đó.3 Mỗi nơ-ron trong lớp FC này được kết nối với tất cả các đầu vào của lớp trước 3, và cuối cùng, lớp này gán một giá trị xác suất cho hình ảnh thuộc về từng lớp trong số $C$ lớp khả dĩ.3
+Trước khi đi vào lớp FC, bản đồ đặc trưng 2D/3D cuối cùng được làm phẳng (flattened) thành một vector 1D.
+Lớp FC là lớp cuối cùng của mạng, có chức năng tổng hợp toàn bộ các đặc trưng trừu tượng 
+đã được trích xuất bởi các khối xử lý trước đó. Mỗi nơ-ron trong lớp FC này được 
+kết nối với tất cả các đầu vào của lớp trước, và cuối cùng, lớp này gán một giá trị xác suất cho 
+hình ảnh thuộc về từng lớp trong số $C$ lớp khả dĩ. \cite{Basha2020}
 
-Một phát hiện quan trọng từ các nghiên cứu gần đây là mối quan hệ giữa độ sâu kiến trúc CNN và nhu cầu thiết kế lớp FC.1 Phân tích cho thấy:
-Mạng Nông (Shallow CNNs): Do các đặc trưng được trích xuất ở lớp tích chập cuối cùng ít trừu tượng hơn, mạng nông cần một số lượng lớn nơ-ron và nhiều lớp FC hơn để đạt được hiệu suất phân loại tương đương.1
-Mạng Sâu (Deeper CNNs): Ngược lại, mạng sâu đã trích xuất được các đặc trưng trừu tượng hóa cao hơn. Do đó, chúng cần ít nơ-ron FC hơn để tổng hợp thông tin và đưa ra quyết định.1
-
-Việc hình thức hóa mối quan hệ này giữa kiến trúc và tập dữ liệu (xem Phần 2.3) là một bước tiến quan trọng giúp các nhà thực hành chuyển quá trình lựa chọn kiến trúc từ kinh nghiệm (expertise) sang một quy trình thiết kế tự động và có hệ thống.1
+Một phát hiện quan trọng từ các nghiên cứu gần đây là mối quan hệ giữa độ sâu kiến trúc CNN và nhu cầu thiết kế 
+lớp FC. Phân tích cho thấy:
+Mạng Nông (Shallow CNNs), do các đặc trưng được trích xuất ở lớp tích chập cuối cùng ít trừu tượng hơn, 
+mạng nông cần một số lượng lớn nơ-ron và nhiều lớp FC hơn để đạt được hiệu suất phân loại tương đương.
+Mạng Sâu (Deeper CNNs), ngược lại, mạng sâu đã trích xuất được các đặc trưng trừu tượng hóa cao hơn. 
+Do đó, chúng cần ít nơ-ron FC hơn để tổng hợp thông tin và đưa ra quyết định.
+Việc hình thức hóa mối quan hệ này giữa kiến trúc và tập dữ liệu là một bước tiến quan trọng giúp
+các nhà thực hành chuyển quá trình lựa chọn kiến trúc từ kinh nghiệm (expertise) sang một quy trình 
+thiết kế tự động và có hệ thống. \cite{Basha2020}
 
 \subsection{Sự Phát triển Kiến trúc và Nguyên lý Thiết kế Sâu}
 
 \subsubsection{Các Cột mốc phát triển và Ý nghĩa của Độ sâu Mạng}
 
-Sự trỗi dậy của CNN trong thị giác máy tính hiện đại được đánh dấu bằng các kiến trúc cột mốc. AlexNet, được phát triển vào năm 2012, là mô hình CNN sâu đầu tiên được công nhận rộng rãi, nổi bật qua thành tích trong Thử thách Nhận dạng Hình ảnh Quy mô Lớn ImageNet (ILSVRC).7 AlexNet đã chứng minh một cách dứt khoát rằng độ sâu của mô hình là yếu tố thiết yếu để đạt hiệu suất cao, điều này chỉ trở nên khả thi nhờ vào việc tận dụng đơn vị xử lý đồ họa (GPUs) để giảm chi phí tính toán khi huấn luyện.
+Sự trỗi dậy của CNN trong thị giác máy tính hiện đại được đánh dấu bằng các kiến trúc cột mốc.
+AlexNet, được phát triển vào năm 2012, là mô hình CNN sâu đầu tiên được công nhận rộng rãi,
+nổi bật qua thành tích trong Thử thách Nhận dạng Hình ảnh Quy mô Lớn ImageNet (ILSVRC).
+AlexNet đã chứng minh một cách dứt khoát rằng độ sâu của mô hình là yếu tố thiết yếu để đạt 
+hiệu suất cao, điều này chỉ trở nên khả thi nhờ vào việc tận dụng đơn vị xử lý đồ họa (GPUs) 
+để giảm chi phí tính toán khi huấn luyện. \cite{WikiAlexNet}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{figChap1/alexnet.png}
+    \caption{AlexNet}
+    \label{fig:alexnet}
+\end{figure}
 
 Sau thành công ban đầu, các kiến trúc tiếp theo (như VGGNet) tiếp tục đẩy giới hạn về độ sâu. Đồng thời, nghiên cứu cũng tập trung vào việc tối ưu hóa hiệu suất và tham số. Việc đơn giản hóa các kiến trúc dựa trên LeNet đã đạt được những giảm thiểu đáng kể về độ phức tạp tính toán và số lượng tham số trong khi vẫn duy trì hiệu suất cạnh tranh.8 Điều này nhấn mạnh tiềm năng của các kiến trúc hiệu quả (efficient architectures) trong việc giải quyết các ràng buộc phần cứng trong ứng dụng thực tế.
 
 \subsubsection{Chiến lược Chống Tắt Dần Gradient: Inception và Residual Connections}
 
-Khi các mạng trở nên sâu hơn, vấn đề tắt dần gradient (vanishing gradients) và khó khăn trong tối ưu hóa đã thúc đẩy sự ra đời của các chiến lược kiến trúc mới.
-Kiến trúc Inception nổi bật vì khả năng đạt hiệu suất rất tốt với chi phí tính toán tương đối thấp.9 Sau đó, sự giới thiệu của kết nối residual (hay skip connections) trong ResNet đã mang lại hiệu suất dẫn đầu (state-of-the-art) vào năm 2015.9 Điều này đặt ra câu hỏi về lợi ích của việc kết hợp kiến trúc Inception với kết nối residual.
-Nghiên cứu về Inception-ResNet đã cung cấp bằng chứng thực nghiệm rõ ràng rằng việc huấn luyện với kết nối residual tăng tốc đáng kể quá trình huấn luyện của mạng Inception.9 Lợi ích này không chỉ là lý thuyết; kỹ thuật DropIn, một phương pháp dần dần cho phép đào tạo trực tiếp các mạng sâu và khó huấn luyện như VGG16, cho thấy sự cải thiện đáng kể trong độ chính xác của mạng.10
-Các biến thể Inception-ResNet (như v1 và v2) đã được thiết kế lại để sử dụng các khối Inception rẻ hơn.9 Để bù đ đắp cho việc giảm chiều (dimensionality reduction) do khối Inception gây ra trước khi thực hiện phép cộng residual, một lớp mở rộng bộ lọc (filter-expansion layer), sử dụng tích chập $1 \times 1$ không có hàm kích hoạt, đã được thêm vào sau mỗi khối Inception.9 Ngoài ra, việc sử dụng kỹ thuật Activation Scaling cũng được chứng minh là cần thiết để ổn định quá trình huấn luyện các mạng Inception residual rất rộng.9 Mặc dù các nhà nghiên cứu đã chứng minh rằng việc huấn luyện các mạng rất sâu mà không cần kết nối residual là khả thi, lợi thế về tốc độ tối ưu hóa mà kết nối residual mang lại là một lý do kỹ thuật mạnh mẽ để chúng được áp dụng rộng rãi.9
+Khi các mạng trở nên sâu hơn, vấn đề tắt dần gradient (vanishing gradients) và khó khăn 
+trong tối ưu hóa đã thúc đẩy sự ra đời của các chiến lược kiến trúc mới.
+
+Kiến trúc Inception nổi bật vì khả năng đạt hiệu suất rất tốt với chi phí tính toán tương 
+đối thấp. Sau đó, sự giới thiệu của kết nối residual (hay skip connections) trong ResNet đã 
+mang lại hiệu suất dẫn đầu (state-of-the-art) vào năm 2015. Điều này đặt ra câu hỏi về 
+lợi ích của việc kết hợp kiến trúc Inception với kết nối residual. \cite{Szegedy2017}
+
+Nghiên cứu về Inception-ResNet đã cung cấp bằng chứng thực nghiệm rõ ràng rằng việc huấn 
+luyện với kết nối residual tăng tốc đáng kể quá trình huấn luyện của mạng Inception.\cite{Szegedy2017}
+Lợi ích này không chỉ là lý thuyết; kỹ thuật DropIn, một phương pháp dần dần cho phép 
+đào tạo trực tiếp các mạng sâu và khó huấn luyện như VGG16, cho thấy sự cải thiện đáng 
+kể trong độ chính xác của mạng.\cite{Radford2015}
+
+Các biến thể Inception-ResNet (như v1 và v2) đã được thiết kế lại để sử dụng các 
+khối Inception rẻ hơn. Để bù đ đắp cho việc giảm chiều (dimensionality reduction) do khối 
+Inception gây ra trước khi thực hiện phép cộng residual, một lớp mở rộng bộ lọc 
+(filter-expansion layer), sử dụng tích chập $1 \times 1$ không có hàm kích hoạt, 
+đã được thêm vào sau mỗi khối Inception. Ngoài ra, việc sử dụng kỹ thuật Activation Scaling 
+cũng được chứng minh là cần thiết để ổn định quá trình huấn luyện các mạng Inception 
+residual rất rộng. Mặc dù các nhà nghiên cứu đã chứng minh rằng việc huấn luyện các mạng 
+rất sâu mà không cần kết nối residual là khả thi, lợi thế về tốc độ tối ưu hóa mà kết nối 
+residual mang lại là một lý do kỹ thuật mạnh mẽ để chúng được áp dụng rộng rãi.\cite{Szegedy2017}
 
 \subsubsection{Nguyên tắc Thiết kế Kiến trúc dựa trên Dữ liệu và Tối ưu hóa FC}
 
-Việc lựa chọn kiến trúc CNN (sâu hay nông) không nên chỉ dựa trên kinh nghiệm mà phải tương quan với đặc điểm của tập dữ liệu đang được sử dụng. Các tập dữ liệu có thể được phân loại là sâu (deeper), nghĩa là chúng có số lượng mẫu lớn trên mỗi lớp (ví dụ: CIFAR-10), hoặc rộng (wider), nghĩa là chúng có nhiều lớp nhưng ít mẫu hơn trên mỗi lớp (ví dụ: CIFAR-100, Tiny ImageNet).
+Việc lựa chọn kiến trúc CNN (sâu hay nông) không nên chỉ dựa trên kinh nghiệm mà phải 
+tương quan với đặc điểm của tập dữ liệu đang được sử dụng. Các tập dữ liệu có thể được 
+phân loại là sâu (deeper), nghĩa là chúng có số lượng mẫu lớn trên mỗi lớp (ví dụ: CIFAR-10), 
+hoặc rộng (wider), nghĩa là chúng có nhiều lớp nhưng ít mẫu hơn trên mỗi 
+lớp (ví dụ: CIFAR-100, Tiny ImageNet).\cite{Basha2020}
 Nghiên cứu đã chỉ ra các quy tắc thiết kế mang tính hướng dẫn như sau:
 
 \begin{enumerate}
-    \item Dữ liệu Sâu (Deeper Datasets): Các tập dữ liệu này phù hợp hơn với các kiến trúc CNN sâu (ví dụ: CNN-2 và CNN-3). Do các kiến trúc sâu có nhiều tham số có thể huấn luyện hơn, chúng cần số lượng hình ảnh lớn trên mỗi chủ thể để huấn luyện hiệu quả. Các kiến trúc sâu hơn đã chứng minh hiệu suất tốt hơn trên các tập dữ liệu sâu như CIFAR-10 và CRCHistoPhenotypes.
-    \item Dữ liệu Rộng (Wider Datasets): Các tập dữ liệu này hoạt động hiệu quả hơn với các kiến trúc CNN nông (ví dụ: CNN-1). Mạng nông có ít tham số hơn, điều này phù hợp hơn với các tập dữ liệu có sự đa dạng lớp lớn nhưng số lượng mẫu trên mỗi lớp bị hạn chế.
+    \item Dữ liệu Sâu (Deeper Datasets): Các tập dữ liệu này phù hợp hơn với các kiến trúc 
+    CNN sâu (ví dụ: CNN-2 và CNN-3). Do các kiến trúc sâu có nhiều tham số có thể huấn luyện 
+    hơn, chúng cần số lượng hình ảnh lớn trên mỗi chủ thể để huấn luyện hiệu quả. Các kiến 
+    trúc sâu hơn đã chứng minh hiệu suất tốt hơn trên các tập dữ liệu sâu như CIFAR-10 và 
+    CRCHistoPhenotypes.\cite{Basha2020}
+    \item Dữ liệu Rộng (Wider Datasets): Các tập dữ liệu này hoạt động hiệu quả hơn với các 
+    kiến trúc CNN nông (ví dụ: CNN-1). Mạng nông có ít tham số hơn, điều này phù hợp hơn với 
+    các tập dữ liệu có sự đa dạng lớp lớn nhưng số lượng mẫu trên mỗi lớp bị hạn chế.\cite{Basha2020}
 \end{enumerate}
 
-Mối quan hệ giữa độ sâu kiến trúc và thiết kế lớp FC cũng tuân theo logic này. Mạng nông cần nhiều nơ-ron và lớp FC hơn để tổng hợp các đặc trưng, trong khi mạng sâu cần ít nơ-ron FC hơn. Việc xác định mối quan hệ qua lại này cung cấp một khuôn khổ khoa học giúp các nhà phát triển lựa chọn kiến trúc tối ưu hóa hiệu suất và chi phí tính toán ngay từ đầu, giảm thiểu quá trình thử và sai tốn thời gian.
+Mối quan hệ giữa độ sâu kiến trúc và thiết kế lớp FC cũng tuân theo logic này. 
+Mạng nông cần nhiều nơ-ron và lớp FC hơn để tổng hợp các đặc trưng, trong khi mạng sâu 
+cần ít nơ-ron FC hơn. Việc xác định mối quan hệ qua lại này cung cấp một khuôn khổ khoa 
+học giúp các nhà phát triển lựa chọn kiến trúc tối ưu hóa hiệu suất và chi phí tính toán 
+ngay từ đầu, giảm thiểu quá trình thử và sai tốn thời gian.
 
 \begin{table}[htbp]
     \centering
-    \caption{Bảng danh sách chi tiết bộ phận} % Có thể đổi tên caption tùy ý
+    \caption{Lựa chọn Kiến trúc và Tối ưu hóa Lớp FC} % Có thể đổi tên caption tùy ý
     \label{tab:ds_bophan}
     
     % Cấu trúc cột: |c|c|c|c|c|p{...}|
@@ -88,29 +182,85 @@ Mối quan hệ giữa độ sâu kiến trúc và thiết kế lớp FC cũng t
 
 \subsubsection{Phân đoạn Thực thể (Instance Segmentation) với Mask R-CNN}
 
-Trong khi các kiến trúc như AlexNet và ResNet tập trung vào phân loại, các tác vụ thị giác máy tính phức tạp hơn như phân đoạn thực thể đòi hỏi độ chính xác không gian cao. Mask R-CNN là một khung làm việc linh hoạt và đơn giản về mặt khái niệm, mở rộng Faster R-CNN để không chỉ phát hiện đối tượng mà còn đồng thời tạo ra mặt nạ phân đoạn chất lượng cao cho mỗi thực thể.
+Trong khi các kiến trúc như AlexNet và ResNet tập trung vào phân loại, các tác vụ thị giác 
+máy tính phức tạp hơn như phân đoạn thực thể đòi hỏi độ chính xác không gian cao. 
+Mask R-CNN là một khung làm việc linh hoạt và đơn giản về mặt khái niệm, mở rộng Faster 
+R-CNN để không chỉ phát hiện đối tượng mà còn đồng thời tạo ra mặt nạ phân đoạn chất lượng 
+cao cho mỗi thực thể. \cite{He2017}
 
-Mask R-CNN duy trì quy trình hai giai đoạn của Faster R-CNN, nhưng ở giai đoạn thứ hai, nó bổ sung một nhánh thứ ba hoạt động song song với nhánh dự đoán hộp giới hạn (bounding-box) và phân loại.6 Nhánh này là một Mạng Tích chập Đầy đủ (Fully Convolutional Network – FCN) nhỏ, được áp dụng trên từng Vùng Quan tâm (Region of Interest – RoI) để dự đoán một mặt nạ phân đoạn $m \times m$ theo cách pixel-to-pixel.
+Mask R-CNN duy trì quy trình hai giai đoạn của Faster R-CNN, nhưng ở giai đoạn thứ hai, 
+nó bổ sung một nhánh thứ ba hoạt động song song với nhánh dự đoán hộp giới hạn 
+(bounding-box) và phân loại. Nhánh này là một Mạng Tích chập Đầy đủ (Fully Convolutional 
+Network – FCN) nhỏ, được áp dụng trên từng Vùng Quan tâm (Region of Interest – RoI) để dự 
+đoán một mặt nạ phân đoạn $m \times m$ theo cách pixel-to-pixel. \cite{He2017}
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.8\textwidth]{figChap1/phan_doan_thuc_the.png}
+    \caption{Phân đoạn Thực thể}
+    \label{fig:phan_doan_thuc_the}
+\end{figure}
 
 \textbf{Lớp RoIAlign và Căn chỉnh Chính xác}: 
-Thành phần kỹ thuật quan trọng nhất làm nên sự thành công của Mask R-CNN là việc giới thiệu lớp RoIAlign. Faster R-CNN sử dụng lớp RoIPooling, lớp này thực hiện lượng tử hóa (spatial quantization) thô, dẫn đến sự sai lệch (misalignment) giữa input của mạng và output pixel-to-pixel, gây ảnh hưởng tiêu cực đến độ chính xác không gian.
+Thành phần kỹ thuật quan trọng nhất làm nên sự thành công của Mask R-CNN là việc giới thiệu lớp 
+RoIAlign. Faster R-CNN sử dụng lớp RoIPooling, lớp này thực hiện lượng tử hóa (spatial 
+quantization) thô, dẫn đến sự sai lệch (misalignment) giữa input của mạng và output 
+pixel-to-pixel, gây ảnh hưởng tiêu cực đến độ chính xác không gian.\cite{He2017}
 
-RoIAlign khắc phục vấn đề này bằng cách là một lớp không lượng tử hóa (quantization-free), duy trì căn chỉnh vị trí chính xác. Nó tính toán giá trị của các điểm lấy mẫu bằng cách sử dụng nội suy song tuyến (bilinear interpolation) từ các điểm lưới gần kề trên bản đồ đặc trưng, loại bỏ hoàn toàn việc lượng tử hóa các tọa độ liên quan. Sự thay đổi dường như nhỏ này đã mang lại tác động lớn, cải thiện độ chính xác mặt nạ lên đến $10\%$ đến $50\%$, đặc biệt quan trọng dưới các tiêu chí định vị nghiêm ngặt.
+RoIAlign khắc phục vấn đề này bằng cách là một lớp không lượng tử hóa \\(quantization-free), 
+duy trì căn chỉnh vị trí chính xác. Nó tính toán giá trị của các điểm lấy mẫu bằng cách sử 
+dụng nội suy song tuyến (bilinear interpolation) từ các điểm lưới gần kề trên bản đồ đặc trưng, 
+loại bỏ hoàn toàn việc lượng tử hóa các tọa độ liên quan. Sự thay đổi dường như nhỏ này đã mang 
+lại tác động lớn, cải thiện độ chính xác mặt nạ lên đến $10\%$ đến $50\%$, đặc biệt quan trọng 
+dưới các tiêu chí định vị nghiêm ngặt.\cite{He2017}
 
-\textbf{Decoupling Mask Prediction}: Một yếu tố kỹ thuật khác là việc tách rời (decoupling) dự đoán mặt nạ và dự đoán lớp. Thay vì sử dụng softmax và loss đa thức (multinomial loss) khiến các mặt nạ cạnh tranh lẫn nhau (phổ biến trong semantic segmentation), Mask R-CNN sử dụng sigmoid per-pixel và định nghĩa loss mặt nạ ($L_{mask}$) chỉ trên mặt nạ lớp đúng của RoI đó.6 Cách tiếp cận này đã được chứng minh là chìa khóa để đạt được kết quả phân đoạn thực thể tốt.
+\textbf{Decoupling Mask Prediction}: Một yếu tố kỹ thuật khác là việc tách rời (decoupling) 
+dự đoán mặt nạ và dự đoán lớp. Thay vì sử dụng softmax và loss đa thức (multinomial loss) 
+khiến các mặt nạ cạnh tranh lẫn nhau (phổ biến trong semantic segmentation), Mask R-CNN sử 
+dụng sigmoid per-pixel và định nghĩa loss mặt nạ ($L_{mask}$) chỉ trên mặt nạ lớp đúng của 
+RoI đó. Cách tiếp cận này đã được chứng minh là chìa khóa để đạt được kết quả phân đoạn 
+thực thể tốt.\cite{He2017}
 
-Sự thành công của Mask R-CNN chứng minh rằng các tác vụ định vị mật độ cao đòi hỏi mức độ chính xác không gian cao hơn nhiều so với các tác vụ phát hiện hộp giới hạn đơn thuần. Khung làm việc này cũng linh hoạt, dễ dàng tổng quát hóa sang các tác vụ khác như ước tính tư thế người (person keypoint detection) bằng cách xem mỗi điểm khóa (keypoint) là một mặt nạ nhị phân one-hot.
+Sự thành công của Mask R-CNN chứng minh rằng các tác vụ định vị mật độ cao đòi hỏi mức độ 
+chính xác không gian cao hơn nhiều so với các tác vụ phát hiện hộp giới hạn đơn thuần. 
+Khung làm việc này cũng linh hoạt, dễ dàng tổng quát hóa sang các tác vụ khác như ước tính 
+tư thế người (person keypoint detection) bằng cách xem mỗi điểm khóa (keypoint) là một mặt nạ 
+nhị phân one-hot.
 
 \subsubsection{Mô hình Encoder-Decoder cho Tái tạo Hình ảnh Chất lượng cao (U-Net)}
-Các kiến trúc Encoder-Decoder, nổi bật là U-Net, là nền tảng cho nhiều bài toán dịch ảnh (image-to-image translation) và phân đoạn mật độ cao [User Query]. Phần encoder (sử dụng các lớp tích chập và pooling) nén ảnh gốc thành một vector đặc trưng ẩn, trong khi phần decoder tái tạo vector ẩn đó thành ảnh đầu ra mong muốn [User Query].
+Các kiến trúc Encoder-Decoder, nổi bật là U-Net, là nền tảng cho nhiều bài toán dịch ảnh 
+(image-to-image translation) và phân đoạn mật độ cao. Phần encoder (sử dụng các lớp tích 
+chập và pooling) nén ảnh gốc thành một vector đặc trưng ẩn, trong khi phần decoder tái 
+tạo vector ẩn đó thành ảnh đầu ra mong muốn.\cite{Hasan2019}
 
-Trong phần decoder, việc tái tạo độ phân giải không gian thường được thực hiện bằng cách sử dụng Transposed Convolution (còn gọi là deconvolution hoặc tích chập chuyển vị). Mặc dù Transposed Convolution là một lớp học được, nó có một hạn chế kỹ thuật lớn: dễ dẫn đến sự chồng lấp không đều (uneven overlap), tạo ra các tạo phẩm (artifacts) dưới dạng mẫu kẻ ô (checkerboard-like patterns) trên đầu ra.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{figChap1/u-net.png}
+    \caption{Mô hình U-Net}
+    \label{fig:u-net}
+\end{figure}
 
-Để giải quyết vấn đề này, mô hình U-NetPlus, được thiết kế cho phân đoạn công cụ phẫu thuật, đã giới thiệu một sự thay thế quan trọng. U-NetPlus sử dụng các encoder tiền huấn luyện (pre-trained), cụ thể là VGG-11 hoặc VGG-16, để tăng tốc độ hội tụ và cải thiện kết quả. 
+Trong phần decoder, việc tái tạo độ phân giải không gian thường được thực hiện bằng cách sử 
+dụng Transposed Convolution (còn gọi là deconvolution hoặc tích chập chuyển vị). Mặc dù 
+Transposed Convolution là một lớp học được, nó có một hạn chế kỹ thuật lớn: dễ dẫn đến sự 
+chồng lấp không đều (uneven overlap), tạo ra các tạo phẩm (artifacts) dưới dạng mẫu kẻ ô 
+(checkerboard-like patterns) trên đầu ra.\cite{Hasan2019}
 
-Quan trọng hơn, trong phần decoder, U-NetPlus đã thay thế hoàn toàn Transposed Convolution bằng Nearest-Neighbor (NN) interpolation. Thao tác NN upsampling, theo sau là hai lớp tích chập, đã loại bỏ hiệu quả các tạo phẩm do Transposed Convolution gây ra, đồng thời giảm số lượng tham số của mô hình. Việc các nhà nghiên cứu lựa chọn một phương pháp nội suy không học được (NN) thay vì một lớp học được (Transposed Conv) để ổn định đầu ra decoder cho thấy rằng trong các miền ứng dụng nhạy cảm như y học, độ trung thực hình ảnh và tính ổn định đầu ra có thể được ưu tiên hơn khả năng học tối đa của mạng.
+Để giải quyết vấn đề này, mô hình U-NetPlus, được thiết kế cho phân đoạn công cụ phẫu thuật, 
+đã giới thiệu một sự thay thế quan trọng. U-NetPlus sử dụng các encoder tiền huấn luyện 
+(pre-trained), cụ thể là VGG-11 hoặc VGG-16, để tăng tốc độ hội tụ và cải thiện kết quả. 
 
-\begin{center}
+Quan trọng hơn, trong phần decoder, U-NetPlus đã thay thế hoàn toàn Transposed Convolution 
+bằng Nearest-Neighbor (NN) interpolation. Thao tác NN upsampling, theo sau là hai lớp tích chập, 
+đã loại bỏ hiệu quả các tạo phẩm do Transposed Convolution gây ra, đồng thời giảm số lượng 
+tham số của mô hình. Việc các nhà nghiên cứu lựa chọn một phương pháp nội suy không học được 
+(NN) thay vì một lớp học được (Transposed Conv) để ổn định đầu ra decoder cho thấy rằng trong 
+các miền ứng dụng nhạy cảm như y học, độ trung thực hình ảnh và tính ổn định đầu ra có thể được 
+ưu tiên hơn khả năng học tối đa của mạng.\cite{Hasan2019}
+
+\begin{table}[H]
+\caption{\textbf{Các Kỹ thuật Upsampling trong Decoder của CNN}}
+\label{tab:upsampling_techniques}
+\centering
 \begin{tabular}{|p{3.5cm}|p{3cm}|p{4.5cm}|p{4.5cm}|}
 \hline
 \textbf{Kỹ thuật} & \textbf{Đặc điểm} & \textbf{Ưu điểm Kỹ thuật} & \textbf{Hạn chế Kỹ thuật Chính} \\
@@ -120,109 +270,264 @@ Transposed Convolution & Học được (Learnable) & Linh hoạt, có thể h�
 Nearest-Neighbor Interpolation & Không học được (Non-Learnable) & Giảm thiểu tạo phẩm, giảm số lượng tham số, ổn định đầu ra. & Độ mịn không gian có thể thấp, không học được sự tinh chỉnh chi tiết. \\
 \hline
 \end{tabular}
-\end{center}
+\end{table}
 
-\subsubsection{CNNs trong Dịch Ảnh và Thích ứng Miền}
-CNN không chỉ được sử dụng cho phân loại và phân đoạn, mà còn là nền tảng của các mô hình encoder-decoder dùng trong các bài toán dịch ảnh giữa các miền khác nhau (image-to-image translation).
+
+\subsection{CNNs trong Dịch Ảnh và Thích ứng Miền}
+CNN không chỉ được sử dụng cho phân loại và phân đoạn, mà còn là nền tảng của các mô hình 
+encoder-decoder dùng trong các bài toán dịch ảnh giữa các miền khác nhau (image-to-image 
+translation).
+
 \subsubsection{Dịch Ảnh Không Giám sát và Giả định Không gian Ẩn Chung}
-Bài toán dịch ảnh không giám sát (Unsupervised Image-to-image translation) là một thách thức lớn vì chỉ có các bộ dữ liệu biên độc lập ($X_1, X_2$).13 Sự thiếu vắng các cặp ảnh tương ứng khiến việc suy luận về phân phối chung giữa hai miền trở nên không giải được (ill-posed problem) nếu không có các giả định bổ sung.
+Bài toán dịch ảnh không giám sát (Unsupervised Image-to-image translation) là một thách thức 
+lớn vì chỉ có các bộ dữ liệu biên độc lập ($X_1, X_2$).\cite{Liu2017} Sự thiếu vắng các cặp 
+ảnh tương ứng khiến việc suy luận về phân phối chung giữa hai miền trở nên không giải được 
+(ill-posed problem) nếu không có các giả định bổ sung.
 
-Để giải quyết vấn đề này, khung làm việc UNIT (UNsupervised Image-to-image Translation) đã được đề xuất, kết hợp Variational Autoencoders (VAEs) và Generative Adversarial Networks (GANs), dựa trên Giả định Không gian Ẩn Chung (Shared-Latent Space Assumption).
+Để giải quyết vấn đề này, khung làm việc UNIT (UNsupervised Image-to-image Translation) đã được 
+đề xuất, kết hợp Variational Autoencoders (VAEs) và Generative Adversarial Networks (GANs), 
+dựa trên Giả định Không gian Ẩn Chung (Shared-Latent Space Assumption).
 
-Giả định này khẳng định rằng một cặp ảnh tương ứng từ hai miền khác nhau ($\text{x}_1, \text{x}_2$) có thể được ánh xạ tới cùng một biểu diễn ẩn ($\text{z}$) trong một không gian ẩn chung ($\text{Z}$). Về mặt toán học, điều này ngụ ý rằng tồn tại các hàm mã hóa $\text{E}^*_1, \text{E}^*_2$ và hàm sinh $\text{G}^*_1, \text{G}^*_2$ sao cho $\text{z} = \text{E}^*_1(\text{x}_1) = \text{E}^*_2(\text{x}_2)$ và $\text{x}_1 = \text{G}^*_1(\text{z})$, $\text{x}_2 = \text{G}^*_2(\text{z})$.
+Giả định này khẳng định rằng một cặp ảnh tương ứng từ hai miền khác nhau 
+($\text{x}_1, \text{x}_2$) có thể được ánh xạ tới cùng một biểu diễn ẩn ($\text{z}$) trong 
+một không gian ẩn chung ($\text{Z}$). Về mặt toán học, điều này ngụ ý rằng tồn tại các hàm 
+mã hóa $\text{E}^*_1, \text{E}^*_2$ và hàm sinh $\text{G}^*_1, \text{G}^*_2$ sao 
+cho $\text{z} = \text{E}^*_1(\text{x}_1) = \text{E}^*_2(\text{x}_2)$ và $\text{x}_1 = \text{G}^*_1(\text{z})$, $\text{x}_2 = \text{G}^*_2(\text{z})$.\cite{Liu2017}
+
+% \begin{figure}[H]
+%     \centering
+%     \begin{minipage}{0.28\textwidth} 
+%         \centering
+%         \includegraphics[width=\linewidth]{figChap1/image2imageUnsupervice-a.png} 
+%         \caption{(a) Giả định không gian tiềm ẩn chia sẻ.}
+%         \label{fig:shared_latent}
+%     \end{minipage}
+%     \hfill 
+%     \begin{minipage}{0.68\textwidth} 
+%         \centering
+%         \includegraphics[width=\linewidth]{figChap1/image2imageUnsupervice-b.png}
+%         \caption{(b) Khung công việc UNIT được đề xuất.}
+%         \label{fig:unit_framework}
+%     \end{minipage}
+    
+%     \caption{Không gian tiềm ẩn chia sẻ và kiến trúc mạng UNIT.}
+%     \label{fig:unit_combined}
+% \end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{figChap1/image2imageUnsupervice.png} 
+    
+    \caption{Không gian tiềm ẩn chia sẻ và kiến trúc mạng UNIT.}
+    \label{fig:unit_framework}
+\end{figure}
+
+\textbf{(a) Giả định không gian tiềm ẩn chia sẻ.} Chúng ta giả định một cặp hình 
+ảnh tương ứng $(x_1, x_2)$ trong hai miền khác nhau $\mathcal{X}_1$ và $\mathcal{X}_2$ có 
+thể được ánh xạ tới cùng một mã tiềm ẩn $z$ trong không gian tiềm ẩn chia sẻ 
+$\mathcal{Z}$. $E_1$ và $E_2$ là hai hàm mã hóa, ánh xạ hình ảnh tới các mã tiềm ẩn. 
+$G_1$ và $G_2$ là hai hàm tạo sinh, ánh xạ các mã tiềm ẩn trở lại hình ảnh. 
+\textbf{(b) Khung công việc UNIT được đề xuất.} Chúng ta biểu diễn 
+$E_1, E_2, G_1$ và $G_2$ bằng cách sử dụng Mạng nơ-ron tích chập (CNN) và thực hiện
+giả định không gian tiềm ẩn chia sẻ bằng cách sử dụng ràng buộc chia sẻ trọng số,
+nơi trọng số kết nối của vài lớp đầu tiên (các lớp cấp cao) trong $E_1$ và $E_2$ được 
+gắn kết với nhau (minh họa bằng các đường đứt nét) và trọng số kết nối của vài lớp đầu 
+tiên trong $G_1$ và $G_2$ cũng được gắn kết với nhau. Ở đây, $\tilde{x}_1^{1 \to 1}$ 
+và $\tilde{x}_2^{2 \to 2}$ là các hình ảnh tự tái tạo, và $\tilde{x}_1^{1 \to 2}$ 
+và $\tilde{x}_2^{2 \to 1}$ là các hình ảnh đã được chuyển miền. $D_1$ và $D_2$ là các 
+bộ phân biệt đối kháng (adversarial discriminator) cho các miền tương ứng, có nhiệm vụ 
+đánh giá xem các hình ảnh đã được chuyển có thực tế hay không.
 
 \subsubsection{Cơ chế Triển khai Không gian Ẩn Chung trong UNIT}
 
-Trong UNIT, giả định Shared-Latent Space được triển khai thông qua ràng buộc chia sẻ trọng số (weight-sharing constraint) giữa các mạng con. 
-\begin{enumerate}
-\item Encoders ($\text{E}_1, \text{E}_2$): Các trọng số của vài lớp cuối cùng (các lớp cấp cao) trong hai Encoders được ràng buộc chia sẻ. Những lớp này có trách nhiệm trích xuất các đặc trưng biểu diễn cấp cao.
-\item Generators ($\text{G}_1, \text{G}_2$): Tương tự, các trọng số của vài lớp đầu tiên (các lớp cấp cao) trong hai Generators được ràng buộc chia sẻ.
-\end{enumerate}
-Ràng buộc chia sẻ trọng số này là cơ chế vật lý hóa giả định không gian ẩn chung, buộc các Encoders phải ánh xạ các ảnh tương ứng vào cùng một mã ẩn. 
+Trong UNIT, giả định Shared-Latent Space được triển khai thông qua ràng buộc chia sẻ trọng số 
+(weight-sharing constraint) giữa các mạng con. 
+\begin{itemize}
+\item Encoders ($\text{E}_1, \text{E}_2$): Các trọng số của vài lớp cuối cùng (các lớp cấp cao) 
+trong hai Encoders được ràng buộc chia sẻ. Những lớp này có trách nhiệm trích xuất các đặc trưng 
+biểu diễn cấp cao.\cite{Liu2017}
+\item Generators ($\text{G}_1, \text{G}_2$): Tương tự, các trọng số của vài lớp đầu tiên 
+(các lớp cấp cao) trong hai Generators được ràng buộc chia sẻ.\cite{Liu2017}
+\end{itemize}
+Ràng buộc chia sẻ trọng số này là cơ chế vật lý hóa giả định không gian ẩn chung, buộc các 
+Encoders phải ánh xạ các ảnh tương ứng vào cùng một mã ẩn. 
 
-Giả định không gian ẩn chung cũng ngầm định yêu cầu tính nhất quán vòng lặp (cycle-consistency constraint), đảm bảo rằng một hình ảnh được dịch từ miền $X_1$ sang $X_2$ và sau đó được dịch trở lại $X_1$ sẽ gần giống với hình ảnh gốc ($\text{x}_1 = \text{G}^*_1(\text{E}^*_2(\text{G}^*_2(\text{E}^*_1(\text{x}_1))))$).13 Sự kết hợp giữa VAEs (để tái tạo ảnh), GANs (để đảm bảo ảnh dịch là thực tế) và ràng buộc chia sẻ trọng số (để liên kết các miền) cho phép CNN hoạt động như một nền tảng trích xuất và tái tạo nội dung, thành công trong nhiều tác vụ dịch ảnh phức tạp.
+Giả định không gian ẩn chung cũng ngầm định yêu cầu tính nhất quán vòng lặp 
+(cycle-consistency constraint), đảm bảo rằng một hình ảnh được dịch từ miền $X_1$ 
+sang $X_2$ và sau đó được dịch trở lại $X_1$ sẽ gần giống với hình ảnh gốc 
+($\text{x}_1 = \text{G}^*_1(\text{E}^*_2(\text{G}^*_2(\text{E}^*_1(\text{x}_1))))$).\cite{Liu2017} 
+Sự kết hợp giữa VAEs (để tái tạo ảnh), GANs (để đảm bảo ảnh dịch là thực tế) 
+và ràng buộc chia sẻ trọng số (để liên kết các miền) cho phép CNN hoạt động như 
+một nền tảng trích xuất và tái tạo nội dung, thành công trong nhiều tác vụ dịch ảnh phức tạp.
 
 \subsubsection{Thích ứng Miền (Domain Adaptation) thông qua Style Transfer}
 
-Khả năng học đặc trưng trừu tượng của CNN cũng được sử dụng để giải quyết vấn đề thích ứng miền (domain adaptation), đặc biệt khi có sự dịch chuyển miền (domain shift) — tức là khi dữ liệu huấn luyện (nguồn) và dữ liệu thử nghiệm (đích) đến từ các phân phối khác nhau (ví dụ: ảnh chụp ban ngày so với ban đêm, hoặc ảnh không sương mù so với có sương mù).
+Khả năng học đặc trưng trừu tượng của CNN cũng được sử dụng để giải quyết vấn đề thích ứng 
+miền (domain adaptation), đặc biệt khi có sự dịch chuyển miền (domain shift) — tức là khi 
+dữ liệu huấn luyện (nguồn) và dữ liệu thử nghiệm (đích) đến từ các phân phối khác nhau 
+(ví dụ: ảnh chụp ban ngày so với ban đêm, hoặc ảnh không sương mù so với có sương mù).\cite{WangLAST}
 
-Sự dịch chuyển miền gây ra sự suy giảm hiệu suất đáng kể. Ví dụ, trong bài toán phân đoạn ảnh trên không (aerial image segmentation), sự dịch chuyển miền gây ra mức giảm trung bình $-5.22\%$ mIoU trên bộ dữ liệu Potsdam.14 Để chống lại sự suy giảm này, một mô hình chuyển phong cách trong không gian ẩn (latent space style transfer model) đã được đề xuất.14 Mô hình này sử dụng các biểu diễn đặc trưng ẩn của CNN để tạo ra các phiên bản dữ liệu tổng hợp với phong cách miền đích (ví dụ: thêm sương mù vào ảnh rõ nét).
+Sự dịch chuyển miền gây ra sự suy giảm hiệu suất đáng kể. Ví dụ, trong bài toán phân đoạn ảnh 
+trên không (aerial image segmentation), sự dịch chuyển miền gây ra mức giảm trung 
+bình $-5.22\%$ mIoU trên bộ dữ liệu Potsdam.\cite{WangLAST} Để chống lại sự suy giảm này, 
+một mô hình chuyển phong cách trong không gian ẩn (latent space style transfer model) đã 
+được đề xuất.\cite{WangLAST} Mô hình này sử dụng các biểu diễn đặc trưng ẩn của CNN để tạo 
+ra các phiên bản dữ liệu tổng hợp với phong cách miền đích (ví dụ: thêm sương mù vào ảnh rõ nét).
 
-Cách tiếp cận này loại bỏ nhu cầu ghi chú bổ sung (annotation) trên dữ liệu miền dịch chuyển.14 Bằng cách áp dụng phương pháp này, hiệu suất trên miền dịch chuyển đã được cải thiện đáng kể (ví dụ: tăng $+3.97\%$ mIoU trên Potsdam), chứng minh rằng việc sử dụng CNN để trích xuất và thao túng các đặc trưng phong cách trừu tượng là một chiến lược hiệu quả để nâng cao tính tổng quát của mô hình trong môi trường thực tế.
+Cách tiếp cận này loại bỏ nhu cầu ghi chú bổ sung (annotation) trên dữ liệu miền dịch 
+chuyển.\cite{WangLAST} Bằng cách áp dụng phương pháp này, hiệu suất trên miền 
+dịch chuyển đã được cải thiện đáng kể (ví dụ: tăng $+3.97\%$ mIoU trên Potsdam), 
+chứng minh rằng việc sử dụng CNN để trích xuất và thao túng các đặc trưng phong cách 
+trừu tượng là một chiến lược hiệu quả để nâng cao tính tổng quát của mô hình trong môi 
+trường thực tế.
 
 \subsection{Đánh giá và Xu hướng Tương lai của Kiến trúc Tích chập}
 
 \subsubsection{Vị thế của CNN và Sự Cộng sinh với Vision Transformer}
 
-Trong bối cảnh Vision Transformer (ViT) đang nổi lên như một đối thủ cạnh tranh mạnh mẽ, CNNs (như ResNet và ConvNeXt) vẫn duy trì vị thế là các mô hình nền tảng trong nghiên cứu thị giác máy tính. 
+Trong bối cảnh Vision Transformer (ViT) đang nổi lên như một đối thủ cạnh tranh mạnh mẽ, 
+CNNs (như ResNet và ConvNeXt) vẫn duy trì vị thế là các mô hình nền tảng trong nghiên cứu 
+thị giác máy tính. \cite{Lin2025}
 
-Phân tích cho thấy CNNs vẫn thể hiện ưu thế hoặc hiệu suất tương đương với ViT, đặc biệt trong chế độ học ít mẫu (low-data few-shot regime) trong quá trình học chuyển giao (transfer learning). Điều này được cho là do CNNs sở hữu một thiên kiến quy nạp cục bộ (local inductive bias) vốn có, giúp chúng học ổn định hơn và cần ít dữ liệu hơn để khái quát hóa các mối quan hệ không gian cơ bản.
+Phân tích cho thấy CNNs vẫn thể hiện ưu thế hoặc hiệu suất tương đương với ViT, đặc biệt trong 
+chế độ học ít mẫu (low-data few-shot regime) trong quá trình học chuyển giao (transfer learning). 
+Điều này được cho là do CNNs sở hữu một thiên kiến quy nạp cục bộ (local inductive bias) vốn có, 
+giúp chúng học ổn định hơn và cần ít dữ liệu hơn để khái quát hóa các mối quan hệ không gian cơ 
+bản.
 
-Xu hướng nghiên cứu hiện đại đang hướng tới các mô hình hỗn hợp (Hybrid), kết hợp các thành phần của CNN và Transformer để tận dụng ưu điểm của cả hai. Ví dụ, kiến trúc CoAtNet kết hợp các khối tích chập của CNN với cơ chế tự chú ý (self-attention) của Transformer, đạt hiệu suất tối ưu bằng cách cân bằng giữa việc xử lý thông tin cục bộ và bắt ngữ cảnh toàn cục.
+Xu hướng nghiên cứu hiện đại đang hướng tới các mô hình hỗn hợp (Hybrid), kết hợp các thành 
+phần của CNN và Transformer để tận dụng ưu điểm của cả hai. Ví dụ, kiến trúc CoAtNet kết hợp 
+các khối tích chập của CNN với cơ chế tự chú ý (self-attention) của Transformer, đạt hiệu suất
+ tối ưu bằng cách cân bằng giữa việc xử lý thông tin cục bộ và bắt ngữ cảnh toàn cục.
 
 \subsubsection{Ứng dụng trong Chẩn đoán Y tế và Ensemble Learning}
 
-Lĩnh vực chẩn đoán y tế, như phân tích X-quang ngực, là một ứng dụng quan trọng đòi hỏi độ tin cậy và độ chính xác cao. Việc sử dụng các kỹ thuật học sâu (bao gồm các CNNs tiền huấn luyện, Transformer và mô hình Hybrid) đã được chứng minh là có ý nghĩa quan trọng trong việc tự động chẩn đoán các bệnh lý lồng ngực.
+Lĩnh vực chẩn đoán y tế, như phân tích X-quang ngực, là một ứng dụng quan trọng đòi hỏi độ 
+tin cậy và độ chính xác cao. Việc sử dụng các kỹ thuật học sâu (bao gồm các CNNs tiền huấn 
+luyện, Transformer và mô hình Hybrid) đã được chứng minh là có ý nghĩa quan trọng trong việc 
+tự động chẩn đoán các bệnh lý lồng ngực.
 
-Trong các lĩnh vực có tính quyết định cao như y học, việc giảm thiểu rủi ro và tăng độ tin cậy là tối quan trọng. Nghiên cứu đã chứng minh rằng kỹ thuật tập hợp học sâu (Ensemble Deep Learning) có thể cải thiện đáng kể hiệu suất chẩn đoán.17 Bằng cách kết hợp dự đoán của nhiều mô hình đã huấn luyện (bao gồm cả CNNs truyền thống và mô hình hybrid như CoAtNet) thông qua trung bình có trọng số, hiệu suất đã được cải thiện, đạt AUROC $85.4\%$ trên bộ dữ liệu ChestX-ray14, vượt qua các phương pháp dẫn đầu khác.17 Điều này khẳng định rằng việc tổng hợp kết quả từ nhiều kiến trúc là một chiến lược quan trọng để tăng độ chính xác và độ tin cậy trong các ứng dụng thực tiễn.
+Trong các lĩnh vực có tính quyết định cao như y học, việc giảm thiểu rủi ro và tăng độ tin 
+cậy là tối quan trọng. Nghiên cứu đã chứng minh rằng kỹ thuật tập hợp học sâu (Ensemble Deep 
+Learning) có thể cải thiện đáng kể hiệu suất chẩn đoán.\cite{Lin2025} Bằng cách kết hợp 
+dự đoán của nhiều mô hình đã huấn luyện (bao gồm cả CNNs truyền thống và mô hình hybrid như 
+CoAtNet) thông qua trung bình có trọng số, hiệu suất đã được cải thiện, đạt AUROC $85.4\%$ 
+trên bộ dữ liệu ChestX-ray14, vượt qua các phương pháp dẫn đầu khác.\cite{Lin2025} Điều 
+này khẳng định rằng việc tổng hợp kết quả từ nhiều kiến trúc là một chiến lược quan trọng để 
+tăng độ chính xác và độ tin cậy trong các ứng dụng thực tiễn.
+
+
 
 \newpage
 \section{Kiến trúc Mạng đối nghịch tạo sinh}
-Trong thập kỷ qua, Trí tuệ Nhân tạo (AI) đã chuyển dịch mạnh mẽ từ khả năng phân tích sang sáng tạo, với dấu mốc quan trọng là sự ra đời của Mạng Đối nghịch Tạo sinh (GAN) do Ian Goodfellow và cộng sự đề xuất năm 2014. Khác với các mô hình tạo sinh trước đây vốn dựa trên các phương pháp xác suất phức tạp như MCMC hay Deep Belief Networks, GAN đưa ra cách tiếp cận mới bằng trò chơi đối kháng giữa hai mạng nơ-ron, tận dụng lan truyền ngược để huấn luyện trực tiếp và tạo ra dữ liệu có độ trung thực cao.
+Trong thập kỷ qua, Trí tuệ Nhân tạo (AI) đã chuyển dịch mạnh mẽ từ khả năng phân tích sang 
+sáng tạo, với dấu mốc quan trọng là sự ra đời của Mạng Đối nghịch Tạo sinh (GAN) do Ian 
+Goodfellow và cộng sự đề xuất năm 2014. Khác với các mô hình tạo sinh trước đây vốn dựa 
+trên các phương pháp xác suất phức tạp như MCMC hay Deep Belief Networks, GAN đưa ra cách 
+tiếp cận mới bằng trò chơi đối kháng giữa hai mạng nơ-ron, tận dụng lan truyền ngược để huấn 
+luyện trực tiếp và tạo ra dữ liệu có độ trung thực cao.\cite{Goodfellow2014}
 
 \subsection{Nguyên lý Hoạt động và Cơ sở Lý thuyết}
 \subsubsection{Khung Làm việc Đối kháng}
 
-GAN (Generative Adversarial Networks) là một hệ thống gồm hai mạng nơ-ron được huấn luyện đồng thời thông qua một trò chơi có tổng bằng không. Trong đó 
-Mạng Tạo sinh (Generator - G) đóng vai trò như một ``kẻ làm giả''. G nhận đầu vào là một vector nhiễu ngẫu nhiên $z$ từ một không gian tiềm ẩn (latent space) với phân phối $p_z(z)$, để tạo ra phân phối chuẩn hoặc giống như phân phối dữ liệu thật $p_{data}$. G cố gắng tạo ra những mẫu gần khớp với $G(z)$. Mục tiêu của G là đánh lừa D, nghĩa là tạo ra những mẫu mà D không thể phân biệt được với dữ liệu thật $p_{data}$.
-Ngược lại mạng Phân biệt (Discriminator - D) đóng vai trò như một ``cảnh sát'' hoặc chuyên gia giám định. D là một bộ phân loại nhị phân nhận đầu vào là dữ liệu $x$ và xuất ra một giá trị thể hiện hướng $D(x; \theta_D)$ biểu thị xác suất dữ liệu đó là dữ liệu thật ($p_{data}$) thay vì từ G.
+GAN (Generative Adversarial Networks) là một hệ thống gồm hai mạng nơ-ron được huấn luyện đồng 
+thời thông qua một trò chơi có tổng bằng không. Trong đó mạng Tạo sinh (Generator - G) đóng vai
+trò như một ``kẻ làm giả''. G nhận đầu vào là một vector nhiễu ngẫu nhiên $z$ từ một không gian 
+tiềm ẩn (latent space) với phân phối $p_z(z)$, để tạo ra phân phối chuẩn hoặc giống như phân 
+phối dữ liệu thật $p_{data}$. G cố gắng tạo ra những mẫu gần khớp với $G(z)$. Mục tiêu của G 
+là đánh lừa D, nghĩa là tạo ra những mẫu mà D không thể phân biệt được với dữ liệu 
+thật $p_{data}$. Ngược lại mạng Phân biệt (Discriminator - D) đóng vai trò như một ``cảnh sát'' 
+hoặc chuyên gia giám định. D là một bộ phân loại nhị phân nhận đầu vào là dữ liệu $x$ và xuất 
+ra một giá trị thể hiện hướng $D(x; \theta_D)$ biểu thị xác suất dữ liệu đó là dữ liệu 
+thật ($p_{data}$) thay vì từ G.\cite{Goodfellow2014}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{figChap1/gan-architect.png}
+    \caption{Hình ảnh của GAN}
+    \label{fig:gan}
+\end{figure}
 
 \subsubsection{Trò chơi Minimax và Hàm Mục tiêu}
-Quá trình huấn luyện GAN được mô hình hóa dưới dạng một bài toán tối ưu hóa Minimax, trong đó $D$ cố gắng tối đa hóa khả năng phân biệt đúng, còn $G$ cố gắng tối thiểu hóa khả năng bị phát hiện (tức là tối đa hóa sai sót của $D$). Hàm giá trị $V(D, G)$ được định nghĩa như sau:
+Quá trình huấn luyện GAN được mô hình hóa dưới dạng một bài toán tối ưu hóa Minimax, 
+trong đó $D$ cố gắng tối đa hóa khả năng phân biệt đúng, còn $G$ cố gắng tối thiểu hóa khả 
+năng bị phát hiện (tức là tối đa hóa sai sót của $D$). Hàm giá trị $V(D, G)$ được định nghĩa 
+như sau:
 
 \[
 \min_G \max_D V(D, G) = \mathbb{E}_{x \sim p_{\text{data}}(x)}[\log D(x)] + \mathbb{E}_{z \sim p_z(z)}[\log(1 - D(G(z)))]
 \]
-Trong đó số hạng đầu tiên $\mathbb{E}_{x \sim p_{\text{data}}(x)}$ khuyến khích $D$ gán xác suất cao cho dữ liệu thật.
-Số hạng thứ hai $\mathbb{E}_{z \sim p_z(z)}$ khuyến khích $D$ gán xác suất thấp cho dữ liệu giả $G(z)$.
+Trong đó số hạng đầu tiên $\mathbb{E}_{x \sim p_{\text{data}}(x)}$ khuyến khích $D$ gán xác suất 
+cao cho dữ liệu thật.
+Số hạng thứ hai $\mathbb{E}_{z \sim p_z(z)}$ khuyến khích $D$ gán xác suất thấp cho dữ liệu 
+giả $G(z)$.\cite{Goodfellow2014}
 
 \subsubsection{Phân tích Điểm Cân bằng Nash và Discriminator Tối ưu}
-Về mặt lý thuyết, mục tiêu cuối cùng của quá trình này là đạt được Điểm cân bằng Nash (Nash Equilibrium). Tại điểm này, không người chơi nào có thể cải thiện kết quả của mình bằng cách đơn phương thay đổi chiến lược.
-Đối với GAN, Discriminator không thể phân biệt được ảnh thật và ảnh giả tốt hơn việc đoán ngẫu nhiên (xác suất $D(x) = 0.5$ cho mọi $x$).
+Về mặt lý thuyết, mục tiêu cuối cùng của quá trình này là đạt được Điểm cân bằng Nash 
+(Nash Equilibrium). Tại điểm này, không người chơi nào có thể cải thiện kết quả của mình 
+bằng cách đơn phương thay đổi chiến lược.\cite{Jabbar2021}
+Đối với GAN, Discriminator không thể phân biệt được ảnh thật và ảnh giả tốt hơn việc đoán 
+ngẫu nhiên (xác suất $D(x) = 0.5$ cho mọi $x$).
 Phân phối của Generator $p_g$ hoàn toàn trùng khớp với phân phối dữ liệu thật $p_{data}$.
 
-Goodfellow et al đã chứng minh rằng với một $G$ cố định, Discriminator tối ưu $D^*$ có dạng:
+Goodfellow et al \cite{Goodfellow2014} đã chứng minh rằng với một $G$ cố định, Discriminator tối ưu $D^*$ có dạng:
 \[
 D^*_G(x) = \frac{p_{\text{data}}(x)}{p_{\text{data}}(x) + p_g(x)}
 \]
-Khi thay thế $D^*_G(x)$ trở lại hàm mục tiêu $V(D, G)$, bài toán tối thiểu hóa của Generator trở thành việc tối thiểu hóa khoảng cách Jensen-Shannon (JS Divergence) giữa hai phân phối:
+Khi thay thế $D^*_G(x)$ trở lại hàm mục tiêu $V(D, G)$, bài toán tối thiểu hóa của Generator 
+trở thành việc tối thiểu hóa khoảng cách Jensen-Shannon (JS Divergence) giữa hai phân phối:
 \[
 C(G) = \max_D V(D, G) = -\log(4) + 2 \cdot D_{\text{JS}}(p_{\text{data}} \parallel p_g)
 \]
-Kết quả này rất quan trọng vì nó cung cấp cơ sở lý thuyết cho thấy việc tối ưu hóa hàm đối nghịch thực chất là việc kéo phân phối sinh $p_g$ về phía phân phối thật $p_{data}$ theo thước đo khoảng cách Jensen-Shannon.
+Kết quả này rất quan trọng vì nó cung cấp cơ sở lý thuyết cho thấy việc tối ưu hóa hàm đối 
+nghịch thực chất là việc kéo phân phối sinh $p_g$ về phía phân phối thật $p_{data}$ theo thước 
+đo khoảng cách Jensen-Shannon.
 
 \subsection{Thách thức trong Huấn luyện GAN}
-Mặc dù lý thuyết rất chặt chẽ, việc áp dụng GAN trong thực tế gặp phải những vấn đề nghiêm trọng liên quan đến tính ổn định của gradient và động lực học của tối ưu hóa. Các nghiên cứu đã chỉ ra ba vấn đề kinh điển: Biến mất Gradient (Vanishing Gradients), Sụp đổ Mode (Mode Collapse), và Không hội tụ (Non-convergence).
+Mặc dù lý thuyết rất chặt chẽ, việc áp dụng GAN trong thực tế gặp phải những vấn đề nghiêm trọng 
+liên quan đến tính ổn định của gradient và động lực học của tối ưu hóa. Các nghiên cứu đã chỉ ra 
+ba vấn đề kinh điển: Biến mất Gradient (Vanishing Gradients), Sụp đổ Mode (Mode Collapse), và 
+Không hội tụ (Non-convergence).
 
 \subsubsection{Vấn đề Biến mất Gradient (Vanishing Gradients)}
-Vấn đề này xuất phát trực tiếp từ bản chất của khoảng cách Jensen-Shannon (JS) được sử dụng trong hàm loss gốc.
-Phân tích Toán học: Khi $p_{data}$ và $p_g$ có giá đỡ (support) rời rạc hoặc nằm trong các không gian con chiều thấp không giao nhau (điều rất phổ biến trong không gian dữ liệu nhiều chiều như ảnh), khoảng cách JS giữa chúng là một hằng số ($\log 2$).
-Hệ quả: Vì hàm loss là hằng số, đạo hàm (gradient) của nó bằng 0. Khi Discriminator trở nên quá chính xác (đạt tiệm cận tối ưu), nó phân tách hoàn hảo ảnh thật và ảnh giả. Lúc này, hàm loss của Generator bão hòa, và $G$ không nhận được bất kỳ tín hiệu gradient nào để cập nhật trọng số. $G$ "không biết" hướng nào để di chuyển nhằm cải thiện chất lượng ảnh.
-Goodfellow đã đề xuất một giải pháp tình thế là thay đổi hàm mục tiêu của $G$ từ $\min \log(1 - D(G(z)))$ sang $\max \log D(G(z))$ (gọi là hàm non-saturating loss). Mặc dù giải quyết được vấn đề biến mất gradient ban đầu, hàm này lại gây ra sự dao động mạnh và không ổn định trong giai đoạn sau của quá trình huấn luyện.
+Vấn đề này xuất phát trực tiếp từ bản chất của khoảng cách Jensen-Shannon (JS) được sử dụng trong 
+hàm loss gốc. Phân tích Toán học: Khi $p_{data}$ và $p_g$ có giá đỡ (support) rời rạc hoặc nằm 
+trong các không gian con chiều thấp không giao nhau (điều rất phổ biến trong không gian dữ liệu 
+nhiều chiều như ảnh), khoảng cách JS giữa chúng là một hằng số ($\log 2$).
+Hệ quả: Vì hàm loss là hằng số, đạo hàm (gradient) của nó bằng 0. Khi Discriminator trở nên 
+quá chính xác (đạt tiệm cận tối ưu), nó phân tách hoàn hảo ảnh thật và ảnh giả. Lúc này, hàm 
+loss của Generator bão hòa, và $G$ không nhận được bất kỳ tín hiệu gradient nào để cập nhật 
+trọng số. $G$ "không biết" hướng nào để di chuyển nhằm cải thiện chất lượng ảnh.
+Goodfellow đã đề xuất một giải pháp tình thế là thay đổi hàm mục tiêu của $G$ 
+từ $\min \log(1 - D(G(z)))$ sang $\max \log D(G(z))$ (gọi là hàm non-saturating loss). 
+Mặc dù giải quyết được vấn đề biến mất gradient ban đầu, hàm này lại gây ra sự dao động 
+mạnh và không ổn định trong giai đoạn sau của quá trình huấn luyện.\cite{Goodfellow2014}
 
 \subsubsection{Hiện tượng Sụp đổ Mode (Mode Collapse)}
 
-Mode collapse là một trong những thất bại phổ biến và khó chịu nhất của GAN. Nó xảy ra khi Generator học được cách tạo ra một hoặc một vài mẫu ảnh (modes) mà Discriminator tin là thật, và sau đó liên tục sinh ra các mẫu này bất kể đầu vào $z$ là gì.
+Mode collapse là một trong những thất bại phổ biến và khó chịu nhất của GAN. Nó xảy ra khi 
+Generator học được cách tạo ra một hoặc một vài mẫu ảnh (modes) mà Discriminator tin là thật, 
+và sau đó liên tục sinh ra các mẫu này bất kể đầu vào $z$ là gì.\cite{Salimans2016}
 
-Cơ chế của hiện tượng này thường xảy ra khi Generator quá "tham lam" tối ưu hóa cho Discriminator hiện tại mà không quan tâm đến sự đa dạng. Ví dụ, nếu $D$ yếu kém trong việc phát hiện các chữ số "1", $G$ sẽ dồn toàn bộ trọng số để chỉ tạo ra số "1".
-Vòng lặp không hồi kết, khi $D$ học được rằng số "1" là giả, $G$ sẽ chuyển sang một mode khác, ví dụ số "8". Hai mạng cứ thế đuổi bắt nhau quanh các mode mà không bao giờ hội tụ về một phân phối đa dạng bao phủ toàn bộ dữ liệu. Điều này dẫn đến kết quả đầu ra thiếu tính sáng tạo và lặp lại.
+Cơ chế của hiện tượng này thường xảy ra khi Generator quá "tham lam" tối ưu hóa cho 
+Discriminator hiện tại mà không quan tâm đến sự đa dạng. Ví dụ, nếu $D$ yếu kém trong 
+việc phát hiện các chữ số "1", $G$ sẽ dồn toàn bộ trọng số để chỉ tạo ra số "1".
+Vòng lặp không hồi kết, khi $D$ học được rằng số "1" là giả, $G$ sẽ chuyển sang một mode 
+khác, ví dụ số "8". Hai mạng cứ thế đuổi bắt nhau quanh các mode mà không bao giờ hội tụ 
+về một phân phối đa dạng bao phủ toàn bộ dữ liệu. Điều này dẫn đến kết quả đầu ra thiếu tính 
+sáng tạo và lặp lại.
 
 \subsubsection{Sự Không Hội tụ (Non-Convergence)}
-Việc tìm kiếm điểm cân bằng Nash trong trò chơi liên tục, nhiều chiều và không lồi (non-convex) là cực kỳ khó khăn. Các thuật toán tối ưu dựa trên gradient descent được thiết kế để tìm cực tiểu cục bộ của hàm chi phí, chứ không phải điểm yên ngựa (saddle point) cần thiết cho GAN.4
-Nhiều nghiên cứu lý thuyết 16 chỉ ra rằng động lực học của gradient descent trong các trò chơi song tuyến tính (bilinear games) thường dẫn đến các quỹ đạo xoay tròn (rotational dynamics) thay vì hội tụ vào tâm. Điều này giải thích tại sao loss của $G$ và $D$ thường dao động mạnh và không bao giờ ổn định.
+Việc tìm kiếm điểm cân bằng Nash trong trò chơi liên tục, nhiều chiều và không lồi (non-convex) 
+là cực kỳ khó khăn. Các thuật toán tối ưu dựa trên gradient descent được thiết kế để tìm cực 
+tiểu cục bộ của hàm chi phí, chứ không phải điểm yên ngựa (saddle point) cần thiết cho GAN.\cite{Salimans2016}
+Nhiều nghiên cứu lý thuyết \cite{Heusel2017} chỉ ra rằng động lực học của gradient descent 
+trong các trò chơi song tuyến tính (bilinear games) thường dẫn đến các quỹ đạo xoay tròn 
+(rotational dynamics) thay vì hội tụ vào tâm. Điều này giải thích tại sao loss của $G$ và $D$ 
+thường dao động mạnh và không bao giờ ổn định.
 
 \begin{longtable}{>{\bfseries}m{4cm} | m{5cm} | m{6cm}}
-\caption{Bảng 1: Tóm tắt Các Chế độ Thất bại của GAN} \\
+\caption{Tóm tắt Các Chế độ Thất bại của GAN} \\
 \toprule
 Vấn đề & Biểu hiện & Nguyên nhân Toán học \\
 \midrule
@@ -240,22 +545,33 @@ Công thức Wasserstein distance:
 \[
 W(p_{\text{data}}, p_g) = \inf_{\gamma \in \Pi(p_{\text{data}}, p_g)} \mathbb{E}_{(x,y) \sim \gamma} \left[ \|x - y\| \right]
 \]
-Ưu điểm vượt trội Gradient liên tục khoảng cách Wasserstein liên tục và khả vi hầu khắp mọi nơi, ngay cả khi hai phân phối $p_{data}$ và $p_g$ không giao nhau. Điều này cung cấp các gradient có ý nghĩa và mượt mà cho Generator trong suốt quá trình huấn luyện, loại bỏ hoàn toàn vấn đề biến mất gradient.
-Tương quan với chất lượng, giá trị loss của WGAN tương quan tốt với chất lượng ảnh sinh ra (loss thấp hơn đồng nghĩa ảnh tốt hơn), điều mà GAN gốc không làm được.
+Ưu điểm vượt trội Gradient liên tục khoảng cách Wasserstein liên tục và khả vi hầu khắp mọi 
+nơi, ngay cả khi hai phân phối $p_{data}$ và $p_g$ không giao nhau. Điều này cung cấp các 
+gradient có ý nghĩa và mượt mà cho Generator trong suốt quá trình huấn luyện, loại bỏ hoàn 
+toàn vấn đề biến mất gradient.
+Tương quan với chất lượng, giá trị loss của WGAN tương quan tốt với chất lượng ảnh sinh ra 
+(loss thấp hơn đồng nghĩa ảnh tốt hơn), điều mà GAN gốc không làm được.
 
-Để tính toán được khoảng cách này, sử dụng tính đối ngẫu Kantorovich-Rubinstein, yêu cầu Discriminator (lúc này gọi là Critic) phải thỏa mãn ràng buộc 1-Lipschitz continuity: $|f(x_1) - f(x_2)| \le |x_1 - x_2|$.
+Để tính toán được khoảng cách này, sử dụng tính đối ngẫu Kantorovich-Rubinstein, yêu cầu 
+Discriminator (lúc này gọi là Critic) phải thỏa mãn ràng buộc 1-Lipschitz continuity:
+ $|f(x_1) - f(x_2)| \le |x_1 - x_2|$.
 
 \subsubsection{WGAN-GP: Từ Weight Clipping đến Gradient Penalty}
-Ban đầu, để thỏa mãn ràng buộc Lipschitz, WGAN sử dụng Weight Clipping (cắt trọng số) để ép các tham số mạng nằm trong khoảng $[-c, c]$. Tuy nhiên, phương pháp này quá thô bạo, dẫn đến việc mạng hoặc sử dụng không hết khả năng (capacity underuse) hoặc gây bùng nổ gradient.
+Ban đầu, để thỏa mãn ràng buộc Lipschitz, WGAN sử dụng Weight Clipping (cắt trọng số) để ép 
+các tham số mạng nằm trong khoảng $[-c, c]$. Tuy nhiên, phương pháp này quá thô bạo, dẫn đến 
+việc mạng hoặc sử dụng không hết khả năng (capacity underuse) hoặc gây bùng nổ gradient.
 
-Cải tiến mô hình này bằng phương pháp Gradient Penalty (WGAN-GP). Thay vì cắt trọng số, họ thêm một số hạng phạt vào hàm loss để khuyến khích norm của gradient của Critic xấp xỉ bằng 1 trên các điểm mẫu nội suy $\hat{x}$:
+Cải tiến mô hình này bằng phương pháp Gradient Penalty (WGAN-GP). Thay vì cắt trọng số, 
+họ thêm một số hạng phạt vào hàm loss để khuyến khích norm của gradient của Critic xấp xỉ 
+bằng 1 trên các điểm mẫu nội suy $\hat{x}$:
 \[
 L_{\text{WGAN-GP}} = 
 \underbrace{\mathbb{E}_{\tilde{x} \sim p_g} - \mathbb{E}_{x \sim p_{\text{data}}}}_{\text{Original WGAN Loss}} 
 + 
 \underbrace{\lambda \mathbb{E}_{\hat{x}}}_{\text{Gradient Penalty}}
 \]
-Kỹ thuật này đã giúp ổn định đáng kể quá trình huấn luyện và cho phép huấn luyện các kiến trúc phức tạp hơn (như ResNet) mà không bị mất ổn định.
+Kỹ thuật này đã giúp ổn định đáng kể quá trình huấn luyện và cho phép huấn luyện các kiến 
+trúc phức tạp hơn (như ResNet) mà không bị mất ổn định.
 
 
 \subsubsection{Spectral Normalization (SN-GAN)}
@@ -297,25 +613,41 @@ FID = \|\mu_r - \mu_g\|^2 + \operatorname{Tr}(\Sigma_r + \Sigma_g - 2(\Sigma_r \
 FID thấp hơn đồng nghĩa với việc hai phân phối gần nhau hơn. FID nhạy cảm hơn IS đối với nhiễu, mode collapse và biến dạng ảnh, cung cấp một đánh giá toàn diện hơn về chất lượng.
 
 \section{ Các mô hình GAN tiêu biểu cho chuyển đổi ảnh sang phong cách Anime}
- Bài toán chuyển ảnh người thật sang tranh vẽ phong cách anime có tính đặc thù cao, đòi hỏi sự kết hợp
- giữa bảo toàn nội dung gốc và thể hiện đúng phong cách anime (với đặc trưng là nét viền rõ ràng, màu
- phẳng, chi tiết được tối giản).
+Bài toán chuyển ảnh người thật sang tranh vẽ phong cách anime có tính đặc thù cao, đòi hỏi 
+sự kết hợp giữa bảo toàn nội dung gốc và thể hiện đúng phong cách anime (với đặc
+trưng là nét viền rõ ràng, màu phẳng, chi tiết được tối giản).
 
 \subsection{CycleGAN và các biến thể (chuyển đổi với dữ liệu không cặp)}
 Kiến trúc CycleGAN (2017): CycleGAN do Zhu et al. đề xuất là mốc quan trọng cho dịch ảnh không cần dữ
-liệu ghép cặp . CycleGAN bao gồm hai bộ Generator song song: $G: X \to Y$ (chuyển ảnh từ miền
+liệu ghép cặp \cite{Zhu2017}. CycleGAN bao gồm hai bộ Generator song song: $G: X \to Y$ (chuyển ảnh từ miền
 nguồn X sang miền đích Y, ví dụ ảnh thật sang ảnh anime) và $F: Y \to X$ (chuyển ngược lại từ Y về X), cùng
 với hai Discriminator $D_X$ và $D_Y$ học phân biệt ảnh thuộc từng miền. Ý tưởng cốt lõi của CycleGAN là
 ràng buộc tính nhất quán vòng lặp (cycle consistency): một ảnh nguồn $x$ sau khi qua biến đổi $G(x)$ rồi
-chuyển ngược $F(G(x))$ phải gần giống chính $x$ ban đầu . Nhờ cycle consistency loss ($\mathcal{L}
-_{cyc}$), mô hình tránh được những phép biến đổi quá tùy ý, giúp bảo toàn nội dung gốc ở mức độ cao
+chuyển ngược $F(G(x))$ phải gần giống chính $x$ ban đầu \cite{Zhu2017}. Nhờ cycle consistency loss ($\mathcal{L}
+_{cyc}$), mô hình tránh được những phép biến đổi quá tùy ý, giúp bảo toàn nội dung gốc ở mức độ cao \cite{Zhu2017}
 . Đồng thời, mỗi cặp $G$–$D_Y$ và $F$–$D_X$ hình thành hai chu trình GAN truyền thống để đảm bảo
 ảnh đầu ra khó phân biệt với ảnh thật miền tương ứng. Cách tiếp cận này cho phép huấn luyện với hai tập
 ảnh không ghép cặp (ví dụ một tập ảnh chân dung người thật và một tập tranh chân dung anime) mà vẫn
 học được phép biến đổi giữa chúng.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{figChap1/cycleGan.png}
+    \caption{Kiến trúc của CycleGAN}
+    \label{fig:cycle_gan}
+\end{figure}
+
+Hình \ref{fig:cycle_gan}a Mô hình của CycleGAN chứa hai hàm ánh xạ $G : X \to Y$ và $F : Y \to X$, cùng với các bộ phân biệt 
+đối kháng $D_Y$ và $D_X$. $D_Y$ khuyến khích $G$ dịch hình ảnh từ miền $X$ sang đầu ra không thể phân 
+biệt được với miền $Y$, và ngược lại đối với $D_X$ và $F$. Để điều chỉnh thêm các ánh xạ, chúng tôi 
+giới thiệu hai tổn thất nhất quán chu trình (cycle consistency losses) nắm bắt trực giác rằng nếu 
+chúng ta dịch từ một miền sang miền khác và sau đó quay trở lại, chúng ta sẽ thu được hình ảnh ban đầu.
+ Hình \ref{fig:cycle_gan}b tổn thất nhất quán chu trình xuôi (forward cycle-consistency loss):
+  $x \to G(x) \to F(G(x)) \approx x$, và Hình \ref{fig:cycle_gan}c tổn thất nhất quán chu trình ngược 
+  (backward cycle-consistency loss): $y \to F(y) \to G(F(y)) \approx y$.
  
 Ưu điểm: CycleGAN rất linh hoạt do không cần các cặp ảnh trước-sau, nên có thể áp dụng cho nhiều bài
-toán chuyển kiểu dáng, chất liệu (ví dụ: ngựa <=> zebra, phong cảnh <=> tranh Monet) . Tính nhất quán
+toán chuyển kiểu dáng, chất liệu (ví dụ: ngựa <=> zebra, phong cảnh <=> tranh Monet) \cite{Zhu2017}. Tính nhất quán
 vòng lặp giúp nội dung chính của ảnh (hình dáng khuôn mặt, bố cục) được giữ lại khá tốt sau khi chuyển
 đổi. 
 
@@ -336,14 +668,14 @@ người và màu da nhân vật anime)
 Kiến trúc StyleGAN (Karras et al., 2019): StyleGAN đại diện cho hướng tiếp cận khác, tập trung vào sinh
 ảnh chất lượng cao và khả năng điều khiển phong cách linh hoạt. Khác với mô hình GAN truyền thống,
 StyleGAN đưa ra kiến trúc Generator mới gồm hai thành phần: Mạng ánh xạ (Mapping Network) và Mạng
-tổng hợp (Synthesis Network) . Mạng ánh xạ lấy một vector ngẫu nhiên $z$ và ánh xạ nó thành vector
+tổng hợp (Synthesis Network) \cite{Karras2019}. Mạng ánh xạ lấy một vector ngẫu nhiên $z$ và ánh xạ nó thành vector
 trung gian $w$ trong không gian tiềm ẩn đã được phân tách (disentangled latent space); sau đó $w$
 được đưa vào từng tầng của mạng tổng hợp qua cơ chế Adaptive Instance Normalization (AdaIN) để
-điều chỉnh “phong cách” ở các mức độ khác nhau . Nhờ đó, StyleGAN có khả năng điều chỉnh các thuộc
+điều chỉnh “phong cách” ở các mức độ khác nhau \cite{Karras2019}. Nhờ đó, StyleGAN có khả năng điều chỉnh các thuộc
 tính ảnh (như độ thô của hình, màu sắc chi tiết) ở từng tầng, cho phép sinh ra ảnh có độ chân thực cao và
 tách biệt được các yếu tố như bố cục và chi tiết bề mặt. Kết hợp thêm việc đưa nhiễu ngẫu nhiên ở các tầng
 để tạo tiểu tiết (ví dụ tóc, tàn nhang) , StyleGAN đã chứng tỏ khả năng sinh ảnh chân dung người đáng
-kinh ngạc, khó phân biệt với ảnh chụp thật . Nhiều người đã tận dụng mô hình này để huấn luyện trên
+kinh ngạc, khó phân biệt với ảnh chụp thật \cite{Karras2019}. Nhiều người đã tận dụng mô hình này để huấn luyện trên
 các tập dữ liệu mới như chân dung nhân vật hoạt hình, tranh ukiyo-e hay Pokémon, và thu được kết quả ấn
 tượng về độ phân giải và tính thẩm mỹ.
 
@@ -386,7 +718,7 @@ xây dựng mô hình GAN gọn nhẹ tối ưu cho ảnh phong cách anime. Phi
 thiết kế đặc thù cho bài toán “photo animation” (chuyển ảnh chụp thành ảnh hoạt hình).
 
 Kiến trúc Generator “hai đuôi” (Double-tail): Điểm độc đáo của AnimeGANv3 là Generator có hai nhánh
-đầu ra (two output tails) . Cụ thể, ảnh đầu vào sau khi qua phần encoder và các khối ResNet sẽ được
+đầu ra (two output tails) \cite{Liu2024}. Cụ thể, ảnh đầu vào sau khi qua phần encoder và các khối ResNet sẽ được
 chia thành hai luồng xử lý song song ở đầu ra: - Nhánh hỗ trợ (Support tail): tạo ra một ảnh anime thô với
 phong cách cơ bản, nhưng có thể còn nhiễu và các lỗi nhỏ. - Nhánh chính (Main tail): nhận đầu vào chính
 là ảnh thô từ nhánh hỗ trợ, tiếp tục tinh chỉnh qua một số tầng mạng bổ sung để cho ra ảnh anime cuối
@@ -398,8 +730,20 @@ thể được lược bỏ, chỉ giữ lại nhánh chính – nhờ đó mô 
 báo cáo, Generator của AnimeGANv3 chỉ có ~1.02 triệu tham số khi inference, nhỏ hơn nhiều so với các mô
 hình khác.
 
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.95\textwidth]{figChap1/pipelineDTGan.png}
+    
+    \caption{\textbf{Sơ đồ quy trình của Double-Tail GAN (DTGAN).}}
+    \label{fig:pipeline_dtgan}
+    
+    \vspace{0.5em} 
+    \small 
+    \textbf{Chi tiết:} $p$ đại diện cho ảnh chụp thế giới thực, $a$ đại diện cho ảnh anime và $e$ đại diện cho ảnh anime với các cạnh bị làm mờ. Các kết nối bỏ qua (skip connections) giữa bộ mã hóa (encoder) và hai đuôi (tails) được kết nối bằng phép cộng từng phần tử (element-wise addition).
+\end{figure}
+
 Kỹ thuật chuẩn hóa mới – LADE: Để khắc phục hiện tượng phát sinh artifacts trong ảnh hoạt hình, nhóm
-tác giả đề xuất một phương pháp chuẩn hóa đặc thù gọi là Linearly Adaptive Denormalization (LADE)
+tác giả đề xuất một phương pháp chuẩn hóa đặc thù gọi là Linearly Adaptive Denormalization (LADE) \cite{Liu2024}
 . Khác với các kỹ thuật chuẩn hóa thông dụng như BatchNorm, InstanceNorm hay LayerNorm (vốn tỏ ra
 chưa phù hợp cho phong cách anime do vẫn tạo ra nứt vỡ hoặc nhiễu ), LADE cho phép mô hình học
 tham số chuẩn hóa một cách linh hoạt, thích ứng tuyến tính với đặc trưng của ảnh hiện tại. Nhờ LADE,
@@ -409,10 +753,10 @@ các layer norm thông thường trong mô hình mà không làm tăng độ ph�
 
 Hệ thống hàm mất mát chuyên biệt: AnimeGANv3 đưa ra hai hàm mất mát mới tối ưu cho nhiệm vụ ảnh
 anime: (1) Region smoothing loss – hàm mất mát làm mịn vùng, nhằm làm yếu bớt chi tiết texture phức
-tạp trong ảnh gốc, hướng tới các vùng màu phẳng đặc trưng của hoạt hình . Loss này giúp ảnh đầu ra có
+tạp trong ảnh gốc, hướng tới các vùng màu phẳng đặc trưng của hoạt hình \cite{Liu2024}. Loss này giúp ảnh đầu ra có
 độ chi tiết vừa phải, tránh hiện tượng “quá nét” hoặc lẫn nhiễu từ ảnh thật. (2) Fine-grained revision loss 
 hàm mất mát tinh chỉnh vi mô, tập trung loại bỏ các nhiễu và tạo tác nhỏ trong ảnh anime do Generator
-sinh ra, đồng thời giữ sắc nét các đường biên quan trọng . Sự kết hợp hai hàm mất mát này, cùng với
+sinh ra, đồng thời giữ sắc nét các đường biên quan trọng \cite{Liu2024}. Sự kết hợp hai hàm mất mát này, cùng với
 mất mát đối nghịch truyền thống và có thể cả mất mát perceptual (tính trên đặc trưng VGG), giúp mô hình
 cân bằng giữa tính chân thực và tính nghệ thuật: ảnh tạo ra có màu sắc và nét vẽ mềm mại như anime,
 nhưng vẫn rõ ràng, không mờ nhòe. Kết quả thực nghiệm cho thấy mô hình huấn luyện với các loss trên
@@ -420,9 +764,9 @@ cho ảnh chất lượng vượt trội so với các phiên bản trước đ�
 
 Ưu điểm: AnimeGANv3 (DTGAN) kế thừa các ưu điểm của phiên bản trước và cải tiến rõ rệt về mọi mặt.
 Chất lượng hình ảnh: ảnh anime xuất ra có độ phân giải cao, màu sắc hài hòa và ít lỗi (rõ nét hơn so với
-AnimeGANv2, vốn đã giảm nhiều nhiễu so với AnimeGANv1) . Tốc độ xử lý: nhờ mô hình gọn nhẹ (chỉ ~1
+AnimeGANv2, vốn đã giảm nhiều nhiễu so với AnimeGANv1) \cite{Liu2024}. Tốc độ xử lý: nhờ mô hình gọn nhẹ (chỉ ~1
 triệu tham số), AnimeGANv3 đạt tốc độ xử lý ~115ms cho ảnh Full HD trên GPU, nhanh hơn các mô hình
-khác cùng nhiệm vụ . Hiệu suất cao trên dữ liệu không ghép cặp: tương tự các phiên bản trước,
+khác cùng nhiệm vụ \cite{Liu2024}. Hiệu suất cao trên dữ liệu không ghép cặp: tương tự các phiên bản trước,
 AnimeGANv3 được huấn luyện end-to-end trên dữ liệu không cặp và đạt hiệu quả tốt, không đòi hỏi ảnh đối
 chiếu thủ công . Ngoài ra, ưu điểm đặc biệt là dễ triển khai thực tế: mô hình nhẹ có thể tích hợp vào
 ứng dụng di động hoặc web để chuyển ảnh theo thời gian thực.
@@ -442,7 +786,7 @@ phong cách anime. Từ CycleGAN đặt nền móng về học không ghép cặ
 khiển phong cách mạnh mẽ, và AnimeGANv3 tối ưu chuyên biệt cho ảnh anime, mỗi hướng tiếp cận đều
 đóng góp những ý tưởng giá trị. Bảng so sánh sơ bộ cho thấy AnimeGANv3 hiện đạt FID thấp nhất về gần
 phân phối anime, trong khi AnimeGANv2 vẫn giữ FID thấp nhất về gần phân phối ảnh thật (tức bảo toàn nội
-dung tốt) . Điều này gợi ý việc kết hợp các ưu điểm – như dùng cơ chế double-tail và loss của
+dung tốt) \cite{ChenLiu2020}. Điều này gợi ý việc kết hợp các ưu điểm – như dùng cơ chế double-tail và loss của
 AnimeGANv3 cùng biện pháp giữ danh tính của các mô hình trước – có thể là hướng đi tiềm năng để tiếp
 tục nâng cao chất lượng ảnh chuyển đổi.
 

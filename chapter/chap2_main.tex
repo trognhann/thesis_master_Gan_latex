@@ -18,7 +18,11 @@ cần) nhằm đạt mục tiêu của luận văn.
 \section{Cấu trúc mô hình đề xuất}
 \subsection{Kiến trúc Generator “Double-Tail” (Hai đuôi)}
 
-Trái tim của AnimeGANv3 là kiến trúc Generator "Double-Tail" (DTGAN). Đây là một sự khởi đầu mới mẻ so với thiết kế "Single-Stream" của hầu hết các mạng dịch ảnh trước đây. Thay vì cố gắng bắt mạng nơ-ron thực hiện đồng thời việc trừu tượng hóa hình ảnh và tinh chỉnh chi tiết trong cùng một luồng ra, DTGAN tách quy trình này thành hai giai đoạn song song và tuần tự.
+Trái tim của AnimeGANv3 là kiến trúc Generator "Double-Tail" (DTGAN). Đây là một sự khởi đầu mới mẻ so 
+với thiết kế "Single-Stream" của hầu hết các mạng dịch ảnh trước đây. Thay vì cố gắng bắt mạng nơ-ron 
+thực hiện đồng thời việc trừu tượng hóa hình ảnh và tinh chỉnh chi tiết trong cùng một luồng ra, DTGAN 
+tách quy trình này thành hai giai đoạn song song và tuần tự. Chi tiết về cấu trúc của DTGAN được trình bày 
+trong hình \ref{fig:pipeline_dtgan}.
 
 \subsubsection{Kiến trúc}
 
@@ -51,7 +55,21 @@ Một trong những thành tựu nổi bật nhất của kiến trúc Double-Ta
 
 
 \subsection{Kỹ thuật chuẩn hóa Linearly Adaptive Denormalization (LADE)}
-Một thành phần then chốt khác giúp AnimeGANv3 vượt trội so với các phiên bản trước là kỹ thuật chuẩn hóa mới: Linearly Adaptive Denormalization (LADE).
+Một thành phần then chốt khác giúp AnimeGANv3 vượt trội so với các phiên bản trước là kỹ thuật chuẩn 
+hóa mới: Linearly Adaptive Denormalization (LADE).
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{figChap2/LADE.png}
+    \caption{LADE}
+    \label{fig:lade_params}
+    
+    \vspace{0.5em} 
+    \small 
+    \textbf{Chi tiết:} Trong LADE, các đặc trưng được tích chập để tạo ra các tham số điều 
+    chế $\gamma$ và $\beta$. $\gamma$ và $\beta$ là các vector. $\gamma$ và $\beta$ được tạo ra 
+    sau đó được nhân và cộng vào kích hoạt đã được chuẩn hóa theo từng phần tử (element-wise).
+\end{figure}
 
 \subsubsection{Phân tích Nhược điểm của Các Chuẩn hóa Hiện hữu}
 Để thấy rõ sự cần thiết của LADE, trước hết cần phân tích những hạn chế của các phương pháp chuẩn hóa truyền thống trong bối cảnh anime style transfer. Với Batch Normalization (BN), việc chuẩn hóa dựa trên thống kê của toàn bộ mini-batch thường gây ra hiện tượng “vết nứt” hoặc sự không nhất quán giữa các vùng ảnh, đặc biệt khi kích thước batch nhỏ hoặc dữ liệu có tính đa dạng cao. Trong khi đó, Instance Normalization (IN) lại chuẩn hóa từng mẫu riêng biệt, giúp loại bỏ phong cách gốc để áp đặt phong cách mới. Tuy nhiên, đối với ảnh anime, cách tiếp cận này thường làm mất đi nhiều thông tin về độ tương phản và cấu trúc, dẫn đến các tạo tác dạng hạt hoặc khiến hình ảnh trở nên nhợt nhạt, thiếu chiều sâu.
@@ -104,8 +122,8 @@ và thay đổi nhẹ độ sáng/màu. Cuối cùng, ảnh được chuẩn hó
 output GAN, hoặc [0,1] nếu dùng Sigmoid) nhất quán ở cả hai miền.
 
 Sau khi xử lý, ta thu được hai tập dữ liệu cân bằng về số lượng (ví dụ mỗi tập khoảng vài nghìn ảnh). Như
-một ví dụ điển hình, selfie2anime dataset từng được sử dụng trong U-GAT-IT có 3400 ảnh selfie và 3400
-ảnh anime để huấn luyện – khối lượng này đủ để huấn luyện mô hình trung bình. Nếu có điều kiện,
+một ví dụ điển hình, selfie2anime dataset từng được sử dụng trong U-GAT-IT có  2929 ảnh selfie và 
+2929 ảnh anime để huấn luyện – khối lượng này đủ để huấn luyện mô hình trung bình. Nếu có điều kiện,
 tăng số lượng ảnh sẽ giúp mô hình học phong phú hơn, nhưng cũng cần lưu ý chất lượng ảnh (độ phân
 giải, mức độ noise) vì ảnh kém chất lượng có thể làm GAN học những artifact không mong muốn
 
