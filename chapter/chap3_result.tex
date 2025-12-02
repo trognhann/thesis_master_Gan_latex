@@ -1,0 +1,181 @@
+\phantomsection
+
+\setcounter{chapter}{2}
+\chapter[{THỰC NHIỆM VÀ ĐÁNH GIÁ KẾT QUẢ}]{THỰC NHIỆM VÀ ĐÁNH GIÁ KẾT QUẢ}
+
+\section{Môi trường Thực nghiệm và Thông số Huấn luyện}
+
+Dựa trên kết quả phân tích log (\textit{training.log}), với môi trường thực nghiệm được thiết lập trên 
+nền tảng Google Colab với GPU NVIDIA Tesla T4, tương thích với thư viện TensorFlow GPU. 
+Mô hình được triển khai bằng TensorFlow phiên bản \textit{legacy} của TensorFlow 2.x, và sử dụng bộ dữ 
+liệu Hayao với 2{,}929 ảnh mang phong cách minh họa của Hayao Miyazaki. Kích thước ảnh đầu vào được 
+chuẩn hóa về \(256 \times 256\) pixels, batch size đặt ở mức 8, và tổng số epoch huấn luyện là 100, 
+bao gồm 5 epoch đầu dành cho giai đoạn khởi tạo nhằm giúp Generator học tái tạo nội dung cơ bản trước
+khi bước vào huấn luyện GAN đầy đủ. Tốc độ học được cấu hình lần lượt là 0.0002 cho giai đoạn khởi 
+tạo Generator, 0.0001 cho Generator ở giai đoạn huấn luyện chính, và 0.0001 cho Discriminator.
+
+
+\section{Kết quả Huấn luyện và Phân tích Log}
+
+Quá trình huấn luyện được chia thành hai giai đoạn riêng biệt, được thể hiện thông qua hai tệp log. 
+Trong giai đoạn thứ nhất, giai đoạn khởi tạo Generator (Pre-training), được thể hiện trong 
+hình \ref{fig:pre_train_generator}
+mục tiêu chính là giúp Generator học cách tái tạo nội dung ảnh gốc 
+trước khi tiếp cận học phong cách, nhằm hạn chế nguy cơ \textit{mode collapse} hoặc hiện tượng biến 
+dạng mạnh khi bước vào huấn luyện đối kháng. Kết quả phân tích cho thấy trong hai epoch đầu 
+(Epoch 0--1, 366 steps/epoch), giá trị hàm mất mát \textit{Pre\_train\_G\_loss} giảm ổn định từ khoảng 0.90 xuống mức
+xấp xỉ 0.15. Sự hội tụ nhanh này cho thấy kiến trúc Encoder--Decoder của DTGAN có khả năng nắm bắt 
+đặc trưng nội dung, bao gồm cấu trúc khuôn mặt và các chi tiết vật thể, một cách hiệu quả ngay cả 
+khi Discriminator chưa tham gia vào quá trình huấn luyện.
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.95\textwidth]{figChap3/Code_Generated_Image.png}
+	\caption{Kết quả huấn luyện Pre-training Generator}
+	\label{fig:pre_train_generator}
+\end{figure}
+
+Trong giai đoạn thứ hai, giai đoạn huấn luyện đối nghịch (Adversarial Training), được 
+thể hiện trong hình \ref{fig:training_step} và bắt đầu từ Epoch5. Các giá trị log cho thấy sự tương tác 
+phức tạp giữa các thành phần của hàm mất mát. 
+Tại bước đầu của Epoch~5, \textit{G\_loss} đạt mức rất cao (khoảng 34.8), 
+nhưng chỉ sau khoảng 160 bước, giá trị này giảm nhanh xuống còn khoảng 9.8, 
+cho thấy cơ chế Linearly Adaptive Denormalization (LADE) hoạt động hiệu quả trong 
+việc ổn định gradient và hạn chế hiện tượng ``nổ'' gradient thường gặp trong GAN. 
+Bên cạnh đó, cấu trúc Double-Tail thể hiện rõ vai trò của hai nhánh huấn luyện: nhánh 
+hỗ trợ với \textit{G\_support\_loss} dao động trong khoảng 4.5--6.0, đảm nhiệm việc 
+tạo ra bản phác thảo anime thô và duy trì mức mất mát trung bình để bảo toàn cấu trúc 
+nội dung; trong khi nhánh chính, thể hiện qua \textit{G\_main\_loss}, bắt đầu với giá 
+trị rất cao (khoảng 29.1 tại bước~0) nhưng giảm mạnh xuống còn khoảng 4.6 sau 160 bước.
+Sự chênh lệch ban đầu và tốc độ hội tụ nhanh của nhánh chính so với nhánh hỗ trợ củng 
+cố giả thuyết thiết kế của mô hình rằng nhánh chính không học lại từ đầu mà tập trung 
+vào quá trình tinh chỉnh, khử nhiễu và làm sắc nét dựa trên đầu ra sơ bộ của nhánh hỗ 
+trợ.
+
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=0.95\textwidth]{figChap3/trainingstep.png}
+	\caption{Training step (G\_loss \& D\_loss)}
+	\label{fig:training_step}
+\end{figure}
+
+Phân tích chi tiết các thành phần hàm mất mát cho thấy \textit{con\_loss} (Content) 
+tăng nhẹ từ 0.06 lên 0.14, đây là hiện tượng phổ biến trong các mô hình chuyển phong 
+cách, bởi khi mức độ phong cách hóa tăng thì ảnh đầu ra có xu hướng khác biệt hơn 
+so với ảnh gốc ở cấp độ pixel, dù cấu trúc ngữ nghĩa vẫn được bảo toàn. Thành phần 
+\textit{sty\_loss} (Style), được tính dựa trên ma trận Gram, duy trì ổn định trong 
+khoảng 2.8--3.5, phản ánh khả năng chưa giữ vững đặc trưng phong cách Hayao, chẳng hạn 
+như màu sắc tươi sáng và \textit{texture} phẳng. Trong khi đó, \textit{color\_loss} 
+dao động từ khoảng 0.9 xuống 0.6, cho thấy quá trình cạnh tranh giữa Discriminator 
+và Generator trong việc tìm ra bảng màu chưa được tối ưu---vừa mang đậm chất anime, vừa tránh 
+hiện tượng ám màu hoặc sai lệch tông không mong muốn.
+
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=0.95\textwidth]{figChap3/orther_loss.png}
+	\caption{Other loss (con\_loss \& sty\_loss \& color\_loss)}
+	\label{fig:other_loss}
+\end{figure}
+
+\newpage
+\section{Kết quả và Phân tích}
+
+\begin{longtable}{|c|p{3cm}|c|c|p{4cm}|}
+    \caption{Kết quả}
+    \label{tab:result} \\
+    \hline
+    \textbf{Stt} & \textbf{\makecell{Ảnh gốc}} & \textbf{Kết quả (tốt nhất)} & \textbf{Nhánh Support} & \textbf{Nhánh Main} \\
+    \hline
+    \endfirsthead
+
+    \multicolumn{5}{c}%
+    {{\bfseries \tablename\ \thetable{} -- tiếp theo từ trang trước}} \\
+    \hline
+    \textbf{Stt} & \textbf{\makecell{Ảnh gốc}} & \textbf{Kết quả (tốt nhất)} & \textbf{Nhánh Support} & \textbf{Nhánh Main} \\
+    \hline
+    \endhead
+
+    \hline \multicolumn{5}{|r|}{{Tiếp tục ở trang sau}} \\ \hline
+    \endfoot
+
+    \hline
+    \endlastfoot
+    
+    % --- Dòng 1 (Stt 1) ---
+    % Sử dụng \multirow{4}{*} để gộp 4 dòng (Ước tính chiều cao cho hình ảnh)
+    \multirow{8}{*}{\centering 1} & 
+    \multirow{8}{=}{\centering \includegraphics[width=2.5cm]{figChap3/style_results/a_download (1).jpg}} & 
+    \multirow{8}{*}{\centering \includegraphics[width=2.5cm]{figChap3/style_results/b_download (1).jpg}} & 
+    \multirow{8}{*}{\centering \includegraphics[width=2.5cm]{figChap3/style_results/c_download (1).jpg}} & 
+    \multirow{8}{=}{\centering \includegraphics[width=2.5cm]{figChap3/style_results/d_download (1).jpg}} \\*
+    & & & & \\* % Các dòng trống để tạo chiều cao cho \multirow
+    & & & & \\*
+    & & & & \\*
+    & & & & \\*
+    & & & & \\*
+    & & & & \\*
+    & & & & \\
+    \hline
+    
+    \multirow{8}{*}{\centering 2} & 
+    \multirow{8}{*}{\centering \includegraphics[width=3cm]{figChap3/style_results/a_download (2).jpg}} & 
+    \multirow{8}{*}{\centering \includegraphics[width=3cm]{figChap3/style_results/b_download (2).jpg}} & 
+    \multirow{8}{*}{\centering \includegraphics[width=3cm]{figChap3/style_results/c_download (2).jpg}} & 
+    \multirow{8}{=}{\centering \includegraphics[width=3cm]{figChap3/style_results/d_download (2).jpg}} \\*
+    & & & & \\* % Các dòng trống để tạo chiều cao cho \multirow
+    & & & & \\*
+    & & & & \\*
+    & & & & \\*
+    & & & & \\*
+    & & & & \\*
+    & & & & \\
+    \hline
+
+    \multirow{8}{*}{\centering 3} & 
+    \multirow{8}{*}{\centering \includegraphics[width=3cm]{figChap3/style_results/a_download.jpg}} & 
+    \multirow{8}{*}{\centering \includegraphics[width=3cm]{figChap3/style_results/b_download.jpg}} & 
+    \multirow{8}{*}{\centering \includegraphics[width=3cm]{figChap3/style_results/c_download.jpg}} & 
+    \multirow{8}{=}{\centering \includegraphics[width=3cm]{figChap3/style_results/d_download.jpg}} \\*
+    & & & & \\* % Các dòng trống để tạo chiều cao cho \multirow
+    & & & & \\*
+    & & & & \\*
+    & & & & \\*
+    & & & & \\*
+    & & & & \\*
+    & & & & \\
+    \hline
+
+    \multirow{8}{*}{\centering 4} & 
+    \multirow{8}{*}{\centering \includegraphics[width=3cm]{figChap3/style_results/a_trump.jpg}} & 
+    \multirow{8}{*}{\centering \includegraphics[width=3cm]{figChap3/style_results/b_trump.jpg}} & 
+    \multirow{8}{*}{\centering \includegraphics[width=3cm]{figChap3/style_results/c_trump.jpg}} & 
+    \multirow{8}{=}{\centering \includegraphics[width=3cm]{figChap3/style_results/d_trump.jpg}} \\*
+    & & & & \\* % Các dòng trống để tạo chiều cao cho \multirow
+    & & & & \\*
+    & & & & \\*
+    & & & & \\*
+    & & & & \\*
+    & & & & \\*
+    & & & & \\
+    \hline
+
+\end{longtable}
+
+Từ bảng \ref{tab:result}, ta thấy rằng mô hình đã học rất tốt nội dung của hình ảnh do \textit{con\_loss}
+đạt giá trị thấp nhất là 0.14, trong khi \textit{sty\_loss} và \textit{color\_loss} 
+đạt giá trị ổn định trong khoảng 2.8:3.5 và 0.9:0.6, cho thấy mô hình đã học đang không hiệu quả.
+
+\section{Hạn chế và Giải pháp đề xuất}
+Nghiên cứu chỉ ra một số hạn chế của AnimeGANv3. Thứ nhất, mô hình gặp khó khăn khi 
+áp dụng cho phong cách phương Tây, đặc biệt là Disney và Pixar, đôi khi sinh ra các 
+tạo tác ngẫu nhiên. Nguyên nhân chủ yếu là do tập dữ liệu huấn luyện (Hayao/Shinkai) 
+mang đặc trưng 2D phẳng, khác biệt so với các hình khối 3D phức tạp trong phong cách
+Disney. Thứ hai, hiện tượng mất cân bằng dữ liệu cũng ảnh hưởng đến hiệu quả của mô 
+hình; khi dữ liệu huấn luyện chứa ít ảnh chân dung nhưng nhiều ảnh cảnh vật, mô hình 
+có xu hướng hoạt động kém trên các khuôn mặt với góc nghiêng hoặc bị che khuất.
+
+Để khắc phục những hạn chế này, nghiên cứu đề xuất hai hướng chính. Thứ nhất, 
+thực hiện tăng cường dữ liệu (Data Augmentation) chuyên biệt cho khuôn mặt nhằm 
+cải thiện khả năng tổng quát hóa. Thứ hai, áp dụng cơ chế Attention, giúp mô hình 
+tập trung vào các vùng quan trọng, đặc biệt là khuôn mặt, trong quá trình chuyển 
+đổi phong cách.

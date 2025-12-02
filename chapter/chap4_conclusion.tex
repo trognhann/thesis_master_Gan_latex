@@ -1,0 +1,27 @@
+\clearpage
+\phantomsection
+
+\addcontentsline{toc}{chapter}{{Kết luận}}
+\chapter*{Kết luận}
+\textbf{Kết luận}
+
+Nghiên cứu này đã chứng minh hiệu quả vượt trội của mô hình AnimeGANv3 (DTGAN) 
+thông qua phân tích lý thuyết và kết quả thực nghiệm từ các tệp log huấn luyện. 
+Kiến trúc Double-Tail cho thấy khả năng phân tách rõ ràng hai nhiệm vụ “tạo hình 
+thô” và “tinh chỉnh chi tiết”, giúp mô hình hội tụ nhanh chóng, thể hiện qua việc 
+loss giảm mạnh từ epoch 5, đồng thời đạt chất lượng hình ảnh cao. Việc kết hợp cơ 
+chế chuẩn hóa Linearly Adaptive Denormalization (LADE) với các hàm mất mát chuyên 
+biệt, bao gồm Region Smoothing, đã giải quyết hiệu quả các vấn đề nhiễu hạt và nứt 
+vỡ texture thường gặp ở các GAN nhẹ. Ngoài ra, với kích thước mô hình nhỏ (~1MB) và 
+tốc độ suy luận nhanh, DTGAN được đánh giá là giải pháp lý tưởng cho các ứng dụng 
+di động và xử lý thời gian thực.
+
+\textbf{Hướng nghiên cứu tiếp theo}
+Tập trung vào việc cải thiện chất lượng ảnh đầu ra thông qua việc tối ưu hóa các tham số.
+Tinh chỉnh các tham số của hàm mất mát để giảm thiểu nhiễu và tăng cường đặc trưng phong
+cách và màu sắc. Ngoài ra, cải thiện hiệu suất huấn luyện thông qua việc tối ưu hóa các 
+tham số huấn luyện.
+
+Chuyển phong cách video (Video-to-Anime Style Transfer): Mở rộng mô hình để xử 
+lý video, tập trung giải quyết hiện tượng nhấp nháy giữa các khung hình 
+thông qua các ràng buộc về tính nhất quán theo thời gian (temporal consistency loss).
