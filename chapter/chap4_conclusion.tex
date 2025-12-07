@@ -5,16 +5,26 @@
 \chapter*{Kết luận}
 \textbf{Kết luận}
 
-Nghiên cứu này đã chứng minh hiệu quả vượt trội của mô hình AnimeGANv3 (DTGAN) 
-thông qua phân tích lý thuyết và kết quả thực nghiệm từ các tệp log huấn luyện. 
-Kiến trúc Double-Tail cho thấy khả năng phân tách rõ ràng hai nhiệm vụ “tạo hình 
-thô” và “tinh chỉnh chi tiết”, giúp mô hình hội tụ nhanh chóng, thể hiện qua việc 
-loss giảm mạnh từ epoch 5, đồng thời đạt chất lượng hình ảnh cao. Việc kết hợp cơ 
-chế chuẩn hóa Linearly Adaptive Denormalization (LADE) với các hàm mất mát chuyên 
-biệt, bao gồm Region Smoothing, đã giải quyết hiệu quả các vấn đề nhiễu hạt và nứt 
-vỡ texture thường gặp ở các GAN nhẹ. Ngoài ra, với kích thước mô hình nhỏ (~1MB) và 
-tốc độ suy luận nhanh, DTGAN được đánh giá là giải pháp lý tưởng cho các ứng dụng 
-di động và xử lý thời gian thực.
+Dự án đã triển khai và bước đầu huấn luyện thành công mô hình AnimeGANv3, một kiến trúc mạng đối 
+kháng sinh (GAN) tiên tiến sử dụng cơ chế "Double-Tail" (Hai đuôi: Main Tail và Support Tail) để 
+chuyển đổi ảnh thực sang phong cách hoạt hình (Anime Style Transfer).
+
+Dựa trên quá trình thực nghiệm và phân tích dữ liệu log, rút ra các kết luận sau:
+
+\begin{itemize}
+    \item Kiến trúc hiệu quả: Việc tách biệt nhiệm vụ giữa nhánh hỗ trợ (Support branch - 
+    tập trung học các đặc trưng bề mặt như màu sắc, texture phẳng) và nhánh chính (Main branch - 
+    tập trung vào cấu trúc tổng thể) giúp mô hình có khả năng học đa dạng các đặc trưng của ảnh 
+    phong cách.
+    \item Khả năng tái tạo nội dung: Giai đoạn Pre-training (huấn luyện khởi tạo) cho thấy hàm 
+    mất mát nội dung \textit{con\_loss} giảm ổn định, chứng tỏ Generator có khả năng tái tạo cấu trúc ảnh 
+    đầu vào tốt trước khi học phong cách.
+    \item Thách thức trong huấn luyện đối kháng: Quá trình huấn luyện chính thức (Training GAN) 
+    gặp hiện tượng mất cân bằng. Discriminator hội tụ quá nhanh (\textit{D\_loss} rất thấp), dẫn đến việc 
+    Generator (đặc biệt là nhánh Support) gặp khó khăn trong việc tối ưu hóa hàm mất mát tổng hợp, 
+    biểu hiện qua việc \textit{G\_support\_loss} đi ngang và không giảm sâu. Điều này cho thấy sự cần thiết của 
+    việc tinh chỉnh siêu tham số (hyperparameter tuning).
+\end{itemize}
 
 \textbf{Hướng nghiên cứu tiếp theo}
 Tập trung vào việc cải thiện chất lượng ảnh đầu ra thông qua việc tối ưu hóa các tham số.

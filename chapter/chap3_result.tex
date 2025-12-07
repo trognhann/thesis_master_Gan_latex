@@ -54,8 +54,8 @@ trợ.
 
 \begin{figure}[h]
 	\centering
-	\includegraphics[width=0.95\textwidth]{figChap3/trainingstep.png}
-	\caption{Training step (G\_loss \& D\_loss)}
+	\includegraphics[width=0.95\textwidth]{figChap3/Dloss_Gloss.png}
+	\caption{G\_loss \& D\_loss}
 	\label{fig:training_step}
 \end{figure}
 
@@ -166,16 +166,20 @@ Từ bảng \ref{tab:result}, ta thấy rằng mô hình đã học rất tốt 
 đạt giá trị ổn định trong khoảng 2.8:3.5 và 0.9:0.6, cho thấy mô hình đã học đang không hiệu quả.
 
 \section{Hạn chế và Giải pháp đề xuất}
-Nghiên cứu chỉ ra một số hạn chế của AnimeGANv3. Thứ nhất, mô hình gặp khó khăn khi 
-áp dụng cho phong cách phương Tây, đặc biệt là Disney và Pixar, đôi khi sinh ra các 
-tạo tác ngẫu nhiên. Nguyên nhân chủ yếu là do tập dữ liệu huấn luyện (Hayao/Shinkai) 
-mang đặc trưng 2D phẳng, khác biệt so với các hình khối 3D phức tạp trong phong cách
-Disney. Thứ hai, hiện tượng mất cân bằng dữ liệu cũng ảnh hưởng đến hiệu quả của mô 
-hình; khi dữ liệu huấn luyện chứa ít ảnh chân dung nhưng nhiều ảnh cảnh vật, mô hình 
-có xu hướng hoạt động kém trên các khuôn mặt với góc nghiêng hoặc bị che khuất.
+
+Từ biểu đồ \ref{fig:training_step}, ta thấy rằng \textit{D\_loss} đường màu cam đang nằm rất thấp 
+ở dưới đáy gần bằng không. Điều này có nghĩa là Discriminator phân biệt ảnh thật/ảnh giả quá dễ dàng.
+Nguyên nhân có thể là do Khi D quá mạnh, nó "trừng phạt" Generator quá gắt, hoặc gradient trả về cho 
+Generator bị bão hòa (vanishing gradient), khiến nhánh Support của Generator không biết phải tối ưu 
+theo hướng nào để đánh lừa D. Để khắc phục vấn đề này, ta có thể Giảm Learning Rate của 
+Discriminator (\textit{D\_loss}) xuống $1e-4$ hoặc $5e-5$ thay vì $2e-4$.
+
+Ngoài ra, trọng số các thành phần Loss (Loss Weights) không cân bằng. Hiện tại trọng số Adversarial Loss này là 1.0 
+(mặc định) ta có thể tăng trọng số này lên ba lần (x3) để ép Generator phải nỗ lực hơn trong việc tạo 
+ra ảnh "giống thật" (đối với D). Ngoài ra, \textit{sty\_loss} đang chiếm tỷ trọng quá lớn, làm lu mờ 
+gradient của các loss khác. Ta nên giảm trọng số của các lớp sâu (đặc biệt là lớp 4-4).
 
 Để khắc phục những hạn chế này, nghiên cứu đề xuất hai hướng chính. Thứ nhất, 
 thực hiện tăng cường dữ liệu (Data Augmentation) chuyên biệt cho khuôn mặt nhằm 
-cải thiện khả năng tổng quát hóa. Thứ hai, áp dụng cơ chế Attention, giúp mô hình 
-tập trung vào các vùng quan trọng, đặc biệt là khuôn mặt, trong quá trình chuyển 
-đổi phong cách.
+cải thiện khả năng tổng quát hóa. Thứ hai, sử dụng các  kỹ thuật fine-tuning để mô hình có thể học được
+các đặc trưng của phong cách mới chất lượng.
