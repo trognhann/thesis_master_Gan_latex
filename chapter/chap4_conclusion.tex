@@ -24,6 +24,10 @@ Dựa trên quá trình thực nghiệm và phân tích dữ liệu log, rút ra
     Generator (đặc biệt là nhánh Support) gặp khó khăn trong việc tối ưu hóa hàm mất mát tổng hợp, 
     biểu hiện qua việc \textit{G\_support\_loss} đi ngang và không giảm sâu. Điều này cho thấy sự cần thiết của 
     việc tinh chỉnh siêu tham số (hyperparameter tuning).
+    \item Tương thích nền tảng: Mã nguồn đã được điều chỉnh để chạy trên môi 
+    trường TensorFlow 2.x thông qua chế độ tương thích (compat.v1), đảm bảo 
+    khả năng tái sử dụng các pretrained weights cũ trong khi vẫn tận dụng được 
+    môi trường thực thi mới.
 \end{itemize}
 
 \textbf{Hướng nghiên cứu tiếp theo}
@@ -31,6 +35,13 @@ Tập trung vào việc cải thiện chất lượng ảnh đầu ra thông qua
 Tinh chỉnh các tham số của hàm mất mát để giảm thiểu nhiễu và tăng cường đặc trưng phong
 cách và màu sắc. Ngoài ra, cải thiện hiệu suất huấn luyện thông qua việc tối ưu hóa các 
 tham số huấn luyện.
+
+Thay vì chạy chế độ compat.v1, cần viết lại hoàn toàn các lớp Generator và 
+Discriminator sử dụng tf.keras.layers và tf.GradientTape. Điều này giúp tận dụng 
+các tính năng mới như Mixed Precision Training (giúp train nhanh hơn và tốn ít 
+VRAM hơn). Cùng đó thay thế việc xử lý ảnh bằng CPU (thư viện OpenCV/Numpy trong 
+data\_loader.py) bằng $tf.data$ API để tăng tốc độ nạp dữ liệu và tránh nghẽn cổ chai 
+(bottleneck) khi huấn luyện.
 
 Chuyển phong cách video (Video-to-Anime Style Transfer): Mở rộng mô hình để xử 
 lý video, tập trung giải quyết hiện tượng nhấp nháy giữa các khung hình 
