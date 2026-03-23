@@ -31,10 +31,10 @@ Generator của DTGAN bao gồm một bộ mã hóa chung (Shared Encoder) và s
 Thứ hai là Main Tail (Nhánh chính), nó chịu trách nhiệm tinh chỉnh  kết quả từ nhánh hỗ trợ để tạo ra ảnh chất lượng cao cuối cùng.
 
 Kiến trúc này được mô tả toán học như sau:
-\begin{align*}
+\begin{align}
 \mathbf{y} &= G_{\text{support}}(\mathbf{x}) \\
 \mathbf{y}_{\text{refined}} &= G_{\text{main}}(\mathbf{y}, \mathbf{x})
-\end{align*}
+\end{align}
 
 Trong đó, $\mathbf{x}$ là ảnh đầu vào, $\mathbf{y}$ là ảnh sinh ra từ nhánh hỗ trợ, và $\mathbf{y}_{\text{refined}}$ là ảnh sinh ra từ nhánh chính.
 
@@ -89,7 +89,10 @@ Mục đích của hàm mất mát này là giải quyết vấn đề "quá nhi
 Ảnh anime đặc trưng bởi các vùng màu đồng nhất (flat regions). Ảnh thực tế lại chứa nhiều nhiễu kết cấu (texture noise).
 Do đó cơ chế Region Smoothing Loss được sử dụng để làm suy yếu các chi tiết kết cấu của hình ảnh sinh ra, hướng tới hiệu ứng anime với các chi tiết trừu tượng.
 Về mặt kỹ thuật, hàm này có thể dựa trên việc so sánh sai số giữa ảnh sinh ra và một phiên bản đã được làm mịn (smoothed version) của ảnh gốc. Các kỹ thuật như Superpixel Segmentation (phân đoạn siêu điểm ảnh) thường được sử dụng ở bước này để xác định các vùng cần làm phẳng.
-Công thức tổng quát (suy luận từ ngữ cảnh): $$ L_{smooth} = || G(x) - Smooth(x) ||_{region} $$
+Công thức tổng quát (suy luận từ ngữ cảnh):
+\begin{equation}
+L_{smooth} = || G(x) - Smooth(x) ||_{region}
+\end{equation}
 Hàm này buộc mạng phải bỏ qua các biến thiên nhỏ về màu sắc (ví dụ: các nốt tàn nhang nhỏ, nhiễu ISO) và chỉ tập trung vào màu sắc chủ đạo của từng vùng.
 
 \subsubsection{Fine-grained Revision Loss (Hàm Mất mát Hiệu chỉnh Tinh)}

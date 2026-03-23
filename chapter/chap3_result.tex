@@ -107,41 +107,37 @@ hiện tượng ám màu hoặc sai lệch tông không mong muốn.
     \includegraphics[width=3cm]{figChap3/style_results/c_download (1).jpg} & 
     \includegraphics[width=3cm]{figChap3/style_results/d_download (1).jpg} \\
     \hline
-
     2 & 
     \includegraphics[width=3cm]{figChap3/style_results/a_download (2).jpg} & 
     \includegraphics[width=3cm]{figChap3/style_results/b_download (2).jpg} & 
     \includegraphics[width=3cm]{figChap3/style_results/c_download (2).jpg} & 
     \includegraphics[width=3cm]{figChap3/style_results/d_download (2).jpg} \\
     \hline
-
     3 & 
     \includegraphics[width=3cm]{figChap3/style_results/a_download.jpg} & 
     \includegraphics[width=3cm]{figChap3/style_results/b_download.jpg} & 
     \includegraphics[width=3cm]{figChap3/style_results/c_download.jpg} & 
     \includegraphics[width=3cm]{figChap3/style_results/d_download.jpg} \\
     \hline
-
     4 & 
     \includegraphics[width=3cm]{figChap3/style_results/a_trump.jpg} & 
     \includegraphics[width=3cm]{figChap3/style_results/b_trump.jpg} & 
     \includegraphics[width=3cm]{figChap3/style_results/c_trump.jpg} & 
     \includegraphics[width=3cm]{figChap3/style_results/d_trump.jpg} \\
     \hline
-
 \end{longtable}
 
 Từ bảng \ref{tab:result}, ta thấy rằng mô hình đã học rất tốt nội dung của hình ảnh do \textit{con\_loss}
 đạt giá trị thấp nhất là 0.14, trong khi \textit{sty\_loss} và \textit{color\_loss} 
-đạt giá trị ổn định trong khoảng 2.8:3.5 và 0.9:0.6, cho thấy mô hình đã học đang không hiệu quả.
+đạt giá trị ổn định trong khoảng 2.8 - 3.5 và 0.9 - 0.6, cho thấy mô hình đã học đang không hiệu quả.
 
 \section{Hạn chế và Giải pháp đề xuất}
 
 Từ biểu đồ \ref{fig:training_step}, ta thấy rằng \textit{D\_loss} đường màu cam đang nằm rất thấp 
 ở dưới đáy gần bằng không. Điều này có nghĩa là Discriminator phân biệt ảnh thật/ảnh giả quá dễ dàng.
-Nguyên nhân có thể là do Khi D quá mạnh, nó "trừng phạt" Generator quá gắt, hoặc gradient trả về cho 
+Nguyên nhân có thể là do khi D quá mạnh, nó "trừng phạt" Generator quá gắt, hoặc gradient trả về cho 
 Generator bị bão hòa (vanishing gradient), khiến nhánh Support của Generator không biết phải tối ưu 
-theo hướng nào để đánh lừa D. Để khắc phục vấn đề này, ta có thể Giảm Learning Rate của 
+theo hướng nào để đánh lừa D. Để khắc phục vấn đề này, ta có thể giảm Learning Rate của 
 Discriminator (\textit{D\_loss}) xuống $1e-4$ hoặc $5e-5$ thay vì $2e-4$.
 
 Ngoài ra, trọng số các thành phần Loss (Loss Weights) không cân bằng. Hiện tại trọng số Adversarial Loss này là 1.0 
@@ -151,5 +147,5 @@ gradient của các loss khác. Ta nên giảm trọng số của các lớp sâ
 
 Để khắc phục những hạn chế này, nghiên cứu đề xuất hai hướng chính. Thứ nhất, 
 thực hiện tăng cường dữ liệu (Data Augmentation) chuyên biệt cho khuôn mặt nhằm 
-cải thiện khả năng tổng quát hóa. Thứ hai, sử dụng các  kỹ thuật fine-tuning để mô hình có thể học được
+cải thiện khả năng tổng quát hóa. Thứ hai, sử dụng các kỹ thuật fine-tuning để mô hình có thể học được
 các đặc trưng của phong cách mới chất lượng.
