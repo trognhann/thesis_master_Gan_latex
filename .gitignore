@@ -8,3 +8,6 @@
 *.aux
 *.fls
 *.fdb_latexmk
+*.synctex(busy)
+*.synctex.gz
+*.toc

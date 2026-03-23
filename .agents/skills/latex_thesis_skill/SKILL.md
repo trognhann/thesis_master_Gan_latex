@@ -82,3 +82,6 @@ Tối đa 4 cấp (ví dụ: 3.1.2.3). Mỗi cấp phải có ít nhất 2 tiể
    \usepackage{booktabs,graphicx,amsmath,hyperref}
    \usepackage[style=numeric,sorting=ynt]{biblatex}
    \addbibresource{thesis.bib}
+   ```
+3. Đảm bảo file được biên dịch bằng `xelatex` hoặc `lualatex` để hỗ trợ font tiếng Việt (fontspec) và Unicode. Nếu người dùng muốn dùng `pdflatex`, nhắc họ thay thế sử dụng gói lệnh `\usepackage{mathptmx}` hoặc `\usepackage{tgtermes}` kèm theo `\usepackage[utf8]{inputenc}` và `\usepackage[T5]{fontenc}`.
+4. Tự động kiểm tra file `main.tex` hiện tại để xem các quy định 139/ĐT (margin, font, dãn dòng) đã được đáp ứng chưa. Nếu dãn dòng đang sai (ví dụ `setspace`), tự chèn dòng `\setstretch{1.2}`.
