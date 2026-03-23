@@ -1,14 +1,17 @@
-# Luận Văn Thạc Sĩ: Mạng Đối Kháng Sinh Thành (GAN)
+# Luận Văn Thạc Sĩ: Mạng đối nghịch tạo sinh trong chuyển đổi ảnh chân dung sang phong cách Anime
 
-**Trường Đại học Công nghệ - Đại học Quốc gia Hà Nội**
-
-Năm 2025 - 2026
+**Tác giả:** Nguyễn Trọng Nhân  
+**Người hướng dẫn:** TS. Ma Thị Châu  
+**Trường Đại học Công nghệ - Đại học Quốc gia Hà Nội**  
+**Năm:** 2026  
 
 ---
 
 ## 📋 Mô tả dự án
 
-Dự án này là luận văn thạc sĩ về **Mạng Đối Kháng Sinh Thành (Generative Adversarial Networks - GANs)**, được thực hiện tại Trường Đại học Công nghệ, ĐHQGHN. Luận văn tuân thủ đầy đủ quy định của **Công văn 139/ĐT (12/04/2012)** về hình thức và cấu trúc luận văn thạc sĩ.
+Repository này chứa mã nguồn LaTeX của Luận văn Thạc sĩ Khoa học Máy tính theo đề tài **"Mạng đối nghịch tạo sinh trong chuyển đổi ảnh chân dung sang phong cách Anime"** (chú trọng vào kiến trúc DTGAN - AnimeGANv3). 
+
+Luận văn tuân thủ 100% quy chuẩn định dạng theo **Công văn 139/ĐT (12/04/2012)** của Trường Đại học Công nghệ (UET) - ĐHQGHN.
 
 ---
 
@@ -111,18 +114,16 @@ xelatex -interaction=nonstopmode main.tex  # Chạy lần thứ 3
 
 ## 📖 Cấu trúc nội dung
 
-Luận văn được tổ chức theo cấu trúc tiêu chuẩn:
+Luận văn được phân bố cấu trúc thư mục chi tiết theo các chương:
 
-1. **Phần bìa**: Bìa, phụ bìa, cam đoan, lời cảm ơn
-2. **Mục lục**: Tự động sinh từ `\tableofcontents`
-3. **Danh mục**: Ký hiệu, bảng, hình vẽ
-4. **Mở đầu** (chap0_intro.tex): Tổng quan vấn đề, mục tiêu
-5. **Chương 1** (chap1_Prologue.tex): Nền tảng lý thuyết
-6. **Chương 2** (chap2_main.tex): Phương pháp và đóng góp chính
-7. **Chương 3** (chap3_result.tex): Kết quả thực nghiệm
-8. **Chương 4** (chap4_conclusion.tex): Kết luận và hướng phát triển
-9. **Tài liệu tham khảo**: Từ file `references.tex` hoặc `.bib`
-10. **Phụ lục**: Thêm nội dung phụ trợ (nếu cần)
+1. **Trang bìa & Tóm tắt**: Cấu hình tại folder `cover/` (Bìa ngoài, Bìa lót tiếng Việt và Tiếng Anh)
+2. **Mục lục, Hình/Bảng**: Tự động đánh số cấu hình trong `main.tex`
+3. **MỞ ĐẦU** (`chap0_intro.tex`): Tính cấp thiết, mục tiêu và đối tượng nghiên cứu
+4. **CHƯƠNG 1** (`chap1_Prologue.tex`): Cơ sở lý thuyết và tổng quan nghiên cứu
+5. **CHƯƠNG 2** (`chap2_main.tex`): Phương pháp nghiên cứu đề xuất (DTGAN, LADE loss)
+6. **CHƯƠNG 3** (`chap3_result.tex`): Thực nghiệm và đánh giá kết quả
+7. **KẾT LUẬN** (`chap4_conclusion.tex`): Kết luận và Hướng phát triển tiếp theo
+8. **Tài liệu tham khảo** (`references.tex`): Trích dẫn theo quy chuẩn UET
 
 ---
 
@@ -204,7 +205,9 @@ Trước khi nộp, kiểm tra:
 
 ## 👨‍💻 Tác giả
 
-*Thay thế bằng tên của bạn*
+**Nguyễn Trọng Nhân**  
+*Học viên Thạc sĩ ngành Khoa học Máy tính (Mã số: 24025149)*  
+*Trường Đại học Công nghệ (UET) - Đại học Quốc gia Hà Nội*
 
 ---
 
