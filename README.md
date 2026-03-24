@@ -15,11 +15,19 @@ Luận văn tuân thủ 100% quy chuẩn định dạng theo **Công văn 139/Đ
 
 ---
 
+## 💻 Mã nguồn và Huấn luyện (Training)
+
+- **Mã nguồn (Source Code)**: Toàn bộ mã nguồn sử dụng cho mô hình AnimeGANv3 trong nghiên cứu này được lưu trữ và công khai tại repository: [https://github.com/trognhann/AnimeGANv3.git](https://github.com/trognhann/AnimeGANv3.git)
+- **Môi trường Huấn luyện (Training Platform)**: Luận văn sử dụng nền tảng **Kaggle** để thực hiện quá trình huấn luyện mô hình. Kaggle cung cấp môi trường tính toán mạnh mẽ (GPU) giúp tốc độ huấn luyện mạng GAN ổn định và đạt được hiệu quả chuyển đổi phong cách (style transfer) tốt nhất.
+
+---
+
 ## 📁 Cấu trúc thư mục
 
 ```
 Graduate_Thesis_master_GAN/
 ├── main.tex                    # File chính của luận văn
+├── preamble.tex                # File cấu hình chung (font, lề, thư viện, ...)
 ├── references.tex              # File chứa các tài liệu tham khảo
 ├── README.md                   # File này
 │
