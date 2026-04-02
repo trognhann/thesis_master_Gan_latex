@@ -11,3 +11,11 @@
 *.synctex(busy)
 *.synctex.gz
 *.toc
+*.bbl
+*.blg
+*.bcf
+*.run.xml
+*.nav
+*.bcf*
+*.spl
+*.synctex.gz(busy)
