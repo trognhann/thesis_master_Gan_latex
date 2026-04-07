@@ -86,6 +86,30 @@ Việc hình thức hóa mối quan hệ này giữa kiến trúc và tập dữ
 các nhà thực hành chuyển quá trình lựa chọn kiến trúc từ kinh nghiệm (expertise) sang một quy trình 
 thiết kế tự động và có hệ thống. \cite{Basha2020}
 
+\subsection{Các Hàm kích hoạt}
+
+Hàm kích hoạt (Activation Function) là thành phần không thể thiếu trong Mạng Nơ-ron Tích chập, giúp mô hình giải quyết và biểu diễn các đặc trưng phi tuyến tính phức tạp có trong dữ liệu hình ảnh. Có rất nhiều hàm kích hoạt được sử dụng trong thực tế:
+\begin{itemize}
+    \item \textbf{Sigmoid:} Hàm Sigmoid ánh xạ giá trị đầu vào vào khoảng từ $0$ đến $1$. Hàm này đã từng phổ biến nhưng có nhược điểm lớn là hay gây ra hiện tượng suy giảm đạo hàm (vanishing gradient) khi mô hình trở nên sâu.
+    \item \textbf{Tanh (Hyperbolic Tangent):} Hàm Tanh ánh xạ giá trị vào khoảng từ $-1$ đến $1$. So với Sigmoid, Tanh cho giá trị trung tâm bằng $0$ nên việc hội tụ diễn ra trơn tru hơn nhưng vẫn không thoát khỏi trói buộc triệt tiêu gradient ở cuối miền giá trị.
+    \item \textbf{ReLU (Rectified Linear Unit):} ReLU ($\max(0, x)$) \cite{Nair2010} là hàm kích hoạt tiêu chuẩn cho hầu hết các tiến trình CNN hiện đại. ReLU làm nhẹ gánh nặng tính toán và chống vanishing gradient hiệu quả khi đầu vào mang giá trị dương. Việc có thể gặp cản trở là đặc tính ``Dying ReLU'' của nó làm vô hiệu hóa các nơ-ron nhận nguồn giá trị âm.
+    \item \textbf{Leaky ReLU:} Đây là phiên bản biến thể \cite{Maas2013} nhằm khắc phục nhược điểm của ReLU. Việc giữ lại một độ dốc vô cùng nhỏ (ví dụ, $0.01x$) cho giá trị dưới $0$ khiến gradient không bị đẩy về con số 0 tuyệt đối và duy trì khả năng truyền ngược hiệu quả.
+\end{itemize}
+
+\subsection{Các Kỹ thuật Chuẩn hóa}
+
+Quá trình chuẩn hóa (Normalization) được sinh ra để cân bằng các giá trị tính toán trước hoặc sau kích hoạt nhằm hạn chế hội chứng nhảy loạn trong biểu diễn tri thức. Đây là một cơ chế thiết yếu để gia tốc sự hội tụ:
+\begin{itemize}
+    \item \textbf{Batch Normalization (BN):} Lấy trung bình và chuẩn hóa trên trục lô (mini-batch) \cite{Ioffe2015} nhằm giảm hiện tượng Internal Covariate Shift. Kỹ thuật này bị lệ thuộc nhiều vào kích thước batch nên khi tính toán bằng phần cứng hạn chế mức RAM sẽ nảy sinh lỗi thống kê.
+    \item \textbf{Layer Normalization (LN):} Khác biệt với BN \cite{Ba2016} ở chỗ lấy phương sai toàn cục của kênh trong một mẫu ảnh nhất định, không chịu tác động nhỏ lẻ trên batch. Kỹ thuật này thường được áp dụng cho Transformers hay RNNs.
+    \item \textbf{Group Normalization (GN):} Một sự dung hòa \cite{Wu2018}, chia bộ các bản đồ đặc trưng làm nhiều nhóm nhỏ có số kênh chuyên biệt để lấy kết quả trên mạng tích chập mà không làm phụ thuộc chiều lô mạng lưới hệ thống.
+    \item \textbf{Instance Normalization (IN):} Xử lý chuẩn hóa theo mức độ cụ thể nhất \cite{Ulyanov2016} – với mỗi mẫu ảnh và mỗi kênh độc lập. Kỹ thuật này ngăn chặn các thông tin toàn cục làm lu mờ phong cách nội tải và là sự lựa chọn hoàn hảo bên trong ứng dụng chuyển đổi hình ảnh. Đặc biệt \textbf{quan trọng vì LADE (sẽ trình bày ở Chương 2) là quá trình cải tiến nâng cao trên nền Instance Normalization.}
+\end{itemize}
+
+\subsection{Spectral Normalization (SN)}
+
+Spectral Normalization (SN) \cite{Miyato2018} là kỹ thuật áp dụng công thức chuẩn hóa ma trận khối lượng $W$, kìm hãm chỉ số biến thiên cao nhất bằng cách chia nó cho giá trị riêng lớn nhất (Largest singular value). \textbf{Được dùng trong Discriminator — tham chiếu \texttt{spectral\_norm()}}. Khi ứng dụng kết hợp trong các Mạng Phân biệt (Discriminator), SN đáp ứng các ràng buộc Lipschitz nhằm ổn định hệ thống.
+
 \subsection{Sự Phát triển Kiến trúc và Nguyên lý Thiết kế Sâu}
 
 \subsubsection{Các Cột mốc phát triển và Ý nghĩa của Độ sâu Mạng}
