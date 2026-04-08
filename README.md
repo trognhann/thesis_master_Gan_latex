@@ -82,26 +82,13 @@ Graduate_Thesis_master_GAN/
 
 ## 🔨 Hướng dẫn biên dịch
 
-### Phương pháp 1: Sử dụng latexmk (Khuyến nghị)
+### Phương pháp 1: Biên dịch trực tiếp
 
 ```bash
-latexmk -xelatex -pdf -interaction=nonstopmode main.tex
-```
-
-Hoặc để xóa các file tạm sau biên dịch:
-
-```bash
-latexmk -xelatex -pdf -interaction=nonstopmode main.tex
-latexmk -c  # Xóa file tạm
-```
-
-### Phương pháp 2: Biên dịch trực tiếp
-
-```bash
-xelatex -interaction=nonstopmode main.tex
-xelatex -interaction=nonstopmode main.tex  # Chạy 2 lần để cập nhật tham chiếu
+pdflatex -interaction=nonstopmode main.tex
+pdflatex -interaction=nonstopmode main.tex  # Chạy 2 lần để cập nhật tham chiếu
 biber main    # Nếu dùng biblatex
-xelatex -interaction=nonstopmode main.tex  # Chạy lần thứ 3
+pdflatex -interaction=nonstopmode main.tex  # Chạy lần thứ 3
 ```
 
 ### Phương pháp 3: Sử dụng VS Code + LaTeX Workshop
