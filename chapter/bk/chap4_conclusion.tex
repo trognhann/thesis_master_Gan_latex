@@ -1,0 +1,47 @@
+\clearpage
+\phantomsection
+
+\addcontentsline{toc}{chapter}{KẾT LUẬN}
+\chapter*{KẾT LUẬN}
+
+Dự án đã triển khai và bước đầu huấn luyện thành công mô hình AnimeGANv3, một kiến trúc mạng đối 
+kháng sinh (GAN) tiên tiến sử dụng cơ chế "Double-Tail" (Hai đuôi: Main Tail và Support Tail) để 
+chuyển đổi ảnh thực sang phong cách hoạt hình (Anime Style Transfer).
+
+Dựa trên quá trình thực nghiệm và phân tích dữ liệu log, rút ra các kết luận sau:
+
+\begin{itemize}
+    \item Kiến trúc hiệu quả: Việc tách biệt nhiệm vụ giữa nhánh hỗ trợ (Support branch - 
+    tập trung học các đặc trưng bề mặt như màu sắc, texture phẳng) và nhánh chính (Main branch - 
+    tập trung vào cấu trúc tổng thể) giúp mô hình có khả năng học đa dạng các đặc trưng của ảnh 
+    phong cách.
+    \item Khả năng tái tạo nội dung: Giai đoạn Pre-training (huấn luyện khởi tạo) cho thấy hàm 
+    mất mát nội dung \textit{con\_loss} giảm ổn định, chứng tỏ Generator có khả năng tái tạo cấu trúc ảnh 
+    đầu vào tốt trước khi học phong cách.
+    \item Thách thức trong huấn luyện đối kháng: Quá trình huấn luyện chính thức (Training GAN) 
+    gặp hiện tượng mất cân bằng. Discriminator hội tụ quá nhanh (\textit{D\_loss} rất thấp), dẫn đến việc 
+    Generator (đặc biệt là nhánh Support) gặp khó khăn trong việc tối ưu hóa hàm mất mát tổng hợp, 
+    biểu hiện qua việc \textit{G\_support\_loss} đi ngang và không giảm sâu. Điều này cho thấy sự cần thiết của 
+    việc tinh chỉnh siêu tham số (hyperparameter tuning).
+    \item Tương thích nền tảng: Mã nguồn đã được điều chỉnh để chạy trên môi 
+    trường TensorFlow 2.x thông qua chế độ tương thích (compat.v1), đảm bảo 
+    khả năng tái sử dụng các pretrained weights cũ trong khi vẫn tận dụng được 
+    môi trường thực thi mới.
+\end{itemize}
+
+\section*{Hướng nghiên cứu tiếp theo}
+Tập trung vào việc cải thiện chất lượng ảnh đầu ra thông qua việc tối ưu hóa các tham số.
+Tinh chỉnh các tham số của hàm mất mát để giảm thiểu nhiễu và tăng cường đặc trưng phong
+cách và màu sắc. Ngoài ra, cải thiện hiệu suất huấn luyện thông qua việc tối ưu hóa các 
+tham số huấn luyện.
+
+Thay vì chạy chế độ compat.v1, cần viết lại hoàn toàn các lớp Generator và 
+Discriminator sử dụng tf.keras.layers và tf.GradientTape. Điều này giúp tận dụng 
+các tính năng mới như Mixed Precision Training (giúp train nhanh hơn và tốn ít 
+VRAM hơn). Cùng đó thay thế việc xử lý ảnh bằng CPU (thư viện OpenCV/Numpy trong 
+data\_loader.py) bằng $tf.data$ API để tăng tốc độ nạp dữ liệu và tránh nghẽn cổ chai 
+(bottleneck) khi huấn luyện.
+
+Chuyển phong cách video (Video-to-Anime Style Transfer): Mở rộng mô hình để xử 
+lý video, tập trung giải quyết hiện tượng nhấp nháy giữa các khung hình 
+thông qua các ràng buộc về tính nhất quán theo thời gian (temporal consistency loss).
