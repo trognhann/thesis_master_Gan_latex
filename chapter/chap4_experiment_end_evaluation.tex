@@ -113,9 +113,11 @@ Trong giai đoạn pre-training (5 epoch đầu), chỉ Generator được huấ
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.85\textwidth]{figChap3/preTrainGLoss.png}
-    \caption{Đường cong hội tụ Pre-train G\_loss trong giai đoạn pre-training (5 epoch đầu). Loss giảm nhanh từ $\approx 0.9$ xuống $\approx 0.15$ trong 500 steps đầu, sau đó tiếp tục giảm dần và ổn định ở $\approx 0.12$ -- cho thấy Generator đã học được biểu diễn nội dung tốt trước khi kích hoạt adversarial training.}
+    \caption{Đường cong hội tụ Pre-train G\_loss trong giai đoạn pre-training (5 epoch đầu)}
     \label{fig:pretrain_loss}
 \end{figure}
+    \noindent\textit{Chú thích:} Loss giảm nhanh từ $\approx 0.9$ xuống $\approx 0.15$ trong 500 steps đầu, sau đó tiếp tục giảm dần và ổn định ở $\approx 0.12$ -- cho thấy Generator đã học được biểu diễn nội dung tốt trước khi kích hoạt adversarial training.
+
 
 Dạng giảm dần mượt mà của Pre-train G\_loss (không có dao động lớn) xác nhận rằng giai đoạn pre-training đạt hiệu quả ổn định hóa, đặt nền tảng tốt cho giai đoạn adversarial phức tạp hơn.
 
@@ -127,9 +129,11 @@ Dạng giảm dần mượt mà của Pre-train G\_loss (không có dao động 
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.9\textwidth]{figChap3/Dloss_Gloss.png}
-    \caption{Đường cong G\_loss (xanh lam) và D\_loss (cam) qua 3.500 steps trong giai đoạn huấn luyện đầy đủ. G\_loss giảm mạnh từ $\approx 44$ xuống $\approx 8$ trong 500 steps đầu, sau đó ổn định và dao động trong vùng $[7, 10]$. D\_loss duy trì ổn định gần 0 trong suốt quá trình -- biểu hiện điển hình của cân bằng GAN khi Discriminator đủ mạnh.}
+    \caption{Đường cong G\_loss (xanh lam) và D\_loss (cam) qua 3.500 steps trong giai đoạn huấn luyện đầy đủ}
     \label{fig:gloss_dloss}
 \end{figure}
+    \noindent\textit{Chú thích:} G\_loss giảm mạnh từ $\approx 44$ xuống $\approx 8$ trong 500 steps đầu, sau đó ổn định và dao động trong vùng $[7, 10]$. D\_loss duy trì ổn định gần 0 trong suốt quá trình -- biểu hiện điển hình của cân bằng GAN khi Discriminator đủ mạnh.
+
 
 Đặc điểm đáng chú ý từ Hình~\ref{fig:gloss_dloss}:
 \begin{itemize}
@@ -144,9 +148,11 @@ Dạng giảm dần mượt mà của Pre-train G\_loss (không có dao động 
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.9\textwidth]{figChap3/orther_loss.png}
-    \caption{Đường cong các thành phần loss phụ: color\_loss (xanh lam, $\approx 0.6$), con\_loss (cam, $\approx 0.15$) và sty\_loss (xanh lá, dao động $[2.5, 4.0]$) qua 3.500 steps. Style loss dao động lớn phản ánh bản chất khó đo lường của phong cách anime -- đây là hành vi bình thường.}
+    \caption{Đường cong các thành phần loss phụ}
     \label{fig:other_loss}
 \end{figure}
+    \noindent\textit{Chú thích:} color\_loss (xanh lam, $\approx 0.6$), con\_loss (cam, $\approx 0.15$) và sty\_loss (xanh lá, dao động $[2.5, 4.0]$) qua 3.500 steps. Style loss dao động lớn phản ánh bản chất khó đo lường của phong cách anime -- đây là hành vi bình thường.
+
 
 Phân tích các thành phần loss trong Hình~\ref{fig:other_loss}:
 \begin{itemize}
@@ -263,9 +269,11 @@ Hệ thống được thử nghiệm trên nhiều nguyên mẫu ảnh chân dun
         \includegraphics[width=\textwidth]{figChap3/style_results/d_trump.jpg}
         \caption*{(d) Phong cách 3}
     \end{minipage}
-    \caption{Kết quả chuyển đổi phong cách anime từ ảnh chân dung gốc (a) sang 3 phong cách anime khác nhau (b), (c), (d) bằng AnimeGANv3 DTGAN với chế độ Face Mode ($512 \times 512$). Mỗi phong cách có đặc trưng riêng về bảng màu và cách xử lý đường nét.}
+    \caption{Kết quả chuyển đổi phong cách anime từ ảnh chân dung gốc (a) sang 3 phong cách anime khác nhau (b), (c), (d) bằng AnimeGANv3 DTGAN với chế độ Face Mode ($512 \times 512$)}
     \label{fig:style_results_trump}
 \end{figure}
+    \noindent\textit{Chú thích:} Mỗi phong cách có đặc trưng riêng về bảng màu và cách xử lý đường nét.
+
 
 \begin{figure}[H]
     \centering
@@ -288,9 +296,11 @@ Hệ thống được thử nghiệm trên nhiều nguyên mẫu ảnh chân dun
         \includegraphics[width=\textwidth]{figChap3/style_results/d_trump1.jpg}
         \caption*{(d) Phong cách 3}
     \end{minipage}
-    \caption{Kết quả chuyển đổi với ảnh chân dung góc nghiêng nhẹ. Mô hình xử lý tốt khuôn mặt với nhiều góc khác nhau nhờ module Face Extraction sử dụng RetinaFace đa tỉ lệ.}
+    \caption{Kết quả chuyển đổi với ảnh chân dung góc nghiêng nhẹ}
     \label{fig:style_results_trump1}
 \end{figure}
+    \noindent\textit{Chú thích:} Mô hình xử lý tốt khuôn mặt với nhiều góc khác nhau nhờ module Face Extraction sử dụng RetinaFace đa tỉ lệ.
+
 
 \begin{figure}[H]
     \centering
@@ -313,9 +323,11 @@ Hệ thống được thử nghiệm trên nhiều nguyên mẫu ảnh chân dun
         \includegraphics[width=\textwidth]{figChap3/style_results/d_download.jpg}
         \caption*{(d) Phong cách 3}
     \end{minipage}
-    \caption{Kết quả chuyển đổi với ảnh chân dung nữ. Hệ thống bảo toàn tốt đặc điểm khuôn mặt, làm nhuyễn kết cấu da đặc trưng phong cách anime trong khi giữ biểu cảm và cấu trúc khuôn mặt.}
+    \caption{Kết quả chuyển đổi với ảnh chân dung nữ}
     \label{fig:style_results_download}
 \end{figure}
+    \noindent\textit{Chú thích:} Hệ thống bảo toàn tốt đặc điểm khuôn mặt, làm nhuyễn kết cấu da đặc trưng phong cách anime trong khi giữ biểu cảm và cấu trúc khuôn mặt.
+
 
 \subsection{Phân tích Ảnh hưởng của Module Face Extraction}
 \label{subsec:face_ext_effect}
