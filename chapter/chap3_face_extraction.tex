@@ -1,0 +1,437 @@
+\clearpage
+
+\phantomsection
+
+\setcounter{chapter}{2}
+\chapter[{MODULE TRÍCH XUẤT KHUÔN MẶT}]{MODULE TRÍCH XUẤT KHUÔN MẶT (FACE EXTRACTION)}
+
+Module Trích xuất Khuôn mặt (Face Extraction) là \textbf{đóng góp riêng của luận văn} vào hệ thống AnimeGANv3, được xây dựng và tích hợp vào ứng dụng GUI dựa trên PyQt5 \cite{AnimeGANv3}. Thay vì xử lý toàn bộ ảnh đầu vào, module này tự động phát hiện và cắt lấy vùng khuôn mặt có bối cảnh đầy đủ trước khi đưa vào mô hình chuyển đổi phong cách, giúp cải thiện đáng kể chất lượng và tính nhất quán của ảnh anime đầu ra đối với ảnh chân dung.
+
+% =====================================================
+\section{Tổng quan Pipeline Tích hợp}
+\label{sec:fe_overview}
+
+Luận văn xây dựng một pipeline hoàn chỉnh gồm hai giai đoạn xử lý song song:
+
+\begin{enumerate}
+    \item \textbf{Phát hiện và cắt khuôn mặt:} Sử dụng RetinaFace \cite{Deng2019RetinaFace} với backbone MobileNet 0.25 \cite{Howard2017MobileNet} chạy trên ONNX Runtime \cite{ONNX2019} để phát hiện khuôn mặt, sau đó áp dụng kỹ thuật Margin Expansion để mở rộng vùng cắt.
+    \item \textbf{Chuyển đổi phong cách anime:} Vùng khuôn mặt đã cắt hoặc toàn bộ ảnh (chế độ landscape) được đưa qua mô hình AnimeGANv3 (ONNX) để sinh ảnh anime.
+\end{enumerate}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{figChap3/face_extraction_pipeline.png}
+    \caption{Pipeline tích hợp Face Extraction vào AnimeGANv3. Chế độ Face Mode (có phát hiện mặt): ảnh qua RetinaFace $\to$ Margin Expansion $\to$ Crop 512$\times$512 $\to$ ONNX Inference. Chế độ Landscape: ảnh được resize giữ tỉ lệ (chia hết 8) rồi trực tiếp qua ONNX Inference \cite{AnimeGANv3}.}
+    \label{fig:face_extraction_pipeline}
+\end{figure}
+
+Kiến trúc này cho phép hệ thống xử lý linh hoạt hai loại đầu vào: ảnh chân dung cận mặt (portrait) và ảnh phong cảnh/nhóm người (landscape), tự động chọn chiến lược phù hợp dựa trên kết quả phát hiện khuôn mặt.
+
+% =====================================================
+\section{Phát hiện Khuôn mặt với RetinaFace}
+\label{sec:retinaface}
+
+\subsection{Tổng quan RetinaFace}
+\label{subsec:retinaface_overview}
+
+RetinaFace \cite{Deng2019RetinaFace} là phương pháp phát hiện khuôn mặt đơn luồng (single-shot) đa tỉ lệ, được đề xuất tại CVPR 2020. Điểm nổi bật của RetinaFace là thực hiện \textbf{học đa nhiệm} (multi-task learning) đồng thời ba bài toán con trong một lần suy luận: phân loại mặt/không mặt, hồi quy bounding box, và hồi quy 5 điểm đặc trưng khuôn mặt (facial landmarks). Cách tiếp cận này không chỉ cải thiện độ chính xác phát hiện mà còn cung cấp thêm thông tin vị trí chi tiết cho các bước xử lý tiếp theo.
+
+Trong hệ thống của luận văn, phiên bản sử dụng backbone \textbf{MobileNet 0.25} \cite{Howard2017MobileNet} -- phiên bản siêu nhẹ của MobileNet chỉ với 25\% số kênh so với MobileNet đầy đủ -- được triển khai thông qua ONNX Runtime \cite{ONNX2019} để đảm bảo tốc độ suy luận cao trên cả CPU lẫn GPU tiêu dùng.
+
+\subsection{Kiến trúc Mạng Phát hiện}
+\label{subsec:retinaface_arch}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{figChap3/retinaface_architecture.png}
+    \caption{Kiến trúc RetinaFace với backbone MobileNet 0.25 và Feature Pyramid Network (FPN). Ba đầu ra đa nhiệm tại mỗi cấp FPN: confidence score, bounding box offset (loc), và 5 facial landmarks. Hậu xử lý bao gồm lọc ngưỡng tin cậy (0.8), NMS (0.3), và sắp xếp theo diện tích \cite{Deng2019RetinaFace}.}
+    \label{fig:retinaface_arch}
+\end{figure}
+
+Kiến trúc RetinaFace bao gồm ba thành phần chính:
+
+\subsubsection{Backbone MobileNet 0.25}
+MobileNet \cite{Howard2017MobileNet} được thiết kế đặc biệt cho tính toán trên thiết bị nhúng và ứng dụng thời gian thực, sử dụng \textit{depthwise separable convolution} để giảm chi phí tính. Phiên bản 0.25 (width multiplier $\alpha = 0.25$) thu hẹp số lượng kênh trong mỗi lớp xuống còn 25\%, đạt tốc độ xử lý cao trong khi vẫn giữ được khả năng trích xuất đặc trưng đủ tốt cho bài toán phát hiện khuôn mặt.
+
+\subsubsection{Feature Pyramid Network (FPN)}
+Feature Pyramid Network \cite{Lin2017FPN} được xây dựng trên các đặc trưng trung gian của backbone để tạo ra biểu diễn đa tỉ lệ $\{P_3, P_4, P_5\}$, cho phép phát hiện khuôn mặt ở nhiều kích thước khác nhau trong cùng một ảnh. Kiến trúc top-down với lateral connections đảm bảo mỗi tầng FPN đều có thông tin ngữ nghĩa mức cao và độ phân giải không gian đủ tốt.
+
+\subsubsection{Đầu ra Đa nhiệm}
+Tại mỗi tầng FPN, ba đầu dự đoán song song được kích hoạt:
+\begin{itemize}
+    \item \textbf{Classification head:} Xác suất có/không có khuôn mặt tại mỗi anchor.
+    \item \textbf{BBox Regression head (\texttt{loc}):} 4 giá trị offset $(dx, dy, dw, dh)$ so với prior box.
+    \item \textbf{Landmark Regression head (\texttt{landms}):} 10 giá trị $(x_i, y_i)$ cho 5 điểm đặc trưng: mắt trái, mắt phải, mũi, khóe miệng trái, khóe miệng phải.
+\end{itemize}
+
+\subsection{Tiền xử lý Ảnh Đầu vào}
+\label{subsec:retinaface_preprocess}
+
+Trước khi đưa vào mạng RetinaFace, ảnh được tiền xử lý theo chuẩn ImageNet:
+
+\begin{enumerate}
+    \item Chuyển kiểu dữ liệu sang \texttt{float32}
+    \item Trừ giá trị mean ImageNet theo từng kênh:
+    \begin{equation}
+    \label{eq:imagenet_mean}
+    \text{img} \leftarrow \text{img} - (123.0,\; 117.0,\; 104.0)
+    \end{equation}
+    \item Chuyển thứ tự trục từ $H \times W \times C$ (HWC) sang $C \times H \times W$ (CHW):
+    \begin{equation}
+    \label{eq:hwc2chw}
+    \text{img} = \text{img}^T_{(2,0,1)}
+    \end{equation}
+    \item Mở rộng chiều batch: $\text{img} \in \mathbb{R}^{1 \times C \times H \times W}$
+\end{enumerate}
+
+\subsection{Hậu xử lý và Prior Box}
+\label{subsec:retinaface_postprocess}
+
+\subsubsection{Prior Box (Anchor)}
+Mô hình sử dụng hệ thống Prior Box đa tỉ lệ với cấu hình \texttt{cfg\_mnet}:
+
+\begin{table}[H]
+\caption{Cấu hình Prior Box của RetinaFace với backbone MobileNet 0.25}
+\label{tab:prior_box}
+\centering
+\begin{tabular}{|c|c|c|c|}
+\hline
+\textbf{Tầng FPN} & \textbf{Stride} & \textbf{Anchor sizes} & \textbf{Đối tượng phát hiện} \\
+\hline
+$P_3$ (high res) & 8 & $[16, 32]$ px & Khuôn mặt rất nhỏ \\
+\hline
+$P_4$ & 16 & $[64, 128]$ px & Khuôn mặt nhỏ -- trung bình \\
+\hline
+$P_5$ (low res) & 32 & $[256, 512]$ px & Khuôn mặt lớn, cận cảnh \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsubsection{Giải mã Kết quả}
+Từ output thô của mạng, bounding boxes và landmarks được giải mã từ offset relative sang tọa độ tuyệt đối:
+
+\begin{equation}
+\label{eq:decode_box}
+\hat{b}_x = p_x + \text{loc}_x \cdot \text{var}_0 \cdot p_w, \quad
+\hat{b}_y = p_y + \text{loc}_y \cdot \text{var}_0 \cdot p_h
+\end{equation}
+\begin{equation}
+\label{eq:decode_box2}
+\hat{b}_w = p_w \cdot e^{\text{loc}_w \cdot \text{var}_1}, \quad
+\hat{b}_h = p_h \cdot e^{\text{loc}_h \cdot \text{var}_1}
+\end{equation}
+
+trong đó $(p_x, p_y, p_w, p_h)$ là tọa độ prior box, $(\text{var}_0, \text{var}_1)$ là variance parameters.
+
+\subsubsection{Lọc và Non-Maximum Suppression}
+Quá trình hậu xử lý gồm 4 bước:
+
+\begin{enumerate}
+    \item \textbf{Lọc ngưỡng tin cậy:} Chỉ giữ các detection có confidence $> 0.8$.
+    \item \textbf{Non-Maximum Suppression (NMS):} Loại bỏ các bounding box trùng lặp với $\text{IoU} > 0.3$: giữ lại box có confidence cao nhất trong mỗi nhóm box chồng lấp.
+    \item \textbf{Sắp xếp theo diện tích:} Khuôn mặt lớn nhất (chủ thể chính) được đặt lên đầu danh sách:
+    \begin{equation}
+    \label{eq:sort_area}
+    \text{order} = \text{argsort}\!\left[(x_2 - x_1)(y_2 - y_1)\right]_{\text{descending}}
+    \end{equation}
+    \item \textbf{Chọn khuôn mặt:} Lấy phần tử đầu tiên (\texttt{bboxes[0]}) -- khuôn mặt lớn nhất -- làm đối tượng chuyển đổi.
+\end{enumerate}
+
+% =====================================================
+\section{Kỹ thuật Mở rộng Vùng Khuôn mặt (Margin Expansion)}
+\label{sec:margin_expansion}
+
+\subsection{Động lực và Mục tiêu}
+\label{subsec:margin_motivation}
+
+Bounding box khuôn mặt trả về bởi RetinaFace thường chỉ bao quanh phần khuôn mặt thuần túy (từ trán đến cằm, từ tai này đến tai kia). Nếu cắt đúng theo bounding box này để đưa vào mô hình AnimeGANv3, ảnh đầu ra sẽ thiếu ngữ cảnh quan trọng: tóc, cổ, vai -- những thành phần không thể thiếu để tạo ra ảnh anime chân dung trông tự nhiên và hoàn chỉnh.
+
+Kỹ thuật \textbf{Margin Expansion} (mở rộng lề) được phát triển trong luận văn để giải quyết vấn đề này: tự động mở rộng bounding box theo tỉ lệ phần trăm kích thước mặt, đồng thời duy trì tỉ lệ khung hình 1:1 (vuông) phù hợp với yêu cầu đầu vào $512 \times 512$ của mô hình.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{figChap3/margin_expansion.png}
+    \caption{Minh họa kỹ thuật Margin Expansion: bounding box gốc (nét đỏ) được mở rộng 50\% mỗi bên theo chiều ngang, sau đó điều chỉnh chiều dọc để tạo vùng vuông (nét xanh). Vùng mở rộng bao gồm tóc, tai, cổ -- cần thiết cho chuyển đổi anime tự nhiên.}
+    \label{fig:margin_expansion}
+\end{figure}
+
+\subsection{Thuật toán Margin Expansion}
+\label{subsec:margin_algorithm}
+
+Cho bounding box khuôn mặt $(x_1, y_1, x_2, y_2)$, kích thước ảnh $(H, W)$ và hệ số mở rộng $m = 0.5$, thuật toán thực hiện theo 6 bước:
+
+\textbf{Bước 1 -- Tính kích thước hộp gốc:}
+\begin{equation}
+\label{eq:margin_step1}
+w = x_2 - x_1, \quad h = y_2 - y_1
+\end{equation}
+
+\textbf{Bước 2 -- Mở rộng theo chiều ngang:}
+\begin{equation}
+\label{eq:margin_step2}
+x_1' = \max(0,\; x_1 - m \cdot w), \quad x_2' = \min(W,\; x_2 + m \cdot w)
+\end{equation}
+
+\textbf{Bước 3 -- Đảm bảo mở rộng đối xứng:}
+\begin{equation}
+\label{eq:margin_step3}
+x_d = \min(x_1 - x_1',\; x_2' - x_2), \quad w' = w + 2 x_d
+\end{equation}
+Nếu khuôn mặt gần biên trái hoặc phải ảnh, $x_d$ sẽ nhỏ hơn $m \cdot w$, đảm bảo hộp không vượt ra ngoài ảnh trong khi vẫn đối xứng.
+
+\textbf{Bước 4 -- Thiết lập chiều cao mới (tỉ lệ 1:1):}
+\begin{equation}
+\label{eq:margin_step4}
+h' = w'
+\end{equation}
+
+\textbf{Bước 5 -- Điều chỉnh chiều dọc (căn giữa):}
+\begin{equation}
+\label{eq:margin_step5}
+y_d = \frac{h' - h}{2}
+\end{equation}
+\begin{align}
+\label{eq:margin_step5b}
+y_1' &= \max(0,\; y_1 - y_d) \\
+y_2' &= \min(H,\; y_2 + y_d)
+\end{align}
+
+\textbf{Bước 6 -- Clamp về biên ảnh:} Các giá trị $x_1', y_1', x_2', y_2'$ được chuyển sang kiểu nguyên (\texttt{int}) và dùng làm chỉ số cắt.
+
+\subsection{Xử lý Trường hợp Đặc biệt (Edge Cases)}
+\label{subsec:edge_cases}
+
+Bước 3 và bước 5 là cơ chế xử lý edge case quan trọng:
+
+\begin{itemize}
+    \item \textbf{Khuôn mặt gần biên ảnh:} Thay vì tràn ra ngoài ảnh, hộp mở rộng sẽ không đối xứng -- mở rộng nhiều hơn về phía có không gian, ít hơn về phía biên. Điều này giữ được thông tin ảnh nhiều nhất có thể.
+    \item \textbf{Khuôn mặt ở góc ảnh:} Cả hai điều kiện $\max(0, \cdot)$ và $\min(W/H, \cdot)$ sẽ đồng thời hoạt động, bảo toàn không gian hợp lệ theo cả hai chiều.
+    \item \textbf{Khuôn mặt rất lớn (gần bằng ảnh):} Hệ số $m = 0.5$ sẽ bị giới hạn bởi kích thước ảnh, vùng crop sẽ nhỏ hơn 1:1 lý tưởng nhưng vẫn là tối đa có thể.
+\end{itemize}
+
+\subsection{Ý nghĩa của Tham số margin = 0.5}
+\label{subsec:margin_value}
+
+Giá trị $m = 0.5$ được lựa chọn qua thực nghiệm, có nghĩa là mở rộng \textbf{50\% chiều rộng khuôn mặt về mỗi phía}, tạo ra vùng crop rộng hơn 2× so với bounding box gốc theo chiều ngang. Điều này đủ để bao phủ:
+
+\begin{itemize}
+    \item \textbf{Phía trên:} Toàn bộ tóc và trán, kể cả tóc xõa.
+    \item \textbf{Hai bên:} Tai và khoảng không gian ngoài tai.
+    \item \textbf{Phía dưới:} Cổ và phần trên vai (tùy tỉ lệ khuôn mặt trong ảnh).
+\end{itemize}
+
+Thực nghiệm trên bộ dữ liệu chân dung đa dạng cho thấy $m = 0.5$ là điểm cân bằng tốt: nhỏ hơn ($m = 0.3$) thường cắt mất tóc, lớn hơn ($m = 0.7$) đôi khi đưa quá nhiều nền làm nhiễu quá trình chuyển đổi phong cách.
+
+% =====================================================
+\section{Luồng xử lý Ảnh trong Pipeline}
+\label{sec:image_pipeline}
+
+\subsection{Đọc và Giới hạn Kích thước Ảnh}
+\label{subsec:read_resize}
+
+Ảnh đầu vào được đọc bằng Pillow và chuyển sang không gian màu RGB. Để đảm bảo hệ thống xử lý được ảnh có độ phân giải cao mà không gặp vấn đề bộ nhớ, cạnh dài nhất của ảnh được giới hạn ở 1280 pixel:
+
+\begin{equation}
+\label{eq:max_edge}
+\text{scale} = \frac{1280}{\max(H, W)}, \quad \text{nếu } \max(H, W) > 1280
+\end{equation}
+
+Ảnh được resize về $(\lfloor W \cdot \text{scale} \rfloor, \lfloor H \cdot \text{scale} \rfloor)$ trong khi giữ nguyên tỉ lệ khung hình.
+
+\subsection{Xử lý Phân nhánh: Face vs. Landscape}
+\label{subsec:branching}
+
+Sau bước đọc ảnh, pipeline phân nhánh dựa trên cờ \texttt{det} (face detection enabled):
+
+\begin{table}[H]
+\caption{So sánh hai chế độ xử lý trong pipeline Face Extraction}
+\label{tab:face_vs_landscape}
+\centering
+\begin{tabular}{|p{3cm}|p{5.5cm}|p{5.5cm}|}
+\hline
+\textbf{Tiêu chí} & \textbf{Face Mode (\texttt{det=True})} & \textbf{Landscape Mode (\texttt{det=False})} \\
+\hline
+Phát hiện mặt & RetinaFace ONNX & Không \\
+\hline
+Mở rộng vùng & Margin Expansion ($m=0.5$) & Không có \\
+\hline
+Kích thước input & Cố định $512 \times 512$ & Giữ tỉ lệ, chia hết cho 8 \\
+\hline
+Ưu điểm & Chất lượng mặt cao, tập trung & Giữ toàn cảnh, xử lý nhóm \\
+\hline
+Nhược điểm & Mất background & Mặt nhỏ chất lượng có thể thấp \\
+\hline
+Phù hợp & Portrait, avatar, selfie & Phong cảnh, ảnh nhóm \\
+\hline
+\end{tabular}
+\end{table}
+
+\textbf{Quy tắc resize Landscape mode:} Kích thước ảnh phải chia hết cho 8 (do kiến trúc encoder 3 lần downsampling stride-2 của Generator). Hàm \texttt{to\_8s(x)} tính $8 \cdot \lfloor x / 8 \rfloor$:
+\begin{equation}
+\label{eq:to8s}
+\texttt{to\_8s}(x) = 8 \cdot \left\lfloor \frac{x}{8} \right\rfloor
+\end{equation}
+
+\subsection{Chuẩn hóa và Suy luận ONNX}
+\label{subsec:normalize_inference}
+
+Trước khi đưa vào mô hình ONNX, ảnh được chuẩn hóa từ $[0, 255]$ sang $[-1.0, 1.0]$:
+\begin{equation}
+\label{eq:normalize}
+x_{\text{norm}} = \frac{x}{127.5} - 1.0
+\end{equation}
+
+Suy luận qua ONNX Runtime:
+\begin{equation}
+\label{eq:onnx_inference}
+\hat{y} = \text{session.run}\!\left(\texttt{None},\; \{\texttt{"input"}: x_{\text{norm}}\}\right)[0]
+\end{equation}
+
+Sau suy luận, ảnh đầu ra được chuyển ngược về $[0, 255]$:
+\begin{equation}
+\label{eq:denormalize}
+\text{output} = \frac{\hat{y} + 1.0}{2.0} \times 255
+\end{equation}
+
+\subsection{Luồng Xử lý Hoàn chỉnh}
+\label{subsec:full_pipeline}
+
+Toàn bộ luồng xử lý ảnh trong module (tham chiếu \texttt{photo\_page.py -- Thread\_01.run()}):
+
+\begin{enumerate}
+    \item \textbf{Đọc ảnh:} \texttt{Image.open(path).convert("RGB")}
+    \item \textbf{Giới hạn kích thước:} Nếu $\max(H,W) > 1280$ thì resize về scale 1280.
+    \item \textbf{[Face Mode] Phát hiện mặt:} \texttt{face\_det.detect\_face(np.array(img))} $\to$ \texttt{bboxes, points}
+    \item \textbf{[Face Mode] Mở rộng vùng:} Nếu phát hiện được mặt: \texttt{margin\_face(bboxes[0], img.shape[:2])} $\to$ \texttt{margin\_box}
+    \item \textbf{[Face Mode] Cắt ảnh:} \texttt{img = img[y1:y2, x0:x2]}
+    \item \textbf{Resize cho model:}
+        \begin{itemize}
+            \item Face mode: \texttt{img.resize((512, 512))}
+            \item Landscape: \texttt{img.resize((to\_8s(w), to\_8s(h)))}
+        \end{itemize}
+    \item \textbf{Chuẩn hóa:} $x_{\text{norm}} = x / 127.5 - 1.0$
+    \item \textbf{ONNX Inference:} \texttt{session.run(None, \{"input": img\})[0]}
+    \item \textbf{Hậu chuẩn hóa:} $\text{output} = (\hat{y} + 1.0) / 2.0 \times 255$
+    \item \textbf{Lưu/hiển thị kết quả.}
+\end{enumerate}
+
+% =====================================================
+\section{Kiến trúc Ứng dụng GUI}
+\label{sec:gui_architecture}
+
+\subsection{Tổng quan Ứng dụng}
+\label{subsec:gui_overview}
+
+Module Face Extraction được tích hợp vào ứng dụng GUI desktop xây dựng bằng \textbf{PyQt5} \cite{AnimeGANv3}. Ứng dụng cho phép người dùng:
+\begin{itemize}
+    \item Chọn thư mục chứa ảnh đầu vào.
+    \item Chọn mô hình ONNX (Hayao, Shinkai, hoặc các phong cách khác).
+    \item Bật/tắt chế độ Face Extraction thông qua checkbox.
+    \item Theo dõi tiến trình xử lý qua thanh progress bar và log.
+    \item Xem kết quả trực tiếp trong giao diện.
+\end{itemize}
+
+\subsection{Xử lý Đa luồng}
+\label{subsec:multithreading}
+
+Để đảm bảo giao diện không bị đơ (frozen) trong quá trình xử lý ảnh (đặc biệt với batch lớn), luồng xử lý chính (\texttt{Thread\_01}) được tách riêng khỏi luồng giao diện Qt:
+
+\begin{itemize}
+    \item \textbf{Main thread (Qt):} Quản lý giao diện, nhận sự kiện người dùng, cập nhật progress bar.
+    \item \textbf{Worker thread (\texttt{Thread\_01}):} Thực hiện toàn bộ pipeline xử lý ảnh (load ảnh, face detection, ONNX inference, lưu kết quả).
+    \item \textbf{Giao tiếp:} Sử dụng Qt signals/slots để truyền kết quả từ worker thread về main thread an toàn.
+\end{itemize}
+
+Kiến trúc đa luồng này đồng thời cho phép xử lý nhiều ảnh theo batch, với mỗi ảnh trong batch được xử lý tuần tự trong worker thread.
+
+\subsection{Cấu trúc Module và Các File Chính}
+\label{subsec:file_structure}
+
+\begin{table}[H]
+\caption{Cấu trúc các file chính của ứng dụng GUI AnimeGANv3}
+\label{tab:gui_files}
+\centering
+\begin{tabular}{|p{4cm}|p{9.5cm}|}
+\hline
+\textbf{File} & \textbf{Chức năng} \\
+\hline
+\texttt{face\_det.py} & Module phát hiện khuôn mặt: \texttt{FaceDetector} class, \texttt{detect\_face()}, \texttt{margin\_face()} \\
+\hline
+\texttt{photo\_page.py} & Pipeline xử lý ảnh và video: \texttt{Thread\_01} worker thread \\
+\hline
+\texttt{home.py} & Cửa sổ chính PyQt5, điều hướng giữa các trang \\
+\hline
+\texttt{config.py} & Cấu hình ứng dụng: đường dẫn model, tham số mặc định \\
+\hline
+\texttt{retinaface\_/config.py} & Cấu hình RetinaFace: \texttt{cfg\_mnet} (anchor sizes, variance) \\
+\hline
+\texttt{retinaface\_/prior\_box.py} & Tạo prior boxes cho ONNX inference \\
+\hline
+\texttt{retinaface\_/box\_utils.py} & Hàm decode bounding box và landmark \\
+\hline
+\end{tabular}
+\end{table}
+
+% =====================================================
+\section{Phân tích Kỹ thuật và Đánh giá Thiết kế}
+\label{sec:fe_analysis}
+
+\subsection{Lý do Chọn RetinaFace MobileNet 0.25}
+\label{subsec:why_retinaface}
+
+So với các phương pháp phát hiện khuôn mặt phổ biến khác, RetinaFace với backbone MobileNet 0.25 có ưu thế rõ ràng trong bối cảnh triển khai thực tế:
+
+\begin{table}[H]
+\caption{So sánh các phương pháp phát hiện khuôn mặt cho ứng dụng thực tế}
+\label{tab:face_det_comparison}
+\centering
+\begin{tabular}{|p{3cm}|p{2cm}|p{2.5cm}|p{2.5cm}|p{2.5cm}|}
+\hline
+\textbf{Phương pháp} & \textbf{Tốc độ} & \textbf{Landmark} & \textbf{Multi-scale} & \textbf{Model size} \\
+\hline
+Viola-Jones \cite{ViolaJones2004} & Rất nhanh & Không & Có hạn & Nhỏ \\
+\hline
+MTCNN \cite{Zhang2016MTCNN} & Trung bình & 5 điểm & Tốt & Nhỏ \\
+\hline
+SSD Face \cite{Liu2016SSD} & Nhanh & Không & Tốt & Trung bình \\
+\hline
+\textbf{RetinaFace MN0.25} \cite{Deng2019RetinaFace} & \textbf{Nhanh} & \textbf{5 điểm} & \textbf{Rất tốt} & \textbf{Rất nhỏ} \\
+\hline
+RetinaFace ResNet50 & Chậm & 5 điểm & Xuất sắc & Lớn \\
+\hline
+\end{tabular}
+\end{table}
+
+Các lý do kỹ thuật cụ thể:
+\begin{itemize}
+    \item \textbf{ONNX Runtime compatibility:} RetinaFace được xuất sang ONNX một cách tự nhiên, tương thích hoàn toàn với runtime đã dùng cho AnimeGANv3.
+    \item \textbf{5 facial landmarks:} Thông tin landmarks (dù chưa được khai thác đầy đủ trong phiên bản hiện tại) mở ra khả năng face alignment trong các phiên bản tương lai.
+    \item \textbf{Multi-scale FPN:} Phát hiện tốt cả khuôn mặt nhỏ trong ảnh góc rộng lẫn khuôn mặt lớn trong ảnh cận cảnh.
+    \item \textbf{Kích thước model nhỏ:} Phù hợp để đóng gói vào file executable (\texttt{.exe}) bằng PyInstaller.
+\end{itemize}
+
+\subsection{Đánh giá Pipeline Tổng thể}
+\label{subsec:pipeline_evaluation}
+
+Pipeline Face Extraction được thiết kế theo nguyên tắc \textbf{graceful degradation}: nếu không phát hiện được khuôn mặt (confidence dưới ngưỡng 0.8, hoặc khuôn mặt bị che khuất), hệ thống tự động chuyển sang chế độ Landscape để xử lý toàn bộ ảnh, tránh trả về lỗi cho người dùng.
+
+Bảng~\ref{tab:face_vs_landscape} tóm tắt sự đánh đổi chính giữa hai chế độ. Trong thực tế, chế độ Face Mode cho chất lượng anime đáng kể cao hơn đối với ảnh chân dung, do:
+\begin{enumerate}
+    \item Khuôn mặt chiếm 100\% diện tích ảnh đầu vào cho model $\Rightarrow$ model tập trung tất cả ``năng lực'' vào vùng mặt.
+    \item Loại bỏ background phức tạp giúp tránh hiện tượng style transfer không nhất quán giữa vùng mặt và nền.
+    \item Cố định kích thước $512 \times 512$ cho phép model hoạt động ở chế độ tối ưu (khác với $256 \times 256$ cho landscape mode).
+\end{enumerate}
+
+\section*{Tổng kết chương}
+
+Chương này đã trình bày đầy đủ Module Trích xuất Khuôn mặt, phần đóng góp kỹ thuật riêng của luận văn vào hệ thống AnimeGANv3, bao gồm:
+
+\begin{itemize}
+    \item \textbf{Kiến trúc pipeline} tích hợp hai chế độ Face Mode và Landscape Mode, với cơ chế graceful degradation tự động.
+    \item \textbf{RetinaFace MobileNet 0.25} triển khai qua ONNX Runtime: kiến trúc FPN đa nhiệm, cấu hình Prior Box, và quy trình hậu xử lý 4 bước (lọc ngưỡng, NMS, sắp xếp diện tích).
+    \item \textbf{Thuật toán Margin Expansion} 6 bước: tự động mở rộng bounding box 50\% mỗi chiều, duy trì tỉ lệ 1:1, xử lý edge cases khuôn mặt gần biên ảnh.
+    \item \textbf{Luồng xử lý hoàn chỉnh}: chuẩn hóa ảnh, phân nhánh Face/Landscape, ONNX inference với chuẩn hóa $[-1, 1]$.
+    \item \textbf{Kiến trúc GUI PyQt5} đa luồng với worker thread riêng biệt, đảm bảo giao diện mượt mà.
+\end{itemize}
+
+Chương 4 sẽ trình bày kết quả thực nghiệm định lượng và định tính của toàn bộ hệ thống, bao gồm đánh giá chất lượng ảnh anime đầu ra và hiệu năng của module Face Extraction.
