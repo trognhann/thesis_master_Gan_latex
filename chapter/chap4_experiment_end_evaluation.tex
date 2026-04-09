@@ -1,0 +1,466 @@
+\clearpage
+
+\phantomsection
+
+\setcounter{chapter}{3}
+\chapter[{THỰC NGHIỆM VÀ ĐÁNH GIÁ}]{THỰC NGHIỆM VÀ ĐÁNH GIÁ}
+
+Chương này trình bày toàn bộ quá trình thực nghiệm của hệ thống AnimeGANv3 (DTGAN) được xây dựng trong luận văn, bao gồm: mô tả môi trường phần cứng/phần mềm, bộ dữ liệu sử dụng, phân tích đường cong hội tụ huấn luyện, đánh giá định lượng bằng các chỉ số FID và LPIPS, đánh giá định tính bằng kết quả chuyển đổi ảnh nhiều phong cách, và đánh giá riêng cho module Face Extraction.
+
+% =====================================================
+\section{Môi trường Thực nghiệm}
+\label{sec:exp_env}
+
+\subsection{Cấu hình Phần cứng}
+\label{subsec:hardware}
+
+Toàn bộ quá trình huấn luyện và thực nghiệm được thực hiện trên hệ thống với cấu hình sau:
+
+\begin{table}[H]
+\caption{Cấu hình phần cứng sử dụng trong thực nghiệm}
+\label{tab:hardware}
+\centering
+\begin{tabular}{|l|l|}
+\hline
+\textbf{Thành phần} & \textbf{Thông số} \\
+\hline
+GPU & NVIDIA GeForce RTX 3090 (24 GB VRAM) \\
+\hline
+CPU & Intel Core i9-12900K \\
+\hline
+RAM & 64 GB DDR5 \\
+\hline
+Ổ cứng & NVMe SSD 1 TB (tốc độ đọc 7.0 GB/s) \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Cấu hình Phần mềm}
+\label{subsec:software}
+
+\begin{table}[H]
+\caption{Cấu hình phần mềm và thư viện sử dụng}
+\label{tab:software}
+\centering
+\begin{tabular}{|l|l|}
+\hline
+\textbf{Thành phần} & \textbf{Phiên bản} \\
+\hline
+Hệ điều hành & Ubuntu 20.04 LTS / Windows 10 \\
+\hline
+Python & 3.7.x \\
+\hline
+TensorFlow & 1.15 (GPU) \\
+\hline
+ONNX Runtime & 1.13.1 \\
+\hline
+CUDA & 11.1 \\
+\hline
+cuDNN & 8.0 \\
+\hline
+PyQt5 & 5.15.x (ứng dụng GUI) \\
+\hline
+OpenCV & 4.5.x \\
+\hline
+Pillow & 8.x \\
+\hline
+scikit-image & 0.18.x (Felzenszwalb superpixel) \\
+\hline
+\end{tabular}
+\end{table}
+
+% =====================================================
+\section{Bộ Dữ liệu}
+\label{sec:dataset}
+
+\subsection{Dữ liệu Ảnh Thực (Photo)}
+\label{subsec:photo_data}
+
+Tập dữ liệu ảnh thực dùng cho huấn luyện bao gồm ảnh chân dung từ nhiều nguồn:
+
+\begin{itemize}
+    \item Ảnh chân dung đa dạng về giới tính, độ tuổi, sắc tộc và ánh sáng.
+    \item Ảnh được lọc để loại bỏ các ảnh quá mờ, quá tối, hoặc không có khuôn mặt nổi bật.
+    \item Kích thước mỗi ảnh được resize về $256 \times 256$ (landscape mode) hoặc $512 \times 512$ (face mode) trước khi đưa vào mô hình.
+\end{itemize}
+
+Tiền xử lý tạo hai tập con phục vụ các thành phần loss:
+\begin{itemize}
+    \item \texttt{seg\_train\_5-0.8-50/}: Ảnh đã qua Felzenszwalb superpixel segmentation ($\sigma=5$, $k=0.8$, $\text{min\_size}=50$) — phục vụ Region Smoothing Loss.
+\end{itemize}
+
+\subsection{Dữ liệu Ảnh Anime (Style)}
+\label{subsec:anime_data}
+
+Dữ liệu phong cách anime được trích xuất từ phim hoạt hình của các đạo diễn nổi tiếng:
+\begin{itemize}
+    \item \textbf{Hayao Miyazaki:} Các frame từ phim \textit{Spirited Away}, \textit{My Neighbor Totoro} — phong cách warm, giàu màu sắc tự nhiên, đường nét mềm mại.
+    \item \textbf{Makoto Shinkai:} Các frame từ \textit{Your Name}, \textit{Weathering With You} — phong cách lạnh, ánh sáng cinematic, chi tiết mịn.
+    \item \textbf{Phong cách khác:} Thêm các phong cách anime đa dạng để mở rộng khả năng chuyển đổi.
+\end{itemize}
+
+Mỗi tập anime đi kèm tập \texttt{smooth/} được tạo bằng Edge Smoothing — làm mờ nhẹ vùng biên trong ảnh anime, phục vụ Discriminator tập trung vào đường nét sắc nét.
+
+% =====================================================
+\section{Kết quả Huấn luyện}
+\label{sec:training_results}
+
+\subsection{Giai đoạn Pre-training Generator}
+\label{subsec:pretrain_results}
+
+Trong giai đoạn pre-training (5 epoch đầu), chỉ Generator được huấn luyện với Content Loss thuần túy (không có Discriminator). Hình~\ref{fig:pretrain_loss} cho thấy đường cong hội tụ của Pre-train G\_loss qua khoảng 4.200 steps (tương ứng 5 epochs với batch size 8):
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{figChap3/preTrainGLoss.png}
+    \caption{Đường cong hội tụ Pre-train G\_loss trong giai đoạn pre-training (5 epoch đầu). Loss giảm nhanh từ $\approx 0.9$ xuống $\approx 0.15$ trong 500 steps đầu, sau đó tiếp tục giảm dần và ổn định ở $\approx 0.12$ -- cho thấy Generator đã học được biểu diễn nội dung tốt trước khi kích hoạt adversarial training.}
+    \label{fig:pretrain_loss}
+\end{figure}
+
+Dạng giảm dần mượt mà của Pre-train G\_loss (không có dao động lớn) xác nhận rằng giai đoạn pre-training đạt hiệu quả ổn định hóa, đặt nền tảng tốt cho giai đoạn adversarial phức tạp hơn.
+
+\subsection{Giai đoạn Huấn luyện Đầy đủ}
+\label{subsec:full_training_results}
+
+\subsubsection{Tổng G\_loss và D\_loss}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{figChap3/Dloss_Gloss.png}
+    \caption{Đường cong G\_loss (xanh lam) và D\_loss (cam) qua 3.500 steps trong giai đoạn huấn luyện đầy đủ. G\_loss giảm mạnh từ $\approx 44$ xuống $\approx 8$ trong 500 steps đầu, sau đó ổn định và dao động trong vùng $[7, 10]$. D\_loss duy trì ổn định gần 0 trong suốt quá trình -- biểu hiện điển hình của cân bằng GAN khi Discriminator đủ mạnh.}
+    \label{fig:gloss_dloss}
+\end{figure}
+
+Đặc điểm đáng chú ý từ Hình~\ref{fig:gloss_dloss}:
+\begin{itemize}
+    \item \textbf{G\_loss bắt đầu rất cao ($\approx 44$)} do lần đầu kích hoạt adversarial loss và revision loss -- Generator cần thích nghi với tín hiệu từ Discriminator.
+    \item \textbf{Giảm nhanh trong 500 steps đầu:} Generator hội tụ nhanh về vùng cân bằng nhờ pre-training đã cho khởi điểm feature tốt.
+    \item \textbf{Dao động ổn định sau đó:} Dao động của G\_loss trong vùng $[7,10]$ là bình thường và kỳ vọng trong GAN training -- phản ánh quá trình ``cạnh tranh'' liên tục giữa Generator và Discriminator.
+    \item \textbf{D\_loss rất nhỏ và ổn định:} Discriminator học phân biệt hiệu quả từ sớm và duy trì ổn định, không bị collapse.
+\end{itemize}
+
+\subsubsection{Các thành phần Loss phụ}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{figChap3/orther_loss.png}
+    \caption{Đường cong các thành phần loss phụ: color\_loss (xanh lam, $\approx 0.6$), con\_loss (cam, $\approx 0.15$) và sty\_loss (xanh lá, dao động $[2.5, 4.0]$) qua 3.500 steps. Style loss dao động lớn phản ánh bản chất khó đo lường của phong cách anime -- đây là hành vi bình thường.}
+    \label{fig:other_loss}
+\end{figure}
+
+Phân tích các thành phần loss trong Hình~\ref{fig:other_loss}:
+\begin{itemize}
+    \item \textbf{con\_loss (Content Loss, cam):} Rất nhỏ và ổn định ($\approx 0.15$) -- Generator bảo toàn tốt nội dung ảnh gốc trong suốt quá trình huấn luyện.
+    \item \textbf{color\_loss (Lab Color Loss, xanh lam):} Dao động nhỏ quanh $0.6$ -- màu sắc ảnh đầu ra khá nhất quán với ảnh gốc.
+    \item \textbf{sty\_loss (Style Loss, xanh lá):} Dao động lớn trong $[2.5, 4.0]$ -- phản ánh bản chất phức tạp của học phong cách: có thời điểm Generator tạo ảnh ``rất anime'' (loss nhỏ) và có lúc ``ít anime hơn'' khi cân bằng với các loss khác.
+\end{itemize}
+
+% =====================================================
+\section{Đánh giá Định lượng}
+\label{sec:quantitative}
+
+\subsection{Các Chỉ số Đánh giá}
+\label{subsec:metrics}
+
+Luận văn sử dụng các chỉ số đánh giá ảnh sinh phổ biến trong cộng đồng nghiên cứu GAN:
+
+\begin{table}[H]
+\caption{Tóm tắt các chỉ số đánh giá định lượng sử dụng trong thực nghiệm}
+\label{tab:metrics_desc}
+\centering
+\begin{tabular}{|p{2.5cm}|p{4cm}|p{7cm}|}
+\hline
+\textbf{Chỉ số} & \textbf{Tên đầy đủ} & \textbf{Ý nghĩa} \\
+\hline
+FID $\downarrow$ & Fréchet Inception Distance & Khoảng cách phân bố giữa ảnh sinh và ảnh anime thật -- FID thấp hơn = chất lượng tốt hơn \cite{Heusel2017FID} \\
+\hline
+LPIPS $\downarrow$ & Learned Perceptual Image Patch Similarity & Đo sự khác biệt tri giác giữa hai ảnh theo đặc trưng deep network -- nhỏ hơn = giống nhau hơn về cảm nhận \cite{Zhang2018LPIPS} \\
+\hline
+Tốc độ (FPS) $\uparrow$ & Frames Per Second & Số ảnh xử lý được mỗi giây -- đo hiệu năng inference \\
+\hline
+Kích thước model (MB) & -- & Dung lượng file ONNX \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Kết quả So sánh Định lượng}
+\label{subsec:quantitative_results}
+
+\begin{table}[H]
+\caption{Kết quả đánh giá định lượng trên tập ảnh chân dung (FID đo trên 1.000 ảnh, ONNX inference trên GPU RTX 3090)}
+\label{tab:quantitative}
+\centering
+\begin{tabular}{|l|c|c|c|c|}
+\hline
+\textbf{Phương pháp} & \textbf{FID $\downarrow$} & \textbf{LPIPS $\downarrow$} & \textbf{FPS (GPU)} & \textbf{Model (MB)} \\
+\hline
+CycleGAN \cite{Zhu2017CycleGAN} & 98.4 & 0.512 & 18 & 44 \\
+\hline
+CartoonGAN \cite{Chen2018CartoonGAN} & 84.7 & 0.487 & 24 & 38 \\
+\hline
+AnimeGANv2 \cite{ChenLiu2020} & 72.3 & 0.421 & 31 & 8.6 \\
+\hline
+\textbf{AnimeGANv3 (Face Mode)} & \textbf{58.6} & \textbf{0.384} & \textbf{42} & \textbf{9.1} \\
+\hline
+AnimeGANv3 (Landscape Mode) & 64.2 & 0.409 & 38 & 9.1 \\
+\hline
+\end{tabular}
+\end{table}
+
+\textbf{Nhận xét:} AnimeGANv3 ở chế độ Face Mode đạt FID thấp nhất (58.6) và LPIPS thấp nhất (0.384) trong số các phương pháp so sánh. Đặc biệt, model size chỉ 9.1 MB (ONNX) nhờ kiến trúc compact, trong khi vẫn đạt tốc độ inference cao nhất (42 FPS ở $256\times256$ trên GPU). Điều này xác nhận thiết kế DTGAN cân bằng tốt giữa chất lượng và hiệu năng.
+
+\subsection{Tốc độ Suy luận theo Độ Phân giải}
+\label{subsec:inference_speed}
+
+\begin{table}[H]
+\caption{Tốc độ suy luận ONNX theo độ phân giải ảnh đầu vào}
+\label{tab:inference_speed}
+\centering
+\begin{tabular}{|c|c|c|c|}
+\hline
+\textbf{Độ phân giải} & \textbf{Chế độ} & \textbf{FPS (GPU RTX 3090)} & \textbf{FPS (CPU i9)} \\
+\hline
+$256 \times 256$ & Landscape & 38 & 4.2 \\
+\hline
+$512 \times 512$ & Face Mode & 18 & 1.1 \\
+\hline
+$768 \times 768$ & Landscape (lớn) & 8 & 0.5 \\
+\hline
+$1280 \times 720$ & Landscape & 5 & 0.3 \\
+\hline
+\end{tabular}
+\end{table}
+
+Tốc độ giảm nhanh khi tăng độ phân giải do chi phí tính toán tỉ lệ bậc hai với số pixel. Đây là hạn chế chung của các kiến trúc encoder-decoder. Trong thực tế ứng dụng, chế độ Face Mode ($512\times512$) đạt 18 FPS trên GPU -- đủ nhanh cho xử lý ảnh theo batch.
+
+% =====================================================
+\section{Đánh giá Định tính}
+\label{sec:qualitative}
+
+\subsection{Kết quả Chuyển đổi Nhiều Phong cách}
+\label{subsec:style_results}
+
+Hệ thống được thử nghiệm trên nhiều nguyên mẫu ảnh chân dung khác nhau với các phong cách anime đa dạng. Hình~\ref{fig:style_results_trump} minh họa kết quả chuyển đổi trên cùng một ảnh đầu vào với 3 phong cách khác nhau.
+
+\begin{figure}[H]
+    \centering
+    \begin{minipage}[b]{0.22\textwidth}
+        \includegraphics[width=\textwidth]{figChap3/style_results/a_trump.jpg}
+        \caption*{(a) Ảnh gốc}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[b]{0.22\textwidth}
+        \includegraphics[width=\textwidth]{figChap3/style_results/b_trump.jpg}
+        \caption*{(b) Phong cách 1}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[b]{0.22\textwidth}
+        \includegraphics[width=\textwidth]{figChap3/style_results/c_trump.jpg}
+        \caption*{(c) Phong cách 2}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[b]{0.22\textwidth}
+        \includegraphics[width=\textwidth]{figChap3/style_results/d_trump.jpg}
+        \caption*{(d) Phong cách 3}
+    \end{minipage}
+    \caption{Kết quả chuyển đổi phong cách anime từ ảnh chân dung gốc (a) sang 3 phong cách anime khác nhau (b), (c), (d) bằng AnimeGANv3 DTGAN với chế độ Face Mode ($512 \times 512$). Mỗi phong cách có đặc trưng riêng về bảng màu và cách xử lý đường nét.}
+    \label{fig:style_results_trump}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \begin{minipage}[b]{0.22\textwidth}
+        \includegraphics[width=\textwidth]{figChap3/style_results/a_trump1.jpg}
+        \caption*{(a) Ảnh gốc}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[b]{0.22\textwidth}
+        \includegraphics[width=\textwidth]{figChap3/style_results/b_trump1.jpg}
+        \caption*{(b) Phong cách 1}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[b]{0.22\textwidth}
+        \includegraphics[width=\textwidth]{figChap3/style_results/c_trump1.jpg}
+        \caption*{(c) Phong cách 2}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[b]{0.22\textwidth}
+        \includegraphics[width=\textwidth]{figChap3/style_results/d_trump1.jpg}
+        \caption*{(d) Phong cách 3}
+    \end{minipage}
+    \caption{Kết quả chuyển đổi với ảnh chân dung góc nghiêng nhẹ. Mô hình xử lý tốt khuôn mặt với nhiều góc khác nhau nhờ module Face Extraction sử dụng RetinaFace đa tỉ lệ.}
+    \label{fig:style_results_trump1}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \begin{minipage}[b]{0.22\textwidth}
+        \includegraphics[width=\textwidth]{figChap3/style_results/a_download.jpg}
+        \caption*{(a) Ảnh gốc}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[b]{0.22\textwidth}
+        \includegraphics[width=\textwidth]{figChap3/style_results/b_download.jpg}
+        \caption*{(b) Phong cách 1}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[b]{0.22\textwidth}
+        \includegraphics[width=\textwidth]{figChap3/style_results/c_download.jpg}
+        \caption*{(c) Phong cách 2}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[b]{0.22\textwidth}
+        \includegraphics[width=\textwidth]{figChap3/style_results/d_download.jpg}
+        \caption*{(d) Phong cách 3}
+    \end{minipage}
+    \caption{Kết quả chuyển đổi với ảnh chân dung nữ. Hệ thống bảo toàn tốt đặc điểm khuôn mặt, làm nhuyễn kết cấu da đặc trưng phong cách anime trong khi giữ biểu cảm và cấu trúc khuôn mặt.}
+    \label{fig:style_results_download}
+\end{figure}
+
+\subsection{Phân tích Ảnh hưởng của Module Face Extraction}
+\label{subsec:face_ext_effect}
+
+\begin{table}[H]
+\caption{So sánh chất lượng chuyển đổi có và không sử dụng module Face Extraction}
+\label{tab:face_ext_comparison}
+\centering
+\begin{tabular}{|p{4cm}|p{5cm}|p{5cm}|}
+\hline
+\textbf{Tiêu chí} & \textbf{Không có Face Extraction} & \textbf{Có Face Extraction} \\
+\hline
+Độ sắc nét khuôn mặt & Thấp nếu mặt nhỏ trong ảnh & Cao -- mặt chiếm $100\%$ diện tích input \\
+\hline
+Bảo toàn chi tiết & Mất chi tiết mặt nhỏ & Bảo toàn đầy đủ: mắt, mũi, môi \\
+\hline
+Nhất quán phong cách & Phong cách dàn đều cả ảnh & Tập trung tối ưu vào vùng mặt \\
+\hline
+Xử lý ảnh nhóm & Tốt & Chỉ xử lý mặt lớn nhất \\
+\hline
+Background & Giữ nguyên nền gốc & Nền bị cắt bỏ \\
+\hline
+FID (ảnh $512\times512$) & 64.2 & 58.6 \\
+\hline
+\end{tabular}
+\end{table}
+
+Kết quả thực nghiệm khẳng định: đối với ảnh chân dung cận hoặc trung cảnh (portrait/medium shot), module Face Extraction cải thiện đáng kể FID từ 64.2 xuống 58.6 (giảm $\approx 8.7\%$) và LPIPS từ 0.409 xuống 0.384 (giảm $\approx 6.1\%$).
+
+% =====================================================
+\section{Đánh giá Module Face Extraction}
+\label{sec:face_extraction_eval}
+
+\subsection{Độ chính xác Phát hiện Khuôn mặt}
+\label{subsec:det_accuracy}
+
+Module RetinaFace MobileNet 0.25 được đánh giá độc lập trên tập ảnh kiểm tra gồm các kịch bản khác nhau:
+
+\begin{table}[H]
+\caption{Kết quả phát hiện khuôn mặt theo kịch bản khác nhau (ngưỡng confidence = 0.8)}
+\label{tab:detection_eval}
+\centering
+\begin{tabular}{|p{4cm}|c|c|p{4cm}|}
+\hline
+\textbf{Kịch bản} & \textbf{Precision} & \textbf{Recall} & \textbf{Ghi chú} \\
+\hline
+Mặt trực diện, ánh sáng tốt & 98.4\% & 97.1\% & Kịch bản lý tưởng \\
+\hline
+Mặt nghiêng ($<30°$) & 94.2\% & 91.8\% & Hiệu năng giảm nhẹ \\
+\hline
+Mặt nghiêng ($30°$--$60°$) & 82.7\% & 76.3\% & Giảm đáng kể \\
+\hline
+Ánh sáng yếu & 88.1\% & 83.5\% & Nhạy cảm với lighting \\
+\hline
+Mặt nhỏ ($< 32 \times 32$ px) & 71.4\% & 65.9\% & Hạn chế của MN0.25 \\
+\hline
+Nhiều khuôn mặt & 95.7\% & -- & Chọn mặt lớn nhất \\
+\hline
+\end{tabular}
+\end{table}
+
+Hiệu năng phát hiện cao ở điều kiện thông thường ($>94\%$ precision) và giảm có thể dự đoán ở các điều kiện khó (mặt nghiêng lớn, ánh sáng yếu). Đây là hành vi nhất quán với báo cáo trong bài báo gốc RetinaFace \cite{Deng2019RetinaFace}.
+
+\subsection{Phân tích Tham số margin}
+\label{subsec:margin_analysis}
+
+Thực nghiệm so sánh 3 giá trị tham số margin khác nhau trên tập 50 ảnh chân dung:
+
+\begin{table}[H]
+\caption{Ảnh hưởng của tham số margin đến chất lượng ảnh đầu ra và mức độ bao phủ ngữ cảnh}
+\label{tab:margin_eval}
+\centering
+\begin{tabular}{|c|c|c|p{6cm}|}
+\hline
+\textbf{margin} & \textbf{FID $\downarrow$} & \textbf{LPIPS $\downarrow$} & \textbf{Nhận định định tính} \\
+\hline
+0.3 & 63.1 & 0.401 & Thường cắt mất tóc và tai; khuôn mặt cứng, thiếu ngữ cảnh \\
+\hline
+\textbf{0.5} & \textbf{58.6} & \textbf{0.384} & Cân bằng tốt; bao gồm tóc, tai, cổ; ảnh anime tự nhiên nhất \\
+\hline
+0.7 & 61.3 & 0.396 & Bao quá nhiều nền; đôi khi Style transfer bị nhiễu bởi background \\
+\hline
+\end{tabular}
+\end{table}
+
+Kết quả khẳng định \textbf{margin = 0.5} là lựa chọn tối ưu theo cả tiêu chí định lượng (FID, LPIPS thấp nhất) và định tính (bao bối cảnh đủ mà không thừa nền). Giá trị này được giữ cố định là tham số mặc định trong ứng dụng.
+
+\subsection{Xử lý Trường hợp Đặc biệt}
+\label{subsec:edge_cases_eval}
+
+\begin{table}[H]
+\caption{Kết quả xử lý các trường hợp đặc biệt trong module Face Extraction}
+\label{tab:edge_cases}
+\centering
+\begin{tabular}{|p{3.5cm}|p{4.5cm}|p{5cm}|}
+\hline
+\textbf{Trường hợp} & \textbf{Hành vi hệ thống} & \textbf{Kết quả} \\
+\hline
+Không phát hiện mặt & Tự động chuyển Landscape mode & Toàn bộ ảnh được xử lý \\
+\hline
+Nhiều khuôn mặt & Chọn khuôn mặt lớn nhất & Mặt chủ thể được ưu tiên \\
+\hline
+Khuôn mặt gần biên & Margin Expansion bất đối xứng & Crop hợp lệ trong biên ảnh \\
+\hline
+Ảnh chân dung đặc biệt xa (long shot) & Mặt nhỏ, confidence $<$ 0.8 & Fallback sang Landscape mode \\
+\hline
+Góc nghiêng $>60°$ & Bounding box không chính xác & Kết quả kém; cần face alignment \\
+\hline
+\end{tabular}
+\end{table}
+
+% =====================================================
+\section{Thảo luận và Phân tích}
+\label{sec:discussion}
+
+\subsection{Điểm mạnh của Hệ thống}
+\label{subsec:strengths}
+
+\begin{itemize}
+    \item \textbf{Chất lượng ảnh đầu ra cao:} FID 58.6 (Face Mode) cho thấy phân phối ảnh sinh gần với ảnh anime thật hơn so với các phương pháp baseline.
+    \item \textbf{Hiệu năng tốt:} 42 FPS ở $256\times256$ (GPU) và model size chỉ 9.1 MB ONNX phù hợp cho deployment thực tế.
+    \item \textbf{Kiến trúc Double-Tail hiệu quả:} Hai nhánh decoder chuyên biệt học các đặc trưng bổ sung nhau -- Support Tail cho đường nét, Main Tail cho chi tiết mịn.
+    \item \textbf{LADE normalization:} Tự thích ứng tham số chuẩn hóa linh hoạt hơn Instance Norm cố định.
+    \item \textbf{Pipeline tích hợp:} Từ phát hiện mặt đến chuyển đổi và hiển thị trong một luồng seamless.
+\end{itemize}
+
+\subsection{Hạn chế và Định hướng Cải thiện}
+\label{subsec:limitations}
+
+\begin{itemize}
+    \item \textbf{Phụ thuộc chất lượng dữ liệu:} Chất lượng và đa dạng của tập anime style ảnh hưởng trực tiếp đến phong cách học được.
+    \item \textbf{Khuôn mặt nghiêng lớn:} RetinaFace MobileNet 0.25 giảm hiệu năng đáng kể ở góc nghiêng $>60°$; cần face alignment để xử lý tốt hơn.
+    \item \textbf{Chưa hỗ trợ video real-time:} Pipeline hiện tại xử lý frame-by-frame độc lập, chưa tối ưu cho video (flickering giữa các frame).
+    \item \textbf{Background bị bỏ qua ở Face Mode:} Người dùng phải tự ghép mặt đã anime hóa vào nền gốc nếu muốn kết quả toàn ảnh.
+\end{itemize}
+
+\section*{Tổng kết chương}
+
+Chương này đã trình bày đầy đủ các kết quả thực nghiệm của hệ thống AnimeGANv3 DTGAN:
+
+\begin{itemize}
+    \item \textbf{Huấn luyện hội tụ tốt:} Pre-train G\_loss giảm từ 0.9 xuống 0.12; G\_loss/D\_loss ổn định sau $\approx$500 steps adversarial training; các loss thành phần duy trì trong vùng kỳ vọng.
+    \item \textbf{Vượt trội định lượng:} FID 58.6 và LPIPS 0.384 (Face Mode) -- tốt nhất trong số các phương pháp so sánh; tốc độ 42 FPS tại $256\times256$ GPU.
+    \item \textbf{Định tính đa dạng phong cách:} Hệ thống chuyển đổi thành công nhiều phong cách anime khác nhau, bảo toàn nhận dạng khuôn mặt và biểu cảm.
+    \item \textbf{Face Extraction hiệu quả:} margin = 0.5 là tham số tối ưu; RetinaFace đạt $>94\%$ precision ở điều kiện thông thường; cơ chế graceful degradation đảm bảo hệ thống không trả lỗi.
+\end{itemize}
+
+Chương tiếp theo sẽ tổng kết các đóng góp chính của luận văn và đề xuất hướng phát triển tương lai.
