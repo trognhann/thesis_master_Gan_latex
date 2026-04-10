@@ -5,17 +5,17 @@
 \setcounter{chapter}{2}
 \chapter[{MODULE TRÍCH XUẤT KHUÔN MẶT}]{MODULE TRÍCH XUẤT KHUÔN MẶT (FACE EXTRACTION)}
 
-Module Trích xuất Khuôn mặt (Face Extraction) là \textbf{đóng góp riêng của luận văn} vào hệ thống AnimeGANv3, được xây dựng và tích hợp vào ứng dụng GUI dựa trên PyQt5 \cite{AnimeGANv3}. Thay vì xử lý toàn bộ ảnh đầu vào, module này tự động phát hiện và cắt lấy vùng khuôn mặt có bối cảnh đầy đủ trước khi đưa vào mô hình chuyển đổi phong cách, giúp cải thiện đáng kể chất lượng và tính nhất quán của ảnh anime đầu ra đối với ảnh chân dung.
+Nhằm khắc phục triệt để hạn chế của nguyên bản AnimeGANv3 khi xử lý các bức ảnh có tỷ lệ khuôn mặt thực tế nhỏ hoặc bị loãng bởi không gian bối cảnh tĩnh quá lớn, Mô-đun Trích xuất Khuôn mặt (Face Extraction) được đề xuất như một \textbf{giải pháp mở rộng và đóng góp cốt lõi của luận văn}. Mô-đun này được phát triển chuyên biệt và lập trình tích hợp chặt chẽ vào hệ thống phần mềm giao diện đồ họa (GUI) dựa trên nền tảng PyQt5 \cite{AnimeGANv3}. Xét về bản chất hoạt động, thay vì tiến hành nội suy quá trình chuyển đổi phong cách lên toàn bộ lưới ảnh thô, mô-đun này tự động quét, định vị và trích xuất khu vực chứa khuôn mặt. Quá trình này được kết hợp khéo léo với kỹ thuật mở rộng bối cảnh viền nhằm bảo toàn tỷ lệ không gian quang học hợp lý. Việc phân bổ cơ chế ưu tiên này giúp cấu trúc sinh ảnh (Generator) chỉ tính toán dồn tài nguyên vào khu vực trọng tâm của nhân vật, từ đó nâng tầm rõ rệt chất lượng chi tiết, độ sắc nét và bảo toàn tốt danh tính (identity) cho các tác phẩm chân dung anime đầu ra.
 
 % =====================================================
 \section{Tổng quan Pipeline Tích hợp}
 \label{sec:fe_overview}
 
-Luận văn xây dựng một pipeline hoàn chỉnh gồm hai giai đoạn xử lý song song:
+Để hệ thống trích xuất và chuyển đổi hoạt động liền mạch với hiệu năng thời gian thực, luận văn đã thiết kế một luồng xử lý dữ liệu (pipeline) nội bộ cấu thành từ hai giai đoạn tuần tự như sau:
 
 \begin{enumerate}
-    \item \textbf{Phát hiện và cắt khuôn mặt:} Sử dụng RetinaFace \cite{Deng2019RetinaFace} với backbone MobileNet 0.25 \cite{Howard2017MobileNet} chạy trên ONNX Runtime \cite{ONNX2019} để phát hiện khuôn mặt, sau đó áp dụng kỹ thuật Margin Expansion để mở rộng vùng cắt.
-    \item \textbf{Chuyển đổi phong cách anime:} Vùng khuôn mặt đã cắt hoặc toàn bộ ảnh (chế độ landscape) được đưa qua mô hình AnimeGANv3 (ONNX) để sinh ảnh anime.
+    \item \textbf{Định vị và quy hoạch vùng trích xuất:} Ứng dụng thành tựu của kiến trúc phát hiện khuôn mặt tiên tiến RetinaFace \cite{Deng2019RetinaFace} dựa trên lõi trục xương sống (backbone) thu gọn cực nhẹ MobileNet-0.25 \cite{Howard2017MobileNet}. Khối học sâu này được tối ưu hóa khả năng tăng tốc phần cứng thông qua bộ suy luận tiêu chuẩn ONNX Runtime \cite{ONNX2019} để có thể lấy tọa độ khuôn mặt ngay tức thì. Tiếp sau đó, cơ cấu nới rộng thuật toán (Margin Expansion) được kích hoạt nhằm phóng lớn vùng cắt xén (bounding box), đảm bảo thu gọn không chỉ ngũ quan mà còn toàn bộ chi tiết tóc, cổ và bối cảnh lân cận.
+    \item \textbf{Áp dụng phong cách hóa đồ họa (Stylization):} Phân vùng không gian khuôn mặt sau quy hoạch (được sử dụng riêng cho chế độ chân dung - Face Mode) hoặc nguyên bản toàn bộ đa dạng lưới ảnh (được linh hoạt áp dụng cho chế độ bối cảnh - Landscape Mode) sẽ được đẩy qua luồng hội tụ Generator của AnimeGANv3 (ONNX) nhằm thực thi công đoạn kết xuất và lan truyền phong cách anime tổng thể.
 \end{enumerate}
 
 \begin{figure}[H]
@@ -350,30 +350,26 @@ Module Face Extraction được tích hợp vào ứng dụng GUI desktop xây d
 
 Kiến trúc đa luồng này đồng thời cho phép xử lý nhiều ảnh theo batch, với mỗi ảnh trong batch được xử lý tuần tự trong worker thread.
 
-\subsection{Cấu trúc Module và Các File Chính}
-\label{subsec:file_structure}
+\subsection{Cấu trúc Logic của Hệ thống Tích hợp}
+\label{subsec:logical_structure}
+
+Để đảm bảo tính linh hoạt, hệ thống phần mềm được thiết kế tuân thủ nghiêm ngặt nguyên lý mô-đun hóa (modularity). Các nhóm tác vụ phức tạp không bị bó hẹp trong một luồng duy nhất mà được phân định ranh giới thành các khối logic chuyên biệt:
 
 \begin{table}[H]
-\caption{Cấu trúc các file chính của ứng dụng GUI AnimeGANv3}
-\label{tab:gui_files}
+\caption{Kiến trúc các khối chức năng logic của hệ thống ứng dụng đóng gói}
+\label{tab:logical_modules}
 \centering
-\begin{tabular}{|p{4cm}|p{9.5cm}|}
+\begin{tabular}{|p{4.5cm}|p{9.5cm}|}
 \hline
-\textbf{File} & \textbf{Chức năng} \\
+\textbf{Khối Chức Năng} & \textbf{Vai trò và Nhiệm vụ} \\
 \hline
-\texttt{face\_det.py} & Module phát hiện khuôn mặt: \texttt{FaceDetector} class, \texttt{detect\_face()}, \texttt{margin\_face()} \\
+\textbf{Khối Lõi Trích xuất (Face Extraction Engine)} & Quản lý nền tảng ONNX Runtime, khởi tạo tính toán lưới tọa độ mỏ neo (prior boxes) và giải mã (decode) bouding box cùng với các điểm mốc (landmarks). Khối này cũng trực tiếp thực thi thuật toán mở rộng biên Margin Expansion. \\
 \hline
-\texttt{photo\_page.py} & Pipeline xử lý ảnh và video: \texttt{Thread\_01} worker thread \\
+\textbf{Khối Xử lý Đa luồng (Pipeline \& Multithreading)} & Điều phối vòng đời của luồng xử lý ảnh hay video. Việc khởi tạo các tiến trình nền (worker threads) đảm bảo quá trình suy luận mô hình nặng không chạm tới luồng chính, tránh làm đóng băng giao diện người dùng. \\
 \hline
-\texttt{home.py} & Cửa sổ chính PyQt5, điều hướng giữa các trang \\
+\textbf{Khối Giao diện tương tác (GUI Module)} & Thiết kế trên nền tảng hướng sự kiện (event-driven), kết xuất đồ họa màn hình, thanh điều hướng ứng dụng, và tiếp nhận thiết lập từ người dùng (ví dụ: chuyển đổi qua lại chế độ Face/Landscape, nút chức năng bắt đầu trích xuất). \\
 \hline
-\texttt{config.py} & Cấu hình ứng dụng: đường dẫn model, tham số mặc định \\
-\hline
-\texttt{retinaface\_/config.py} & Cấu hình RetinaFace: \texttt{cfg\_mnet} (anchor sizes, variance) \\
-\hline
-\texttt{retinaface\_/prior\_box.py} & Tạo prior boxes cho ONNX inference \\
-\hline
-\texttt{retinaface\_/box\_utils.py} & Hàm decode bounding box và landmark \\
+\textbf{Khối Quản trị Cấu hình (Configuration Storage)} & Cô lập việc lưu trữ và khởi tạo các thông số hình học đặc thù của mạng (như tập hợp anchor, bước xê lệch variance) cũng như bản đồ đường dẫn tĩnh đến các trọng số mô hình đã được tải sẵn. \\
 \hline
 \end{tabular}
 \end{table}
