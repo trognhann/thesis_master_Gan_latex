@@ -24,7 +24,7 @@ Luận văn xây dựng một pipeline hoàn chỉnh gồm hai giai đoạn xử
     \caption{Pipeline tích hợp Face Extraction vào AnimeGANv3}
     \label{fig:face_extraction_pipeline}
 \end{figure}
-    \noindent\textit{Chú thích:} Chế độ Face Mode (có phát hiện mặt): ảnh qua RetinaFace $\to$ Margin Expansion $\to$ Crop 512$\times$512 $\to$ ONNX Inference. Chế độ Landscape: ảnh được resize giữ tỉ lệ (chia hết 8) rồi trực tiếp qua ONNX Inference \cite{AnimeGANv3.}
+    \noindent\textit{Chú thích:} Chế độ Face Mode (có phát hiện mặt): ảnh qua RetinaFace $\to$ Margin Expansion $\to$ Crop 512$\times$512 $\to$ ONNX Inference. Chế độ Landscape: ảnh được resize giữ tỉ lệ (chia hết 8) rồi trực tiếp qua ONNX Inference \cite{AnimeGANv3}
 
 
 Kiến trúc này cho phép hệ thống xử lý linh hoạt hai loại đầu vào: ảnh chân dung cận mặt (portrait) và ảnh phong cảnh/nhóm người (landscape), tự động chọn chiến lược phù hợp dựa trên kết quả phát hiện khuôn mặt.
@@ -49,7 +49,7 @@ Trong hệ thống của luận văn, phiên bản sử dụng backbone \textbf{
     \caption{Kiến trúc RetinaFace với backbone MobileNet 0.25 và Feature Pyramid Network (FPN)}
     \label{fig:retinaface_arch}
 \end{figure}
-    \noindent\textit{Chú thích:} Ba đầu ra đa nhiệm tại mỗi cấp FPN: confidence score, bounding box offset (loc), và 5 facial landmarks. Hậu xử lý bao gồm lọc ngưỡng tin cậy (0.8), NMS (0.3), và sắp xếp theo diện tích \cite{Deng2019RetinaFace.}
+    \noindent\textit{Chú thích:} Ba đầu ra đa nhiệm tại mỗi cấp FPN: confidence score, bounding box offset (loc), và 5 facial landmarks. Hậu xử lý bao gồm lọc ngưỡng tin cậy (0.8), NMS (0.3), và sắp xếp theo diện tích \cite{Deng2019RetinaFace}
 
 
 Kiến trúc RetinaFace bao gồm ba thành phần chính:
