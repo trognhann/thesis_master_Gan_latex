@@ -9,118 +9,129 @@
 
 ---
 
-## MỤC LỤC ĐỀ CƯƠNG
+## MỤC LỤC ĐỀ CƯƠNG (Cập nhật chuẩn UET 139/ĐT)
 
-| Chương | Nội dung | Ước tính trang |
-|--------|----------|:--------------:|
-| 1 | Tổng quan | 8–10 |
-| 2 | Cơ sở lý thuyết | 25–30 |
-| 3 | Kiến trúc mô hình AnimeGANv3 | 25–30 |
-| 4 | Module trích xuất khuôn mặt (Face Extraction) | 15–18 |
-| 5 | Thực nghiệm và đánh giá | 15–20 |
-| 6 | Kết luận và hướng phát triển | 5–7 |
-| | **Tổng cộng** | **~93–115** |
+| Phần / Chương | Nội dung | Ước tính trang |
+|---------------|----------|:--------------:|
+| **Phần đầu** | Trang phụ bìa, Lời cam đoan, Mục lục, Danh mục ký hiệu, bảng, hình | 5–7 |
+| **Mở đầu** | Lý do, Mục tiêu, Đối tượng, Phạm vi, Phương pháp, Cấu trúc | 3-5 |
+| **Chương 1** | Cơ sở lý thuyết | 25–30 |
+| **Chương 2** | Kiến trúc mô hình AnimeGANv3 (DTGAN) | 25–30 |
+| **Chương 3** | Module trích xuất khuôn mặt (Face Extraction) | 15–18 |
+| **Chương 4** | Thực nghiệm và đánh giá | 15–20 |
+| **Kết luận** | Cụ thể hoá các kết quả, đóng góp, hạn chế và hướng phát triển | 5–7 |
+| **Phần cuối** | Danh mục công trình khoa học (nếu có), TLTK, Phụ lục | 5-7 |
+| | **Tổng cộng khối lượng** | **~98–124** |
 
 ---
 
-## CHƯƠNG 1: TỔNG QUAN
+## MỞ ĐẦU
 
-### 1.1. Lý do chọn đề tài
+### Lý do chọn đề tài
 - Nhu cầu chuyển đổi ảnh chân dung sang phong cách anime trong giải trí, mạng xã hội, game
 - Hạn chế của các phương pháp truyền thống (style transfer dựa trên tối ưu hóa, CycleGAN tốc độ chậm, chất lượng không ổn định)
 - AnimeGANv3 đề xuất kiến trúc Double-Tail GAN đạt cả tốc độ nhanh lẫn chất lượng cao
 - **Đóng góp của luận văn:** Tích hợp module **trích xuất khuôn mặt (Face Extraction)** sử dụng RetinaFace để tạo pipeline hoàn chỉnh: Ảnh đầu vào → Phát hiện khuôn mặt → Cắt & mở rộng vùng mặt → Chuyển đổi anime → Kết quả
 
-### 1.2. Mục tiêu nghiên cứu
+### Mục tiêu nghiên cứu
 1. Nghiên cứu và trình bày lý thuyết GAN, các biến thể ứng dụng trong chuyển đổi phong cách ảnh
 2. Phân tích chi tiết kiến trúc AnimeGANv3 (DTGAN): Generator hai nhánh, kỹ thuật chuẩn hóa LADE, hệ thống hàm mất mát
 3. Xây dựng module trích xuất khuôn mặt dựa trên RetinaFace với kỹ thuật mở rộng vùng mặt (margin expansion)
 4. Huấn luyện, đánh giá mô hình trên bộ dữ liệu phong cách Hayao/Shinkai
 5. Xây dựng ứng dụng demo (GUI/Web) sử dụng ONNX Runtime
 
-### 1.3. Đối tượng và phạm vi nghiên cứu
+### Đối tượng và phạm vi nghiên cứu
 - **Đối tượng:** Ảnh chân dung người thực (portrait photos)
 - **Phạm vi:**
   - Chuyển đổi phong cách: Hayao Miyazaki, Makoto Shinkai
   - Hỗ trợ cả ảnh đơn và video
   - Mô hình triển khai suy luận bằng ONNX
 
-### 1.4. Phương pháp nghiên cứu
+### Phương pháp nghiên cứu
 - Nghiên cứu lý thuyết: Tổng hợp tài liệu, bài báo liên quan
 - Thực nghiệm: Huấn luyện mô hình trên GPU (TensorFlow 1.x)
 - Đánh giá: FID, LPIPS, khảo sát người dùng (user study), tốc độ suy luận (FPS)
 
-### 1.5. Cấu trúc luận văn
-- Tóm tắt cấu trúc 6 chương
+### Cấu trúc luận văn
+Luận văn được biên soạn theo đúng quy định của Trường Đại học Công nghệ - ĐHQGHN (Công văn 139/ĐT), bao gồm các phần chính như sau:
+
+- **Phần đầu:** Trang phụ bìa, Lời cam đoan, Mục lục, Danh mục ký hiệu/viết tắt, Danh mục bảng và Danh mục hình vẽ.
+- **Mở đầu:** Trình bày lý do chọn đề tài, mục tiêu, đối tượng, phạm vi nghiên cứu, phương pháp nghiên cứu và giới thiệu cấu trúc của luận văn.
+- **Chương 1: Cơ sở lý thuyết:** Cung cấp kiến thức nền tảng về mạng nơ-ron tích chập (CNN), mạng đối nghịch tạo sinh (GAN), mạng VGG19, cũng như các phương pháp phát hiện khuôn mặt và tiền xử lý ảnh.
+- **Chương 2: Kiến trúc mô hình AnimeGANv3 (DTGAN):** Phân tích chi tiết kiến trúc Generator, Discriminator, kỹ thuật LADE, cơ chế External Attention v3 và các hàm mất mát (loss functions).
+- **Chương 3: Module trích xuất khuôn mặt (Face Extraction):** Chi tiết cấu trúc module trích xuất tự động qua RetinaFace cùng kỹ thuật mở rộng vùng mặt (Margin Expansion) để tạo dữ liệu đầu vào.
+- **Chương 4: Thực nghiệm và đánh giá:** Trình bày thiết lập môi trường, bộ dữ liệu và đánh giá thực nghiệm bằng các hệ số (FID, LPIPS, FPS) cũng như đánh giá định tính.
+- **Kết luận:** Tổng kết các kết quả đạt được, đóng góp của đề tài, hạn chế còn tồn tại và phương hướng phát triển.
+- **Phần cuối:** Danh mục công trình khoa học của tác giả (nếu có), Tài liệu tham khảo và Phụ lục.
 
 ---
 
-## CHƯƠNG 2: CƠ SỞ LÝ THUYẾT
+## CHƯƠNG 1: CƠ SỞ LÝ THUYẾT
 
-### 2.1. Mạng nơ-ron tích chập (CNN)
-- 2.1.1. Lớp tích chập (Convolution Layer)
-- 2.1.2. Các hàm kích hoạt: ReLU, Leaky ReLU, Tanh, Sigmoid
-- 2.1.3. Các kỹ thuật chuẩn hóa: Batch Normalization, Instance Normalization, Layer Normalization, Group Normalization
+### 1.1. Mạng nơ-ron tích chập (CNN)
+- 1.1.1. Lớp tích chập (Convolution Layer)
+- 1.1.2. Các hàm kích hoạt: ReLU, Leaky ReLU, Tanh, Sigmoid
+- 1.1.3. Các kỹ thuật chuẩn hóa: Batch Normalization, Instance Normalization, Layer Normalization, Group Normalization
   > Quan trọng vì LADE (sẽ trình bày ở Chương 3) là cải tiến trên nền Instance Normalization
-- 2.1.4. Spectral Normalization (SN)
+- 1.1.4. Spectral Normalization (SN)
   > Được dùng trong Discriminator — tham chiếu [spectral_norm()](file:///Users/trognhann/Desktop/gan_thesis/AnimeGANv3/tools/ops.py#L91-L116)
 
-### 2.2. Mạng đối nghịch tạo sinh (GAN)
-- 2.2.1. Kiến trúc GAN gốc (Goodfellow et al., 2014)
+### 1.2. Mạng đối nghịch tạo sinh (GAN)
+- 1.2.1. Kiến trúc GAN gốc (Goodfellow et al., 2014)
   - Generator G và Discriminator D
   - Hàm mục tiêu min-max
   - Quá trình huấn luyện đối nghịch
-- 2.2.2. Các biến thể GAN quan trọng
+- 1.2.2. Các biến thể GAN quan trọng
   - **DCGAN:** Sử dụng CNN cho G và D
   - **WGAN / WGAN-GP:** Wasserstein distance, gradient penalty
   - **LSGAN:** Least-squares loss — *AnimeGANv3 sử dụng biến thể này*
   - **CycleGAN:** Chuyển đổi phong cách không ghép cặp (unpaired)
   - **Pix2Pix:** Chuyển đổi phong cách có giám sát (paired)
-- 2.2.3. Ứng dụng GAN trong chuyển đổi phong cách ảnh (Neural Style Transfer)
+- 1.2.3. Ứng dụng GAN trong chuyển đổi phong cách ảnh (Neural Style Transfer)
   - Gatys et al. (2016) — Style transfer dựa tối ưu hóa
   - Johnson et al. (2016) — Feed-forward style transfer
   - CartoonGAN (2018)
   - AnimeGAN (2020), AnimeGANv2 (2021)
 
-### 2.3. Mạng trích đặc trưng VGG19
-- 2.3.1. Kiến trúc VGG19
-- 2.3.2. Perceptual Loss (Feature Matching Loss)
+### 1.3. Mạng trích đặc trưng VGG19
+- 1.3.1. Kiến trúc VGG19
+- 1.3.2. Perceptual Loss (Feature Matching Loss)
   > Tham chiếu [VGG_LOSS()](file:///Users/trognhann/Desktop/gan_thesis/AnimeGANv3/tools/ops.py#L357-L362) — sử dụng layer conv4_4 (512 channels)
-- 2.3.3. Gram Matrix và Style Loss
+- 1.3.3. Gram Matrix và Style Loss
   > Tham chiếu [gram()](file:///Users/trognhann/Desktop/gan_thesis/AnimeGANv3/tools/ops.py#L342-L347) và [style_loss_decentralization_3()](file:///Users/trognhann/Desktop/gan_thesis/AnimeGANv3/tools/ops.py#L377-L396)
 
-### 2.4. Phát hiện khuôn mặt (Face Detection)
-- 2.4.1. Tổng quan các phương pháp: Viola-Jones, MTCNN, SSD, YOLO
-- 2.4.2. **RetinaFace** (Deng et al., 2019)
+### 1.4. Phát hiện khuôn mặt (Face Detection)
+- 1.4.1. Tổng quan các phương pháp: Viola-Jones, MTCNN, SSD, YOLO
+- 1.4.2. **RetinaFace** (Deng et al., 2019)
   - Kiến trúc: Feature Pyramid Network + Multi-task Learning
   - Backbone: MobileNet 0.25 (lightweight) — được sử dụng trong GUI
   > Tham chiếu [retinaface_/config.py](file:///Users/trognhann/Desktop/gan_thesis/AnimeGANv3_gui.exe/retinaface_/config.py) — `cfg_mnet`
   - Anchor boxes: multi-scale `[[16,32], [64,128], [256,512]]`
   - Prior Box generation
   - Non-Maximum Suppression (NMS)
-- 2.4.3. Suy luận với ONNX Runtime
+- 1.4.3. Suy luận với ONNX Runtime
   > Tham chiếu [face_det.py L20-22](file:///Users/trognhann/Desktop/gan_thesis/AnimeGANv3_gui.exe/face_det.py#L20-L22)
 
-### 2.5. Lọc ảnh và tiền xử lý
-- 2.5.1. Guided Filter
+### 1.5. Lọc ảnh và tiền xử lý
+- 1.5.1. Guided Filter
   > Tham chiếu [GuidedFilter.py](file:///Users/trognhann/Desktop/gan_thesis/AnimeGANv3/tools/GuidedFilter.py) — làm mịn có bảo toàn cạnh
-- 2.5.2. L0 Smoothing
+- 1.5.2. L0 Smoothing
   > Tham chiếu [L0_smoothing.py](file:///Users/trognhann/Desktop/gan_thesis/AnimeGANv3/tools/L0_smoothing.py) — loại bỏ chi tiết giữ biên mạnh
-- 2.5.3. Superpixel Segmentation (Felzenszwalb)
+- 1.5.3. Superpixel Segmentation (Felzenszwalb)
   > Tham chiếu [get_seg()](file:///Users/trognhann/Desktop/gan_thesis/AnimeGANv3/AnimeGANv3_hayao.py#L285-L295)
-- 2.5.4. Non-Local Means Denoising
+- 1.5.4. Non-Local Means Denoising
   > Tham chiếu [get_NLMean_l0()](file:///Users/trognhann/Desktop/gan_thesis/AnimeGANv3/AnimeGANv3_hayao.py#L306-L314)
-- 2.5.5. Edge Smoothing
+- 1.5.5. Edge Smoothing
   > Tham chiếu [edge_smooth.py](file:///Users/trognhann/Desktop/gan_thesis/AnimeGANv3/tools/edge_smooth.py)
 
 ---
 
-## CHƯƠNG 3: KIẾN TRÚC MÔ HÌNH AnimeGANv3 (DTGAN)
+## CHƯƠNG 2: KIẾN TRÚC MÔ HÌNH AnimeGANv3 (DTGAN)
 
 > [!IMPORTANT]
 > Đây là chương trọng tâm kỹ thuật của luận văn. Cần trình bày chi tiết và đầy đủ.
 
-### 3.1. Tổng quan kiến trúc DTGAN
+### 2.1. Tổng quan kiến trúc DTGAN
 
 ```mermaid
 graph TD
@@ -139,7 +150,7 @@ graph TD
 - **Support Tail:** Tạo đường nét anime thô, huấn luyện với grayscale discriminator
 - **Main Tail:** Tinh chỉnh chi tiết, huấn luyện với ảnh đã qua NL-Means + L0 Smoothing
 
-### 3.2. Generator (G_net)
+### 2.2. Generator (G_net)
 
 > Tham chiếu: [generator.py](file:///Users/trognhann/Desktop/gan_thesis/AnimeGANv3/net/generator.py)
 
@@ -178,7 +189,7 @@ x3 → External_attention_v3 → s_x3
 - **External Attention v3** tại bottleneck (32×32)
 - **Bilinear upsampling** thay vì transposed convolution
 
-### 3.3. Kỹ thuật chuẩn hóa LADE (Linearly Adaptive Denormalization)
+### 2.3. Kỹ thuật chuẩn hóa LADE (Linearly Adaptive Denormalization)
 
 > Tham chiếu: [LADE()](file:///Users/trognhann/Desktop/gan_thesis/AnimeGANv3/tools/ops.py#L263-L271) và [LADE_D()](file:///Users/trognhann/Desktop/gan_thesis/AnimeGANv3/tools/ops.py#L252-L260)
 
@@ -209,7 +220,7 @@ output = x_in * sqrt(t_sigma + eps) + t_mean           # Adaptive denorm
 #### 3.3.3. Biến thể LADE_D (dùng trong Discriminator)
 - Thêm Spectral Normalization cho conv1×1
 
-### 3.4. External Attention v3
+### 2.4. External Attention v3
 
 > Tham chiếu: [External_attention_v3()](file:///Users/trognhann/Desktop/gan_thesis/AnimeGANv3/tools/ops.py#L206-L228)
 
@@ -224,7 +235,7 @@ x → Conv1×1 → Reshape(B, H×W, C)
   → Conv1×1 → BatchNorm → Residual Add → LeakyReLU
 ```
 
-### 3.5. Discriminator (D_net)
+### 2.5. Discriminator (D_net)
 
 > Tham chiếu: [discriminator.py](file:///Users/trognhann/Desktop/gan_thesis/AnimeGANv3/net/discriminator.py)
 
@@ -235,7 +246,7 @@ x → Conv1×1 → Reshape(B, H×W, C)
 - Kiến trúc: 7 lớp conv với LADE_D + Spectral Normalization
 - Output: Feature map 1 kênh (PatchGAN style)
 
-### 3.6. Hệ thống hàm mất mát (Loss Functions)
+### 2.6. Hệ thống hàm mất mát (Loss Functions)
 
 > Tham chiếu: [AnimeGANv3_hayao.py L101-133](file:///Users/trognhann/Desktop/gan_thesis/AnimeGANv3/AnimeGANv3_hayao.py#L101-L133)
 
@@ -285,7 +296,7 @@ D_main = 0.1 * standard_LSGAN(NLMean_real, fake_m)
 - **Lab Color Loss:** Bảo toàn màu sắc trong không gian Lab (tách rời luminance và chrominance)
 - **Main Tail pseudo-ground-truth:** NL-Means + L0 Smoothing tạo ảnh anime "sạch" làm mục tiêu
 
-### 3.7. Quy trình huấn luyện
+### 2.7. Quy trình huấn luyện
 
 > Tham chiếu: [train()](file:///Users/trognhann/Desktop/gan_thesis/AnimeGANv3/AnimeGANv3_hayao.py#L168-L278)
 
@@ -307,19 +318,19 @@ graph TD
 - Learning rate: G = 1e-4, D = 1e-4, Init G = 2e-4
 - Optimizer: Adam (β1=0.5, β2=0.999)
 
-### 3.8. Xử lý hậu kỳ: Guided Filter
+### 2.8. Xử lý hậu kỳ: Guided Filter
 - Áp dụng lên output của Support Tail trước khi đưa vào Discriminator
 - `generated = tanh_scale(guided_filter(sigm_scale(fake_s), sigm_scale(fake_s), r=2, eps=0.01))`
 - Tác dụng: Làm mịn ảnh, giảm artifact, giữ biên cạnh sharp
 
 ---
 
-## CHƯƠNG 4: MODULE TRÍCH XUẤT KHUÔN MẶT (FACE EXTRACTION)
+## CHƯƠNG 3: MODULE TRÍCH XUẤT KHUÔN MẶT (FACE EXTRACTION)
 
 > [!IMPORTANT]
 > Đây là phần đóng góp riêng của luận văn — tích hợp face extraction vào pipeline AnimeGANv3.
 
-### 4.1. Tổng quan pipeline
+### 3.1. Tổng quan pipeline
 
 ```mermaid
 graph LR
@@ -333,7 +344,7 @@ graph LR
     G --> H["Ảnh anime đầu ra"]
 ```
 
-### 4.2. Phát hiện khuôn mặt với RetinaFace
+### 3.2. Phát hiện khuôn mặt với RetinaFace
 
 > Tham chiếu: [face_det.py](file:///Users/trognhann/Desktop/gan_thesis/AnimeGANv3_gui.exe/face_det.py)
 
@@ -361,7 +372,7 @@ img = np.expand_dims(img, 0)    # Thêm batch dimension
 box_order = np.argsort((dets[:,2]-dets[:,0]) * (dets[:,3]-dets[:,1]))[::-1]
 ```
 
-### 4.3. Kỹ thuật mở rộng vùng khuôn mặt (Margin Expansion)
+### 3.3. Kỹ thuật mở rộng vùng khuôn mặt (Margin Expansion)
 
 > Tham chiếu: [margin_face()](file:///Users/trognhann/Desktop/gan_thesis/AnimeGANv3_gui.exe/face_det.py#L28-L50)
 
@@ -389,7 +400,7 @@ Cho bounding box `(x1, y1, x2, y2)` với kích thước ảnh `(H, W)` và hệ
 - `margin = 0.5` → mở rộng 50% mỗi bên → bao gồm tóc, tai, cổ
 - Xử lý edge case: khuôn mặt gần biên ảnh (mở rộng không đối xứng)
 
-### 4.4. Luồng xử lý ảnh trong pipeline
+### 3.4. Luồng xử lý ảnh trong pipeline
 
 > Tham chiếu: [photo_page.py — Thread_01.run()](file:///Users/trognhann/Desktop/gan_thesis/AnimeGANv3_gui.exe/photo_page.py#L34-L73)
 
@@ -422,7 +433,7 @@ ort_outs = session.run(None, {"input": img})[0]
 output = (ort_outs + 1.) / 2 * 255
 ```
 
-### 4.5. So sánh chế độ Face vs. Landscape
+### 3.5. So sánh chế độ Face vs. Landscape
 
 | Tiêu chí | Face Extraction (Extract face: Yes) | Landscape (Extract face: No) |
 |----------|-------------------------------------|------------------------------|
@@ -434,26 +445,26 @@ output = (ort_outs + 1.) / 2 * 255
 
 ---
 
-## CHƯƠNG 5: THỰC NGHIỆM VÀ ĐÁNH GIÁ
+## CHƯƠNG 4: THỰC NGHIỆM VÀ ĐÁNH GIÁ
 
-### 5.1. Môi trường thực nghiệm
+### 4.1. Môi trường thực nghiệm
 - **Phần cứng:** GPU NVIDIA (RTX 3090/4090), RAM 32GB+
 - **Phần mềm:** TensorFlow 1.x, ONNX Runtime, Python 3.7+
 - **Framework GUI:** PyQt5
 
-### 5.2. Bộ dữ liệu
+### 4.2. Bộ dữ liệu
 - **Ảnh thực (Photo):** Bộ ảnh chân dung (CelebA, FFHQ, hoặc custom dataset)
 - **Ảnh anime (Style):** Hayao Miyazaki frames, Shinkai Makoto frames
 - **Processed:**
   - `seg_train_5-0.8-50/` — Felzenszwalb superpixel segmented photos
   - `smooth/` — Edge-smoothed anime frames
 
-### 5.3. Kết quả huấn luyện
+### 4.3. Kết quả huấn luyện
 - Đường cong loss (G_loss, D_loss, từng thành phần loss)
 - Mẫu ảnh qua các epoch
 - So sánh output của Support Tail (fake_s) vs Main Tail (fake_m) vs Final (generated)
 
-### 5.4. Đánh giá định lượng
+### 4.4. Đánh giá định lượng
 
 | Chỉ số | Mô tả |
 |--------|-------|
@@ -462,17 +473,17 @@ output = (ort_outs + 1.) / 2 * 255
 | **Inference Speed** (FPS) | Tốc độ suy luận trên GPU/CPU |
 | **Model Size** (params, MB) | Kích thước mô hình |
 
-### 5.5. Đánh giá định tính
+### 4.5. Đánh giá định tính
 - So sánh trực quan với CartoonGAN, AnimeGANv2, CycleGAN
 - So sánh có/không Face Extraction
 - User study: Khảo sát người dùng đánh giá chất lượng anime
 
-### 5.6. Đánh giá module Face Extraction
+### 4.6. Đánh giá module Face Extraction
 - Độ chính xác phát hiện khuôn mặt (Precision, Recall)
 - Ảnh hưởng của `margin` (0.3, 0.5, 0.7) đến chất lượng chuyển đổi
 - Xử lý edge cases: nhiều khuôn mặt, mặt nghiêng, ánh sáng yếu
 
-### 5.7. Demo ứng dụng
+### 4.7. Demo ứng dụng
 - Giao diện GUI (PyQt5) với chức năng:
   - Chọn thư mục ảnh đầu vào
   - Chọn model ONNX
@@ -482,22 +493,22 @@ output = (ort_outs + 1.) / 2 * 255
 
 ---
 
-## CHƯƠNG 6: KẾT LUẬN VÀ HƯỚNG PHÁT TRIỂN
+## KẾT LUẬN
 
-### 6.1. Kết luận
+### Kết luận
 - Tóm tắt các đóng góp chính:
   1. Trình bày chi tiết kiến trúc DTGAN (AnimeGANv3) với Double-Tail Generator, LADE normalization
   2. Tích hợp module Face Extraction sử dụng RetinaFace + Margin Expansion
   3. Xây dựng pipeline hoàn chỉnh từ ảnh chân dung → anime
   4. Đánh giá thực nghiệm toàn diện
 
-### 6.2. Hạn chế
+### Hạn chế
 - Phụ thuộc vào chất lượng và đa dạng của training data
 - Chưa xử lý tốt các trường hợp biên (mặt bị che, góc xiên lớn)
 - Chỉ hỗ trợ batch processing, chưa real-time video
 - Model size lớn hơn cho face mode (512×512)
 
-### 6.3. Hướng phát triển
+### Hướng phát triển
 - **Face alignment:** Sử dụng 5 facial landmarks từ RetinaFace để căn chỉnh mặt trước khi chuyển đổi
 - **Face blending:** Tái hợp nhất vùng mặt đã chuyển đổi vào ảnh gốc (seamless blending)
 - **Multi-style:** Hỗ trợ nhiều phong cách anime đồng thời (style interpolation)

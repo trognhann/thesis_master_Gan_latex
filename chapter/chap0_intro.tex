@@ -6,45 +6,46 @@
 
 \section*{Tính cấp thiết và ý nghĩa của đề tài}
 
-Sự phát triển mạnh mẽ của nghệ thuật kỹ thuật số cùng với thị trường Anime/Manga toàn cầu đã tạo động lực lớn cho các nghiên cứu về chuyển đổi phong cách hình ảnh. Theo thống kê năm 2024, quy mô thị trường anime toàn cầu đạt khoảng 81,96 tỷ USD và dự kiến vượt 200 tỷ USD vào năm 2034. Công nghệ AI hiện nay cũng đang dần xâm nhập vào quy trình sản xuất anime – ví dụ, các công cụ Generative AI đã có thể tự động hoá việc vẽ phông nền và tô màu, giúp giảm bớt công việc lặp lại cho các hoạ sĩ. Trong bối cảnh đó, nhu cầu tự động hoá chuyển đổi ảnh thực sang phong cách anime trở nên cấp thiết, nhằm phục vụ cộng đồng người hâm mộ khổng lồ và ngành công nghiệp sáng tạo nội dung đang bùng nổ.
+Sự phát triển mạnh mẽ của nghệ thuật kỹ thuật số cùng với thị trường Anime/Manga toàn cầu đã tạo động lực lớn cho các nghiên cứu về chuyển đổi phong cách hình ảnh. Theo thống kê năm 2024, quy mô thị trường anime toàn cầu đạt khoảng 81,96 tỷ USD và dự kiến vượt 200 tỷ USD vào năm 2034. Công nghệ AI hiện nay cũng đang dần xâm nhập vào quy trình sản xuất anime -- ví dụ, các công cụ Generative AI đã có thể tự động hoá việc vẽ phông nền và tô màu, giúp giảm bớt công việc lặp lại cho các hoạ sĩ. Trong bối cảnh đó, nhu cầu tự động hoá chuyển đổi ảnh thực sang phong cách anime trở nên cấp thiết, nhằm phục vụ cộng đồng người hâm mộ khổng lồ và ngành công nghiệp sáng tạo nội dung đang bùng nổ.
 
-Tuy nhiên, việc chuyển một ảnh chân dung người thật sang tranh anime là thách thức không nhỏ. Phong cách anime có đặc trưng rất khác biệt (đường nét đơn giản, mắt to, màu sắc phẳng, v.v.), trong khi ảnh chụp chứa nhiều chi tiết thực tế phức tạp. Các phương pháp truyền thống dựa trên Neural Style Transfer thường gặp khó khăn trong việc giữ được nội dung gốc và dễ sinh ra nhiễu, tạo tác (artifacts) khi khác biệt phong cách quá lớn. Mặt khác, vẽ tay thủ công bởi các hoạ sĩ tuy chất lượng cao nhưng tốn kém thời gian và công sức. Do đó, bài toán đặt ra là làm thế nào để tự động hoá quá trình này mà vẫn đảm bảo chất lượng cao và bảo toàn được đặc điểm nhận dạng của đối tượng trong ảnh gốc.
+Tuy nhiên, việc chuyển một ảnh chân dung người thật sang tranh anime là thách thức không nhỏ. Phong cách anime có đặc trưng rất khác biệt (đường nét đơn giản, mắt to, màu sắc phẳng, v.v.), trong khi ảnh chụp chứa nhiều chi tiết thực tế phức tạp. Các phương pháp truyền thống dựa trên Neural Style Transfer thường gặp khó khăn trong việc giữ được nội dung gốc và dễ sinh ra nhiễu, tạo tác (artifacts) khi khác biệt phong cách quá lớn. Thêm vào đó, các phương pháp như CycleGAN tuy có khả năng học dạng chuyển đổi không ghép cặp nhưng còn chậm và chất lượng đầu ra chưa ổn định. Vẽ tay thủ công bởi các hoạ sĩ tuy chất lượng cao nhưng tốn kém thời gian và công sức. Do đó, bài toán đặt ra là làm thế nào để tự động hoá quá trình này mà vẫn đảm bảo chất lượng cao và bảo toàn được đặc điểm nhận dạng của đối tượng trong ảnh gốc.
 
-Mạng Đối nghịch Tạo sinh (GAN) nổi lên như một công nghệ đột phá có thể giải quyết các nhiệm vụ tổng hợp hình ảnh phức tạp. Được Ian Goodfellow giới thiệu năm 2014 \cite{Goodfellow2014} và được Yann LeCun ca ngợi là “ý tưởng thú vị nhất của ML trong 10 năm”, GAN đã chứng tỏ hiệu quả vượt trội trong việc sinh ảnh chân thực từ dữ liệu huấn luyện. Đặc biệt trong bài toán dịch chuyển phong cách (style transfer), GANs cung cấp một khuôn khổ linh hoạt để huấn luyện mô hình tạo ảnh anime từ ảnh thật mà không đòi hỏi dữ liệu ảnh cặp một-một. Nhờ GAN, những tiến bộ gần đây cho thấy khả năng tạo các hình ảnh anime hóa ngày càng sắc nét và chính xác hơn, mở ra hướng tiếp cận mới cho bài toán này.
+Mạng Đối nghịch Tạo sinh (GAN) nổi lên như một công nghệ đột phá có thể giải quyết các nhiệm vụ tổng hợp hình ảnh phức tạp. Được Ian Goodfellow giới thiệu năm 2014 \cite{Goodfellow2014} và được Yann LeCun ca ngợi là ``ý tưởng thú vị nhất của ML trong 10 năm'', GAN đã chứng tỏ hiệu quả vượt trội trong việc sinh ảnh chân thực từ dữ liệu huấn luyện. Đặc biệt trong bài toán dịch chuyển phong cách (style transfer), GANs cung cấp một khuôn khổ linh hoạt để huấn luyện mô hình tạo ảnh anime từ ảnh thật mà không đòi hỏi dữ liệu ảnh cặp một-một. Trong số các mô hình GAN ứng dụng cho anime hóa ảnh, AnimeGANv3 (DTGAN) \cite{Liu2024} nổi bật với kiến trúc Double-Tail Generator sáng tạo, kỹ thuật chuẩn hóa LADE và bộ hàm mất mát chuyên biệt -- đạt được đồng thời tốc độ nhanh và chất lượng ảnh cao. Luận văn này nghiên cứu, tái hiện và mở rộng hệ thống đó bằng cách tích hợp thêm module \textbf{trích xuất khuôn mặt (Face Extraction)} sử dụng RetinaFace, tạo thành một pipeline hoàn chỉnh từ đầu đến cuối: từ ảnh chân dung thô đến ảnh anime chất lượng cao.
 
 \section*{Mục tiêu nghiên cứu}
 
-Mục tiêu tổng quát là xây dựng và đánh giá một mô hình chuyển đổi ảnh chân dung người thật sang phong cách anime chất lượng cao dựa trên GAN, đảm bảo giữ được các nét nhận dạng chính của khuôn mặt gốc. Mục tiêu cụ thể bao gồm:
+Mục tiêu tổng quát của luận văn là nghiên cứu, tái hiện và mở rộng mô hình AnimeGANv3 (DTGAN) để xây dựng một hệ thống chuyển đổi ảnh chân dung người thật sang phong cách anime chất lượng cao, có tích hợp module trích xuất khuôn mặt tự động. Cụ thể, luận văn hướng đến các mục tiêu sau:
 
-\begin{itemize}
-    \item Lựa chọn kiến trúc GAN phù hợp: Nghiên cứu các kiến trúc GAN tiên tiến và chọn mô hình nền tảng hiệu quả nhất cho bài toán (dự kiến sử dụng kiến trúc Double-Tail GAN (DTGAN) – phiên bản AnimeGAN thế hệ mới \cite{AnimeGANv3, Liu2024}).
-    \item Xây dựng tập dữ liệu và tiền xử lý: Thu thập hoặc tinh chỉnh tập dữ liệu gồm ảnh chân dung thực và ảnh anime tương ứng (dạng không ghép cặp), áp dụng các bước tiền xử lý như căn chỉnh khuôn mặt, chuẩn hóa kích thước, tăng cường dữ liệu.
-    \item Đề xuất hàm mất mát và chiến lược huấn luyện tối ưu: Thiết kế bộ hàm loss chuyên biệt (kết hợp giữa loss truyền thống của GAN và các loss phong cách/anime đặc thù) cùng lịch trình huấn luyện thích hợp nhằm tăng độ ổn định và làm nổi bật chi tiết ảnh đầu ra.
-    \item Đánh giá mô hình: Đánh giá chất lượng ảnh anime sinh ra bằng cả phương pháp định lượng (ví dụ: FID, PSNR, LPIPS) và định tính (đánh giá cảm quan, khảo sát người dùng), so sánh với các phương pháp chuyển đổi phong cách hiện có để xác định hiệu quả của mô hình đề xuất.
-\end{itemize}
-
+\begin{enumerate}
+    \item Nghiên cứu và trình bày nền tảng lý thuyết về mạng nơ-ron tích chập (CNN), các biến thể GAN ứng dụng trong chuyển đổi phong cách ảnh, cùng với các kỹ thuật phát hiện khuôn mặt và tiền xử lý ảnh liên quan.
+    \item Phân tích chi tiết kiến trúc AnimeGANv3 (DTGAN): cấu trúc Generator hai nhánh (Double-Tail), kỹ thuật chuẩn hóa LADE, cơ chế External Attention v3 và hệ thống hàm mất mát đặc thù.
+    \item Xây dựng và tích hợp module trích xuất khuôn mặt (Face Extraction) sử dụng RetinaFace kết hợp kỹ thuật mở rộng vùng mặt (Margin Expansion), tạo thành pipeline hoàn chỉnh: Ảnh đầu vào $\rightarrow$ Phát hiện khuôn mặt $\rightarrow$ Cắt \& mở rộng vùng mặt $\rightarrow$ Chuyển đổi anime $\rightarrow$ Kết quả.
+    \item Huấn luyện và đánh giá toàn diện mô hình trên bộ dữ liệu phong cách Hayao Miyazaki và Makoto Shinkai bằng các chỉ số định lượng (FID, LPIPS, FPS) và đánh giá định tính.
+    \item Xây dựng ứng dụng demo (GUI sử dụng PyQt5 hoặc Web) triển khai suy luận qua ONNX Runtime để minh chứng khả năng ứng dụng thực tiễn của hệ thống.
+\end{enumerate}
 
 \section*{Đối tượng và phạm vi nghiên cứu}
 
-Đối tượng nghiên cứu: Các kiến trúc mạng Generative Adversarial Networks (GANs) phục vụ cho nhiệm vụ dịch chuyển phong cách hình ảnh, đặc biệt là các mô hình chuyên dành cho chuyển ảnh người sang hoạt hình/anime. Ngoài ra, đề tài cũng liên quan đến các kỹ thuật thị giác máy tính và học sâu hỗ trợ, như mô hình encoder-decoder, các phương pháp xử lý ảnh (phát hiện, căn chỉnh khuôn mặt) và các hàm tổn thất perceptual.
+\textbf{Đối tượng nghiên cứu:} Kiến trúc mạng Double-Tail Generative Adversarial Network (DTGAN) áp dụng cho bài toán chuyển đổi phong cách ảnh chân dung sang anime. Cụ thể, đề tài tập trung vào: (1) các thành phần cấu trúc của Generator và Discriminator trong AnimeGANv3, (2) kỹ thuật chuẩn hóa LADE và cơ chế External Attention v3, (3) hệ thống hàm mất mát đặc thù cho bài toán anime hóa, và (4) module phát hiện -- trích xuất khuôn mặt sử dụng RetinaFace.
 
-Phạm vi nghiên cứu: Đề tài tập trung vào ảnh chân dung người (face portraits) và phong cách Anime 2D. Cụ thể, ảnh đầu vào giới hạn ở ảnh khuôn mặt người thật (có thể chụp từ camera hoặc ảnh selfie), và ảnh đầu ra hướng đến phong cách tranh vẽ nhân vật anime 2D (phong cách hoạt hình Nhật Bản). Mô hình được huấn luyện và đánh giá trên tập dữ liệu ảnh chân dung và ảnh anime không ghép cặp. Những khía cạnh ngoài phạm vi bao gồm chuyển đổi phong cách cho video, phong cách 3D hoặc các phong cách hoạt hình khác (cartoon kiểu phương Tây, tranh phác hoạ, v.v.), cũng như không đi sâu vào các kỹ thuật diffusion models hay transformer mới hơn (chỉ tập trung vào GAN truyền thống trong giai đoạn 2020-2025).
+\textbf{Phạm vi nghiên cứu:}
+
+\begin{itemize}
+    \item \textit{Dữ liệu:} Ảnh chân dung người thật (portrait photos) làm đầu vào; ảnh anime phong cách Hayao Miyazaki và Makoto Shinkai làm tập dữ liệu phong cách. Tập dữ liệu ở dạng không ghép cặp (unpaired).
+    \item \textit{Mô hình:} Sử dụng mô hình AnimeGANv3 (DTGAN) \cite{Liu2024} làm nền tảng, có mở rộng thêm module Face Extraction dựa trên RetinaFace \cite{Deng2020} với backbone MobileNet 0.25.
+    \item \textit{Triển khai:} Mô hình được chuyển đổi và triển khai suy luận qua ONNX Runtime, hỗ trợ cả ảnh đơn và xử lý theo lô (batch processing).
+    \item \textit{Ngoài phạm vi:} Chuyển đổi phong cách cho video thời gian thực, các phong cách hoạt hình khác (cartoon phương Tây, 3D), và các kiến trúc mới hơn như Diffusion Models hay Vision Transformers (chỉ tập trung vào GAN giai đoạn 2018--2024).
+\end{itemize}
 
 \section*{Cấu trúc luận văn}
 
 Luận văn được tổ chức theo cấu trúc như sau:
 
-Mở đầu – Trình bày sự cần thiết, mục tiêu, phạm vi của đề tài và khái quát nội dung nghiên cứu.
-
-Chương 1: Cơ sở Lý thuyết và Tổng quan Nghiên cứu – Tổng hợp nền tảng lý thuyết về học sâu, thị giác máy, kiến trúc GAN, và các nghiên cứu liên quan trong lĩnh vực chuyển ảnh chân dung sang phong cách anime.
-
-Chương 2: Phương pháp Nghiên cứu Đề xuất – Mô tả chi tiết mô hình GAN đề xuất (kiến trúc Double-Tail GAN), các cải tiến kỹ thuật (như LADE – adaptive denormalization, hàm mất mát mới), cùng quy trình huấn luyện.
-
-Chương 3: Thực nghiệm và Kết quả – Trình bày thiết lập thực nghiệm, quá trình huấn luyện mô hình trên tập dữ liệu thu thập, và kết quả đánh giá so sánh với các phương pháp khác. Phân tích các kết quả định lượng và định tính, minh hoạ bằng các hình ảnh đầu vào/đầu ra.
-
-Kết luận và Hướng phát triển – Tóm tắt những đóng góp chính của luận văn, thảo luận những hạn chế còn tồn tại và đề xuất hướng nghiên cứu trong tương lai (mở rộng sang video, phong cách khác, ứng dụng diffusion model, v.v.).
-
-
-
-
-
+\begin{itemize}
+    \item \textbf{Mở đầu:} Trình bày lý do chọn đề tài, sự cần thiết, mục tiêu, đối tượng, phạm vi nghiên cứu và giới thiệu cấu trúc của luận văn.
+    \item \textbf{Chương 1: Cơ sở lý thuyết.} Cung cấp kiến thức nền tảng về mạng nơ-ron tích chập (CNN), mạng đối nghịch tạo sinh (GAN) và các biến thể (DCGAN, LSGAN, CycleGAN), mạng VGG19 dùng trong perceptual loss, cũng như các phương pháp phát hiện khuôn mặt (RetinaFace) và tiền xử lý ảnh.
+    \item \textbf{Chương 2: Kiến trúc mô hình AnimeGANv3 (DTGAN).} Phân tích chi tiết kiến trúc mạng Double-Tail GAN, gồm Base Encoder, Support Tail và Main Tail của Generator; hai Discriminator; kỹ thuật chuẩn hóa LADE; cơ chế External Attention v3; hệ thống hàm mất mát và quy trình huấn luyện.
+    \item \textbf{Chương 3: Module trích xuất khuôn mặt (Face Extraction).} Trình bày việc xây dựng và tích hợp module trích xuất khuôn mặt tự động dựa trên RetinaFace, kỹ thuật mở rộng vùng mặt (Margin Expansion), và so sánh hai chế độ xử lý ảnh (Face mode và Landscape mode).
+    \item \textbf{Chương 4: Thực nghiệm và đánh giá.} Trình bày môi trường thực nghiệm, bộ dữ liệu, kết quả huấn luyện, đánh giá định lượng (FID, LPIPS, FPS) và định tính (khảo sát người dùng), cùng demo ứng dụng.
+    \item \textbf{Kết luận:} Tóm tắt những kết quả nổi bật, đóng góp của đề tài, thảo luận các hạn chế còn tồn tại và đề xuất phương hướng mở rộng trong tương lai.
+\end{itemize}
