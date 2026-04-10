@@ -13,6 +13,13 @@ Chương này trình bày chi tiết kiến trúc kỹ thuật của mô hình A
 
 Ý tưởng trung tâm của DTGAN là giải quyết bài toán chuyển đổi ảnh sang phong cách anime một cách hiệu quả bằng cách tách quá trình học thành \textbf{hai nhiệm vụ song song}: học các đường nét anime thô (Support Tail) và tinh chỉnh chi tiết màu sắc mịn (Main Tail). Hai nhánh decoder chia sẻ cùng một encoder đặc trưng nhưng có trọng số decoder độc lập, được huấn luyện với các discriminator và hàm mất mát riêng biệt.
 
+Cụ thể, kiến trúc phân nhánh của Generator trong mô hình DTGAN được cấu trúc gồm ba thành phần cơ bản, phối hợp nhịp nhàng để thực hiện từng giai đoạn của quá trình chuyển đổi phong cách:
+\begin{itemize}
+    \item \textbf{Base Encoder (Mạng mã hóa cơ sở dùng chung):} Đây là giai đoạn đầu tiên tiếp nhận ảnh gốc đầu vào ở độ phân giải thực. Mạch mã hóa này sử dụng các lớp tích chập liên tiếp nhằm trích xuất đa dạng các đặc trưng ngữ nghĩa—từ chi tiết bậc thấp như cạnh, đường viền cho đến hình khối và cấu trúc tổng thể phức tạp. Thông qua 3 lần lấy mẫu xuống (downsampling), mạng thu nhỏ không gian ảnh thành các bản đồ đặc trưng (feature maps) có kích thước tiêu chuẩn $32 \times 32$. Thiết kế dùng chung cho cả hai nhánh (shared weights) không chỉ đảm bảo mô hình khởi nguồn từ một không gian đặc trưng thống nhất, mà còn làm giảm đáng kể số lượng tham số thừa, giúp tối ưu hóa chi phí tính toán.
+    \item \textbf{Support Tail (Nhánh giải mã hỗ trợ):} Nhánh decoder này đảm nhận vai trò tiên phong trong việc học và khôi phục các đặc điểm sơ bộ về cấu trúc tổng thể và hệ thống đường nét của phong cách anime. Kết quả trung gian sinh ra là một bức anime thô ký hiệu là $\widehat{y}_s$ (\texttt{fake\_s}). Thay vì đánh giá trực tiếp nhánh này, ảnh $\widehat{y}_s$ được xử lý qua bộ lọc bảo toàn cạnh Guided Filter để tạo ra ảnh biểu diễn $\widehat{y}$ (\texttt{generated}). Phiên bản ảnh sau khi lọc này được chuyển định dạng sang không gian ảnh xám (grayscale) và đưa vào quá trình đối kháng (adversarial training) cùng tập anime gốc, nhằm khích lệ mô hình tập trung tái tạo mảng khối sáng tối và độ tương phản đặc trưng của nét vẽ mà không bị phân tâm bởi yếu tố màu sắc.
+    \item \textbf{Main Tail (Nhánh giải mã chính):} Nhánh decoder thứ hai có nhiệm vụ cao nhất là hoàn thiện bức tranh bằng cách tinh chỉnh sâu về phân phối đa sắc, kết cấu màu và độ mịn màng. Ảnh hoàn chỉnh được sinh ra ký hiệu là $\widehat{y}_m$ (\texttt{fake\_m}). Để mô hình học được năng lực tô màu khối (cel-shading) liền mạch không phô chênh giống họa sĩ thực thụ, quá trình tối ưu nhánh này sẽ được so sánh với các bản đồ nhãn mẫu (pseudo ground-truth) — vốn được tính toán trước bằng thuật toán loại bỏ nhiễu tự nhiên Non-Local Means kết hợp quy trình làm phẳng L0 Smoothing. Thành phần này đóng vai trò quyết định giúp tác phẩm tổng hợp đầu ra đạt diện mạo thẩm mỹ cao, làm sạch các vết artifacts cục bộ.
+\end{itemize}
+
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.95\textwidth]{figChap2/dtgan_architecture.png}
@@ -21,15 +28,8 @@ Chương này trình bày chi tiết kiến trúc kỹ thuật của mô hình A
 \end{figure}
     \noindent\textit{Chú thích:} Ảnh đầu vào qua Shared Base Encoder để tạo các bản đồ đặc trưng $x_0, x_1, x_2, x_3$, sau đó được xử lý song song bởi Support Tail và Main Tail với skip connections kiểu U-Net. Output của Support Tail qua Guided Filter trước khi đưa vào Discriminator grayscale \cite{Liu2024}
 
-
-Cụ thể, kiến trúc Generator của DTGAN bao gồm ba thành phần chính:
-\begin{itemize}
-    \item \textbf{Base Encoder (chia sẻ):} Trích xuất đặc trưng từ ảnh đầu vào, downsampling 3 lần để tạo feature map $32 \times 32$.
-    \item \textbf{Support Tail:} Decoder sinh ảnh anime thô $\widehat{y}_s$ (\texttt{fake\_s}), được lọc qua Guided Filter tạo $\widehat{y}$ (\texttt{generated}), dùng để huấn luyện với Discriminator grayscale và tập dữ liệu ảnh anime.
-    \item \textbf{Main Tail:} Decoder tinh chỉnh ảnh $\widehat{y}_m$ (\texttt{fake\_m}), dùng pseudo ground-truth từ NL-Means + L0 Smoothing để học chi tiết mịn.
-\end{itemize}
-
 % =====================================================
+\newpage
 \section{Mạng Generator (G\_net)}
 \label{sec:generator}
 
@@ -247,8 +247,8 @@ Cơ chế double normalization (chuẩn hóa hai lần theo cả trục $N$ và 
 DTGAN sử dụng hai Discriminator độc lập theo kiến trúc PatchGAN \cite{Isola2017}:
 
 \begin{itemize}
-    \item \textbf{Discriminator (Support D):} Nhận ảnh grayscale làm đầu vào. Phân biệt giữa ảnh anime grayscale thật và $\widehat{y}$ (\texttt{generated}) grayscale từ Support Tail.
-    \item \textbf{Discriminator\_main (Main D):} Nhận ảnh màu đầy đủ. Phân biệt giữa ảnh đã qua NL-Means + L0 Smoothing thật và $\widehat{y}_m$ từ Main Tail.
+    \item \textbf{Discriminator hỗ trợ (Support D):} Mạng này hoạt động chuyên biệt trên không gian ảnh xám (grayscale) 1 kênh màu. Nhiệm vụ cốt lõi của nó là đối chiếu và phân biệt giữa các bức ảnh anime đen trắng bản gốc với ảnh $\widehat{y}$ (\texttt{generated}) — vốn là sản phẩm thô đã được xử lý cạnh từ nhánh Support Tail. Việc cưỡng chế toàn bộ tín hiệu đầu vào sang thang độ xám giúp Discriminator loại bỏ hoàn toàn sự phân mảnh thông tin phức tạp sinh ra từ phân bố đa sắc; qua đó, tạo tín hiệu phạt ngược sắc bén, ép Support Tail phải tập trung tối đa vào việc học hỏi chính xác cấu trúc hình khối, mảng tương phản sáng tối và hệ thống đường viền thanh đậm mang phong cách anime.
+    \item \textbf{Discriminator chính (Main D):} Trái ngược hoàn toàn, nền tảng phân tích của Main D là không gian ảnh màu (RGB) định dạng 3 kênh. Mạng này đảm nhận vai trò giám khảo tổng lực, thẩm định sự tinh tế trong kỹ thuật phối màu và tính đồng nhất mịn màng của bề mặt thị giác. Nó thực thi quá trình đối kháng giữa tập ảnh anime tiêu chuẩn (đã được tiền xử lý triệt để khâu nhiễu hạt bằng giải thuật NL-Means kết hợp L0 Smoothing) và ảnh màu hoàn chỉnh $\widehat{y}_m$ đến từ nhánh Main Tail. Phép kiểm định này cực kỳ quan trọng nhằm bám sát hiệu ứng tô bóng theo vùng (cel-shading) truyền thống, đảm bảo bức tranh ra lò không vướng phải những vệt nhiễu màu hay loang lổ biến dạng sinh ra trong quá trình nội suy tích chập.
 \end{itemize}
 
 Mỗi Discriminator gồm 7 lớp tích chập sử dụng \texttt{LADE\_D} (LADE kết hợp Spectral Normalization), đầu ra là feature map 1 kênh theo phong cách PatchGAN — mỗi vị trí không gian phán xét một vùng cục bộ của ảnh thay vì toàn bộ ảnh, giúp cải thiện độ sắc nét cục bộ trong ảnh đầu ra \cite{Isola2017}.
@@ -520,14 +520,13 @@ Mô hình ONNX hỗ trợ cả CPU và GPU inference, cho phép chạy trên nhi
 
 \section*{Tổng kết chương}
 
-Chương này đã trình bày chi tiết kiến trúc kỹ thuật của AnimeGANv3 (DTGAN), bao gồm:
+Chương 2 đã đi sâu phân tích toàn diện kiến trúc kỹ thuật và nền tảng thiết kế cấu thành nên mô hình AnimeGANv3 (DTGAN). Cụ thể, chương đã làm rõ những nâng cấp kiến trúc mang tính cốt lõi, bao gồm:
 
 \begin{itemize}
-    \item Kiến trúc Generator hai nhánh (Double-Tail): Base Encoder dùng chung, Support Tail học đường nét anime thô, Main Tail tinh chỉnh chi tiết mịn.
-    \item Kỹ thuật chuẩn hóa LADE: tự học tham số thích ứng từ feature map, vượt qua hạn chế của Instance Normalization và AdaIN.
-    \item External Attention v3: giảm độ phức tạp từ $O(N^2)$ xuống $O(Nk)$ nhờ memory bank học được.
-    \item Hệ thống hàm mất mát đa thành phần: Adversarial (LSGAN), Content, Style (Decentralized Gram), Region Smoothing, Lab Color, TV Loss cho Support Tail; Fine-grained Revision Loss cho Main Tail.
-    \item Quy trình huấn luyện hai giai đoạn với CPU preprocessing song song.
+    \item \textbf{Kiến trúc sinh ảnh phân nhánh (Double-Tail Generator):} Tối ưu hóa việc học thông qua một Base Encoder dùng chung, kết hợp cùng nhánh Support Tail chuyên trách khôi phục hình khối, đường nét nguyên thủy, và nhánh Main Tail đảm nhiệm tinh chỉnh phân phối màu sắc khối (cel-shading).
+    \item \textbf{Cơ chế chuẩn hóa LADE:} Kỹ thuật tự động tính toán thông số chuẩn hóa từ chính đặc trưng nội tại của không gian dữ liệu thay vì phụ thuộc vào một ảnh phong cách tham chiếu bên ngoài, khắc phục triệt để điểm yếu của Instance Normalization và AdaIN.
+    \item \textbf{Công nghệ External Attention v3:} Cải thiện đột phá vấn đề thắt cổ chai hiệu năng bằng cách giảm độ phức tạp tính toán từ $O(N^2)$ xuống $O(N \cdot k)$ thông qua các ngân hàng bộ nhớ (learnable memory banks), duy trì tốc độ cho ảnh độ phân giải cao.
+    \item \textbf{Hệ thống tối ưu hóa và Hàm mất mát:} Áp dụng kiến trúc suy luận với quy trình huấn luyện hai giai đoạn và bộ hàm mất mát phức hợp (Perceptual Loss, Decentralized Gram, L0 Smoothing, Lab Color) giúp tạo ra các sản phẩm hình ảnh có độ thẩm mỹ vượt trội.
 \end{itemize}
 
-Chương 3 sẽ trình bày kết quả thực nghiệm và đánh giá định lượng, định tính của mô hình DTGAN trên các bộ dữ liệu phong cách Hayao và Shinkai.
+Mặc dù vậy, với tính chất phân tích tổng quát trên toàn khung lưới, bộ sinh ảnh DTGAN đôi khi vẫn gặp hạn chế về việc bảo toàn độ sắc nét danh tính các khu vực cục bộ như khuôn mặt khi khuôn mặt có kích thước tỷ lệ khuôn hình nhỏ. Để giải quyết dứt điểm nhược điểm này và củng cố chất lượng sinh ảnh chân dung, Chương 3 tiếp theo sẽ trình bày chi tiết về kiến trúc \textbf{Mô-đun Trích Xuất Khuôn Mặt (Face Extraction Module)} dựa trên họ mạng RetinaFace — đóng vai trò là một sự mở rộng quan trọng trong khung thiết kế luận văn.
