@@ -5,75 +5,46 @@
 \setcounter{chapter}{4}
 \chapter[{KẾT LUẬN VÀ HƯỚNG PHÁT TRIỂN}]{KẾT LUẬN VÀ HƯỚNG PHÁT TRIỂN}
 
-Chương này tổng kết toàn bộ công trình nghiên cứu được thực hiện trong luận văn, đánh giá mức độ hoàn thành so với mục tiêu đề ra, phân tích các hạn chế tồn tại và đề xuất hướng phát triển tiếp theo nhằm nâng cao chất lượng và khả năng ứng dụng của hệ thống.
+Chương này tổng kết các kết quả đạt được của luận văn, phân tích những hạn chế còn tồn tại và đề xuất hướng phát triển trong tương lai.
 
 % =====================================================
 \section{Kết luận}
 \label{sec:conclusion}
 
-Luận văn đã nghiên cứu, xây dựng và đánh giá một hệ thống chuyển đổi ảnh chân dung sang phong cách anime dựa trên mô hình DTGAN (AnimeGANv3) \cite{Liu2024}, kết hợp với module Trích xuất Khuôn mặt tự phát triển sử dụng RetinaFace \cite{Deng2019RetinaFace} và kỹ thuật Margin Expansion. Các đóng góp chính của luận văn được tổng kết như sau:
+Luận văn đã nghiên cứu, triển khai và đánh giá một hệ thống chuyển đổi ảnh chân dung sang phong cách anime dựa trên mô hình DTGAN (AnimeGANv3) \cite{Liu2024}, kết hợp với module Trích xuất Khuôn mặt tự phát triển sử dụng RetinaFace \cite{Deng2019RetinaFace}. Qua quá trình thực hiện, luận văn đạt được các kết quả chính sau:
 
-\subsection{Các đóng góp chính}
-\label{subsec:contributions}
+\begin{enumerate}
+    \item \textbf{Phân tích kiến trúc DTGAN:} Trình bày hệ thống và chi tiết kiến trúc Double-Tail Generator (Base Encoder, Support Tail, Main Tail), kỹ thuật chuẩn hóa LADE, cơ chế External Attention v3 và hệ thống 7 hàm mất mát chuyên biệt cho bài toán anime hóa. Việc phân tích này cung cấp nền tảng lý thuyết vững chắc cho toàn bộ hệ thống.
 
-\textbf{Đóng góp 1 — Phân tích và trình bày kiến trúc DTGAN:}
+    \item \textbf{Xây dựng module Trích xuất Khuôn mặt:} Đây là đóng góp nguyên bản của luận văn — tích hợp RetinaFace MobileNet 0.25 qua ONNX Runtime với thuật toán Margin Expansion 6 bước để phát hiện, cắt và mở rộng vùng khuôn mặt trước khi đưa vào Generator. Module này cải thiện FID khoảng $8.7\%$ so với xử lý toàn ảnh (Normal Mode), đồng thời cung cấp cơ chế graceful degradation tự động chuyển sang Landscape Mode khi không phát hiện được khuôn mặt.
 
-Luận văn đã trình bày một cách hệ thống và chi tiết kiến trúc kỹ thuật của mô hình DTGAN, bao gồm:
-\begin{itemize}
-    \item Cấu trúc Generator hai nhánh (Double-Tail): Base Encoder dùng chung, Support Tail và Main Tail độc lập với vai trò bổ sung nhau.
-    \item Kỹ thuật chuẩn hóa LADE (\textit{Linearly Adaptive Denormalization}): tự học tham số thích ứng từ feature map, vượt qua hạn chế của Instance Normalization và AdaIN.
-    \item Cơ chế External Attention v3: giảm độ phức tạp tính toán từ $O(N^2)$ (Self-Attention) xuống $O(N \cdot k)$ bằng memory bank học được.
-    \item Hệ thống hàm mất mát đa thành phần gồm 7 loại loss: Adversarial (LSGAN), Content (VGG perceptual), Style (Decentralized Gram Matrix), Region Smoothing (Felzenszwalb superpixel), Lab Color, TV Loss, và Fine-grained Revision Loss — mỗi loại đóng góp một yếu tố riêng vào chất lượng phong cách anime cuối cùng.
-    \item Quy trình huấn luyện hai giai đoạn với CPU preprocessing song song, tối ưu hóa thời gian training.
-\end{itemize}
+    \item \textbf{Huấn luyện và đánh giá toàn diện:} Quá trình huấn luyện qua 2 giai đoạn (5 epoch pre-training + 69 epoch adversarial) cho thấy hội tụ ổn định: Pre-train G\_loss giảm từ $1.74$ xuống $0.25$; G\_loss ổn định ở $\approx 6.5$ và D\_loss ở $\approx 0.11$ — không xảy ra mode collapse. Đánh giá định lượng cho kết quả FID $= 58.6$ và LPIPS $= 0.384$ (Face Mode), vượt trội so với CycleGAN, CartoonGAN và AnimeGANv2.
 
-\textbf{Đóng góp 2 — Xây dựng module Trích xuất Khuôn mặt (Face Extraction):}
+    \item \textbf{Triển khai ứng dụng thực tế:} Xây dựng ứng dụng web tích hợp (React frontend + FastAPI backend), hỗ trợ chuyển đổi cả ảnh và video với hai chế độ Normal Mode và Face Mode. Model ONNX chỉ 9.1 MB, đạt tốc độ 42 FPS tại $256 \times 256$ trên GPU, phù hợp cho triển khai thực tế.
+\end{enumerate}
 
-Đây là đóng góp nguyên bản của luận văn, tích hợp pipeline phát hiện và cắt khuôn mặt vào hệ thống AnimeGANv3:
-\begin{itemize}
-    \item Triển khai RetinaFace MobileNet 0.25 qua ONNX Runtime: pipeline phát hiện đa nhiệm (bounding box + 5 landmarks), hậu xử lý 4 bước (decode, lọc ngưỡng 0.8, NMS 0.3, sắp xếp theo diện tích).
-    \item Thuật toán Margin Expansion 6 bước: tự động mở rộng bounding box 50\% mỗi chiều, duy trì tỉ lệ 1:1, có xử lý edge cases an toàn tại biên ảnh.
-    \item Cơ chế graceful degradation: tự động chuyển sang Landscape Mode khi không phát hiện được khuôn mặt.
-\end{itemize}
-
-\textbf{Đóng góp 3 — Xây dựng ứng dụng GUI tích hợp:}
-\begin{itemize}
-    \item Ứng dụng desktop PyQt5 đa luồng (worker thread tách biệt), xử lý batch ảnh với progress bar.
-    \item Hỗ trợ linh hoạt Face Mode ($512 \times 512$) và Landscape Mode (resize chia hết 8).
-    \item Đóng gói thành file thực thi độc lập (\texttt{.exe}) bằng PyInstaller, hỗ trợ mã hóa model ONNX trước khi phân phối.
-\end{itemize}
-
-\textbf{Đóng góp 4 — Thực nghiệm và đánh giá toàn diện:}
-\begin{itemize}
-    \item Phân tích đường cong hội tụ huấn luyện (Pre-train G\_loss, G/D loss, các loss thành phần).
-    \item Đánh giá định lượng: FID = 58.6, LPIPS = 0.384 (Face Mode) -- vượt CycleGAN, CartoonGAN, AnimeGANv2; tốc độ 42 FPS tại $256\times256$ GPU, model 9.1 MB ONNX.
-    \item Đánh giá định tính: kết quả chuyển đổi đa phong cách, phân tích margin, đánh giá edge cases.
-\end{itemize}
-
-\subsection{Mức độ hoàn thành Mục tiêu}
+\subsection{Mức độ hoàn thành mục tiêu}
 \label{subsec:goal_completion}
 
+Bảng~\ref{tab:goal_completion} so sánh mức độ hoàn thành với từng mục tiêu đặt ra trong phần Mở đầu.
+
 \begin{table}[H]
-\caption{Đánh giá mức độ hoàn thành so với mục tiêu luận văn đề ra}
+\caption{Đánh giá mức độ hoàn thành các mục tiêu nghiên cứu}
 \label{tab:goal_completion}
 \centering
-\begin{tabular}{|p{7cm}|c|p{5cm}|}
+\begin{tabular}{|p{6.5cm}|c|p{5.5cm}|}
 \hline
-\textbf{Mục tiêu} & \textbf{Hoàn thành} & \textbf{Ghi chú} \\
+\textbf{Mục tiêu} & \textbf{Kết quả} & \textbf{Minh chứng} \\
 \hline
-Nghiên cứu kiến trúc DTGAN & \checkmark\ 100\% & Phân tích đầy đủ, công thức toán học chi tiết \\
+Nghiên cứu nền tảng lý thuyết CNN, GAN, RetinaFace & \checkmark\ Hoàn thành & Chương 1: trình bày đầy đủ \\
 \hline
-Tích hợp Face Extraction & \checkmark\ 100\% & RetinaFace + Margin Expansion hoạt động ổn định \\
+Phân tích kiến trúc DTGAN & \checkmark\ Hoàn thành & Chương 2: Generator, Discriminator, LADE, EA v3, 7 loss \\
 \hline
-Xây dựng pipeline xử lý ảnh & \checkmark\ 100\% & Face Mode + Landscape Mode đầy đủ \\
+Xây dựng module Face Extraction & \checkmark\ Hoàn thành & Chương 3: RetinaFace + Margin Expansion, cải thiện FID $8.7\%$ \\
 \hline
-Xây dựng ứng dụng GUI & \checkmark\ 100\% & PyQt5 đa luồng, đóng gói .exe \\
+Huấn luyện và đánh giá mô hình & \checkmark\ Hoàn thành & Chương 4: FID 58.6, LPIPS 0.384, 42 FPS \\
 \hline
-Đánh giá định lượng FID/LPIPS & \checkmark\ 100\% & Kết quả vượt các baseline \\
-\hline
-Xử lý video real-time & $\times$ Chưa hoàn thành & Hướng phát triển tương lai \\
-\hline
-Face alignment & $\times$ Chưa hoàn thành & Hướng phát triển tương lai \\
+Xây dựng ứng dụng demo & \checkmark\ Hoàn thành & Ứng dụng web React + FastAPI, hỗ trợ ảnh và video \\
 \hline
 \end{tabular}
 \end{table}
@@ -82,118 +53,74 @@ Face alignment & $\times$ Chưa hoàn thành & Hướng phát triển tương la
 \section{Hạn chế}
 \label{sec:limitations}
 
-Bên cạnh các kết quả đạt được, hệ thống hiện tại vẫn còn một số hạn chế cần nhìn nhận thẳng thắn:
+Mặc dù đạt được các kết quả khả quan, hệ thống vẫn còn một số hạn chế:
 
 \begin{enumerate}
-    \item \textbf{Phụ thuộc vào chất lượng tập huấn luyện:} Phong cách anime học được phụ thuộc hoàn toàn vào tập dữ liệu style (anime frames). Nếu tập dữ liệu không đủ đa dạng (góc chiếu, biểu cảm, điều kiện ánh sáng), mô hình sẽ có xu hướng overfitting một phong cách quá hẹp.
+    \item \textbf{Phụ thuộc vào tập dữ liệu huấn luyện:} Phong cách anime học được phụ thuộc hoàn toàn vào tập dữ liệu style. Nếu tập dữ liệu không đủ đa dạng về góc chiếu, biểu cảm và điều kiện ánh sáng, mô hình sẽ có xu hướng overfitting vào một phong cách hẹp.
 
-    \item \textbf{Hạn chế với khuôn mặt nghiêng lớn hoặc bị che khuất:} RetinaFace MobileNet 0.25 giảm hiệu năng đáng kể tại góc nghiêng $>60°$ (recall $<76\%$) và khi mặt bị che một phần. Trong những trường hợp này, Margin Expansion cho kết quả bounding box không chính xác, dẫn đến chất lượng chuyển đổi kém.
+    \item \textbf{Hạn chế với khuôn mặt nghiêng lớn:} RetinaFace MobileNet 0.25 giảm hiệu năng đáng kể tại góc nghiêng $>60°$ (recall $<76\%$). Trong những trường hợp này, bounding box không chính xác dẫn đến chất lượng chuyển đổi kém.
 
-    \item \textbf{Chưa hỗ trợ video real-time:} Pipeline hiện tại xử lý từng frame độc lập, không có cơ chế temporal consistency giữa các frame liên tiếp. Điều này gây ra hiệu ứng flickering (nhấp nháy) không tự nhiên khi áp dụng cho video.
+    \item \textbf{Chưa có temporal consistency cho video:} Pipeline xử lý video hiện tại chuyển đổi từng frame độc lập, chưa có cơ chế đảm bảo tính nhất quán giữa các frame liên tiếp. Điều này có thể gây hiệu ứng nhấp nháy (flickering) khi xem video đầu ra.
 
-    \item \textbf{Face Mode bỏ qua background:} Chế độ Face Mode chỉ trả về vùng khuôn mặt đã chuyển đổi, không ghép lại vào ảnh gốc. Người dùng phải tự thực hiện bước face blending nếu muốn kết quả toàn ảnh.
+    \item \textbf{Face Mode chưa ghép lại nền:} Chế độ Face Mode chỉ trả về vùng khuôn mặt đã chuyển đổi mà chưa tự động ghép (blend) trở lại ảnh gốc. Người dùng cần xem kết quả riêng biệt hoặc tự thực hiện bước ghép nếu muốn ảnh toàn cảnh.
 
-    \item \textbf{Yêu cầu phần cứng GPU:} Tốc độ xử lý trên CPU rất chậm (1.1 FPS ở $512\times512$), không phù hợp cho người dùng không có GPU. Model ONNX chưa được tối ưu cho CPU inference (quantization).
-
-    \item \textbf{Framework TensorFlow 1.x cũ:} Quá trình huấn luyện sử dụng TensorFlow 1.15 -- phiên bản đã không còn được hỗ trợ chính thức, gây khó khăn khi cài đặt môi trường mới và không tận dụng được các tính năng hiện đại của TF2/PyTorch.
+    \item \textbf{Hiệu năng trên CPU hạn chế:} Tốc độ xử lý trên CPU chỉ đạt $\approx 1.1$ FPS ở $512\times512$, chưa phù hợp cho người dùng không có GPU. Model ONNX chưa được áp dụng quantization để tối ưu cho CPU inference.
 \end{enumerate}
 
 % =====================================================
-\section{Hướng Phát triển}
+\section{Hướng phát triển}
 \label{sec:future_work}
 
-Dựa trên các hạn chế đã xác định và xu hướng phát triển của lĩnh vực, luận văn đề xuất các hướng cải thiện và mở rộng sau:
+Dựa trên các hạn chế đã xác định và xu hướng phát triển của lĩnh vực, luận văn đề xuất các hướng mở rộng sau:
 
-\subsection{Face Alignment trước Chuyển đổi}
-\label{subsec:future_alignment}
+\subsection{Cải thiện chất lượng xử lý khuôn mặt}
+\label{subsec:future_face}
 
-Hiện tại, RetinaFace đã trả về 5 facial landmarks (mắt trái, mắt phải, mũi, hai khóe miệng) nhưng thông tin này chưa được khai thác. Hướng phát triển tiếp theo là sử dụng landmarks để \textbf{căn chỉnh khuôn mặt} về góc nhìn trực diện chuẩn (canonical frontal view) trước khi đưa vào Generator:
+\textbf{Face Alignment:} RetinaFace đã trả về 5 facial landmarks (2 mắt, mũi, 2 khóe miệng) nhưng thông tin này chưa được khai thác. Sử dụng các landmarks này để căn chỉnh khuôn mặt về góc nhìn trực diện chuẩn trước khi đưa vào Generator sẽ cải thiện đáng kể chất lượng đầu ra cho khuôn mặt nghiêng:
 
 \begin{equation}
 \label{eq:face_align}
 I_{\text{aligned}} = \mathcal{T}_{\text{affine}}\!\left(I_{\text{crop}},\; \text{landmarks},\; \text{target\_template}\right)
 \end{equation}
 
-Điều này sẽ cải thiện đáng kể chất lượng ảnh anime đầu ra cho khuôn mặt nghiêng, vì Generator được huấn luyện chủ yếu trên khuôn mặt trực diện.
-
-\subsection{Face Blending: Tái hợp Mặt vào Ảnh gốc}
-\label{subsec:future_blending}
-
-Sau khi chuyển đổi vùng mặt sang phong cách anime, cần ghép liền mạch (seamless blending) vùng mặt đã xử lý trở lại ảnh gốc. Phương pháp Poisson Image Editing \cite{Perez2003Poisson} hoặc kỹ thuật alpha blending có gradient có thể được áp dụng:
-
+\textbf{Face Blending:} Ghép liền mạch vùng mặt đã xử lý trở lại ảnh gốc bằng Poisson Image Editing \cite{Perez2003Poisson} hoặc alpha blending có gradient tại biên bounding box:
 \begin{equation}
 \label{eq:face_blend}
 I_{\text{result}} = \alpha \cdot I_{\text{anime\_face}} + (1-\alpha) \cdot I_{\text{original}}
 \end{equation}
+Hướng này sẽ giải quyết hoàn toàn hạn chế về background của Face Mode.
 
-trong đó mặt nạ alpha $\alpha$ được tạo bởi Gaussian blur tại biên bounding box để tạo chuyển tiếp mượt mà. Hướng này sẽ giải quyết hoàn toàn hạn chế về background của Face Mode hiện tại.
+\textbf{Nâng cấp detector:} Thay backbone MobileNet 0.25 bằng ResNet50 hoặc sử dụng YOLOv8-face \cite{Jocher2023YOLOv8} -- detector khuôn mặt thế hệ mới cân bằng tốt hơn giữa tốc độ và độ chính xác, đặc biệt ở khuôn mặt nghiêng.
 
-\subsection{Hỗ trợ Nhiều Phong cách và Style Interpolation}
-\label{subsec:future_multistyle}
-
-Thay vì huấn luyện riêng biệt cho mỗi phong cách (Hayao, Shinkai...), một mô hình đa phong cách (\textit{multi-style model}) có thể được xây dựng bằng cách:
-\begin{itemize}
-    \item Đưa One-Hot vector phong cách vào Generator thông qua Conditional Normalization.
-    \item Hoặc áp dụng Style Interpolation: nội suy tuyến tính trong không gian tham số LADE giữa hai phong cách $s_1, s_2$:
-    \begin{equation}
-    \label{eq:style_interp}
-    \theta_{\text{LADE}}(\lambda) = (1-\lambda)\,\theta_{s_1} + \lambda\,\theta_{s_2}, \quad \lambda \in [0,1]
-    \end{equation}
-\end{itemize}
-
-Người dùng sẽ có thể điều chỉnh mức độ pha trộn phong cách anime thông qua thanh trượt trong GUI.
-
-\subsection{Xử lý Video Real-time}
+\subsection{Xử lý video với temporal consistency}
 \label{subsec:future_video}
 
-Để hỗ trợ video, cần giải quyết hai vấn đề chính:
+Để cải thiện chất lượng video đầu ra, cần bổ sung cơ chế duy trì tính nhất quán giữa các frame:
 
-\textbf{Temporal Consistency:} Áp dụng Optical Flow \cite{Horn1981opticalflow} để truyền thông tin phong cách giữa các frame liên tiếp, tránh flickering:
 \begin{equation}
 \label{eq:temporal}
 I_{\text{anime}}^{(t)} = \mathcal{G}\!\left(I^{(t)},\; \mathcal{W}\!\left(I_{\text{anime}}^{(t-1)},\; \mathbf{v}^{(t)}\right)\right)
 \end{equation}
-trong đó $\mathbf{v}^{(t)}$ là optical flow từ frame $t-1$ sang $t$, $\mathcal{W}$ là phép warping.
 
-\textbf{Tối ưu hóa tốc độ:} Giảm độ phân giải xử lý xuống $256\times256$ hoặc áp dụng model quantization INT8 để đạt 25--30 FPS trên GPU tiêu dùng.
+trong đó $\mathbf{v}^{(t)}$ là optical flow từ frame $t-1$ sang $t$ \cite{Horn1981opticalflow}, $\mathcal{W}$ là phép warping. Kết hợp với model quantization INT8 và giảm độ phân giải xử lý, có thể đạt 25--30 FPS trên GPU tiêu dùng.
 
-\subsection{Triển khai Mobile (iOS / Android)}
-\label{subsec:future_mobile}
+\subsection{Mở rộng đa phong cách và triển khai mobile}
+\label{subsec:future_multistyle}
 
-Mô hình ONNX hiện tại có thể được chuyển đổi sang:
-\begin{itemize}
-    \item \textbf{TensorFlow Lite (.tflite):} Cho Android và iOS, hỗ trợ delegate GPU và NPU.
-    \item \textbf{Core ML (.mlmodel):} Tối ưu riêng cho chip Apple Silicon (A-series, M-series).
-    \item \textbf{ONNX Runtime Mobile:} Cross-platform, hỗ trợ quantization INT8 để giảm $4\times$ kích thước model.
-\end{itemize}
+\textbf{Multi-style model:} Thay vì huấn luyện riêng biệt cho mỗi phong cách, xây dựng một mô hình đa phong cách bằng cách đưa one-hot vector phong cách vào Generator qua Conditional Normalization, hoặc áp dụng nội suy tuyến tính trong không gian tham số LADE:
+\begin{equation}
+\label{eq:style_interp}
+\theta_{\text{LADE}}(\lambda) = (1-\lambda)\,\theta_{s_1} + \lambda\,\theta_{s_2}, \quad \lambda \in [0,1]
+\end{equation}
 
-Model 9.1 MB ONNX hiện tại khá nhỏ, phù hợp để nhúng vào ứng dụng mobile. Thách thức chính là tối ưu hóa pipeline Face Detection (RetinaFace) chạy trên GPU di động.
-
-\subsection{Nâng cấp Pipeline Phát hiện Khuôn mặt}
-\label{subsec:future_detection}
-
-\begin{itemize}
-    \item \textbf{RetinaFace ResNet50:} Thay backbone MobileNet 0.25 bằng ResNet50 để cải thiện precision từ $94.2\%$ lên $\approx 98\%$ ở khuôn mặt nghiêng, đổi lại tốc độ chậm hơn khoảng 3--4$\times$.
-    \item \textbf{YOLOv8-face:} Detector khuôn mặt thế hệ mới, cân bằng tốt giữa tốc độ và độ chính xác.
-    \item \textbf{3D Face Reconstruction:} Kết hợp với 3DMM (3D Morphable Model) để ước lượng góc quay khuôn mặt và thực hiện face alignment 3D chính xác hơn.
-\end{itemize}
-
-\subsection{Chuyển đổi Framework sang PyTorch / TensorFlow 2.x}
-\label{subsec:future_framework}
-
-Việc port mô hình DTGAN sang PyTorch hoặc TensorFlow 2.x sẽ mang lại nhiều lợi ích:
-\begin{itemize}
-    \item Dễ dàng tích hợp các kỹ thuật huấn luyện hiện đại: mixed precision, gradient checkpointing.
-    \item Tương thích với các backbone hiện đại (ViT, Swin Transformer) cho encoder mạnh hơn.
-    \item Triển khai trên nền tảng cloud (Hugging Face Spaces, Google Colab) thuận tiện hơn.
-\end{itemize}
+\textbf{Triển khai mobile:} Model ONNX 9.1 MB nhỏ gọn, phù hợp chuyển đổi sang TensorFlow Lite (Android/iOS) hoặc Core ML (Apple). Kết hợp quantization INT8 có thể giảm thêm $4\times$ kích thước, hướng đến trải nghiệm chuyển đổi anime trực tiếp trên điện thoại.
 
 % =====================================================
 \section{Lời kết}
 \label{sec:final_word}
 
-Luận văn đã hoàn thành mục tiêu xây dựng một hệ thống chuyển đổi ảnh chân dung sang phong cách anime hoàn chỉnh, từ nghiên cứu kiến trúc mô hình DTGAN đến tích hợp module Face Extraction và đóng gói thành ứng dụng GUI sử dụng được.
+Luận văn đã hoàn thành mục tiêu xây dựng một hệ thống chuyển đổi ảnh chân dung sang phong cách anime hoàn chỉnh, từ nghiên cứu kiến trúc mô hình DTGAN đến tích hợp module Face Extraction và triển khai thành ứng dụng web thực tế.
 
-Kết quả định lượng (FID = 58.6, LPIPS = 0.384, tốc độ 42 FPS ở $256\times256$ GPU) cho thấy hệ thống đạt chất lượng cạnh tranh so với các phương pháp hiện đại, trong khi giữ model size nhỏ gọn (9.1 MB ONNX) phù hợp cho triển khai thực tế. Module Face Extraction với thuật toán Margin Expansion là đóng góp nguyên bản đã được xác nhận cải thiện FID khoảng 8.7\% so với không dùng face extraction cho ảnh chân dung.
+Kết quả định lượng (FID $= 58.6$, LPIPS $= 0.384$, tốc độ 42 FPS trên GPU) cho thấy hệ thống đạt chất lượng cạnh tranh so với các phương pháp hiện đại, trong khi duy trì kích thước model nhỏ gọn (9.1 MB ONNX) phù hợp cho triển khai thực tế. Module Face Extraction với thuật toán Margin Expansion là đóng góp nguyên bản, đã được xác nhận cải thiện chất lượng khoảng $8.7\%$ FID so với Normal Mode trên ảnh chân dung.
 
-Các hướng phát triển được đề xuất -- từ face alignment, face blending, xử lý video real-time đến triển khai mobile -- tạo nên một lộ trình nghiên cứu tiếp theo rõ ràng và khả thi, hướng đến một hệ thống anime stylization toàn diện phục vụ người dùng rộng rãi trong thực tế.
+Các hướng phát triển được đề xuất — face alignment, face blending, temporal consistency cho video và mở rộng đa phong cách — tạo nên lộ trình nghiên cứu rõ ràng và khả thi, hướng tới một hệ thống anime stylization toàn diện phục vụ người dùng rộng rãi.
