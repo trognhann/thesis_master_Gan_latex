@@ -108,18 +108,18 @@ Mỗi tập anime đi kèm tập \texttt{smooth/} được tạo bằng Edge Smo
 \subsection{Giai đoạn Pre-training Generator}
 \label{subsec:pretrain_results}
 
-Trong giai đoạn pre-training (5 epoch đầu), chỉ Generator được huấn luyện với Content Loss thuần túy (không có Discriminator). Hình~\ref{fig:pretrain_loss} cho thấy đường cong hội tụ của Pre-train G\_loss qua khoảng 4.200 steps (tương ứng 5 epochs với batch size 8):
+Trong giai đoạn pre-training (5 epoch đầu, tương ứng 2.080 steps với 416 steps/epoch), chỉ Generator được huấn luyện với Content Loss thuần túy (không có Discriminator). Hình~\ref{fig:pretrain_loss} cho thấy đường cong hội tụ của Pre-train G\_loss:
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.85\textwidth]{figChap3/preTrainGLoss.png}
-    \caption{Đường cong hội tụ Pre-train G\_loss trong giai đoạn pre-training (5 epoch đầu)}
+    \caption{Đường cong hội tụ Pre-train G\_loss trong giai đoạn pre-training (Epoch 0--4)}
     \label{fig:pretrain_loss}
 \end{figure}
-    \noindent\textit{Chú thích:} Loss giảm nhanh từ $\approx 0.9$ xuống $\approx 0.15$ trong 500 steps đầu, sau đó tiếp tục giảm dần và ổn định ở $\approx 0.12$ -- cho thấy Generator đã học được biểu diễn nội dung tốt trước khi kích hoạt adversarial training.
+    \noindent\textit{Chú thích:} Loss giảm nhanh từ $\approx 1.74$ xuống $\approx 0.45$ trong 400 steps đầu (Epoch 0), sau đó tiếp tục giảm dần qua các epoch tiếp theo và ổn định ở $\approx 0.25$ (loss thấp nhất đạt $0.203$). Các đường đứt nét đánh dấu ranh giới epoch.
 
 
-Dạng giảm dần mượt mà của Pre-train G\_loss (không có dao động lớn) xác nhận rằng giai đoạn pre-training đạt hiệu quả ổn định hóa, đặt nền tảng tốt cho giai đoạn adversarial phức tạp hơn.
+Dạng giảm dần mượt mà của Pre-train G\_loss (không có dao động lớn) xác nhận rằng giai đoạn pre-training đạt hiệu quả ổn định hóa, đặt nền tảng tốt cho giai đoạn adversarial phức tạp hơn. Loss trung bình ở epoch cuối cùng (Epoch 4) đạt $0.245$, cho thấy Generator đã học tốt biểu diễn nội dung trước khi kích hoạt adversarial training.
 
 \subsection{Giai đoạn Huấn luyện Đầy đủ}
 \label{subsec:full_training_results}
@@ -129,37 +129,51 @@ Dạng giảm dần mượt mà của Pre-train G\_loss (không có dao động 
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.9\textwidth]{figChap3/Dloss_Gloss.png}
-    \caption{Đường cong G\_loss (xanh lam) và D\_loss (cam) qua 3.500 steps trong giai đoạn huấn luyện đầy đủ}
+    \caption{Đường cong G\_loss (xanh lam) và D\_loss (cam) qua 28.632 steps trong giai đoạn huấn luyện đầy đủ (Epoch 5--73)}
     \label{fig:gloss_dloss}
 \end{figure}
-    \noindent\textit{Chú thích:} G\_loss giảm mạnh từ $\approx 44$ xuống $\approx 8$ trong 500 steps đầu, sau đó ổn định và dao động trong vùng $[7, 10]$. D\_loss duy trì ổn định gần 0 trong suốt quá trình -- biểu hiện điển hình của cân bằng GAN khi Discriminator đủ mạnh.
+    \noindent\textit{Chú thích:} G\_loss giảm từ $\approx 9.3$ xuống vùng ổn định $\approx 6.5$ trong khoảng 2.000 steps đầu. D\_loss giảm nhanh từ $0.535$ xuống $\approx 0.1$ và duy trì ổn định -- biểu hiện điển hình của cân bằng GAN khi Discriminator đủ mạnh.
 
 
 Đặc điểm đáng chú ý từ Hình~\ref{fig:gloss_dloss}:
 \begin{itemize}
-    \item \textbf{G\_loss bắt đầu rất cao ($\approx 44$)} do lần đầu kích hoạt adversarial loss và revision loss -- Generator cần thích nghi với tín hiệu từ Discriminator.
-    \item \textbf{Giảm nhanh trong 500 steps đầu:} Generator hội tụ nhanh về vùng cân bằng nhờ pre-training đã cho khởi điểm feature tốt.
-    \item \textbf{Dao động ổn định sau đó:} Dao động của G\_loss trong vùng $[7,10]$ là bình thường và kỳ vọng trong GAN training -- phản ánh quá trình ``cạnh tranh'' liên tục giữa Generator và Discriminator.
-    \item \textbf{D\_loss rất nhỏ và ổn định:} Discriminator học phân biệt hiệu quả từ sớm và duy trì ổn định, không bị collapse.
+    \item \textbf{G\_loss bắt đầu ở $\approx 9.3$} do lần đầu kích hoạt adversarial loss (g\_s\_loss, g\_m\_loss) cùng các thành phần style loss và color loss -- Generator cần thích nghi với tín hiệu từ Discriminator.
+    \item \textbf{Hội tụ nhanh trong 2.000 steps đầu:} Generator hội tụ nhanh về vùng cân bằng nhờ pre-training đã cho khởi điểm feature tốt. G\_loss ổn định quanh $6.5$ (trung bình epoch cuối: $6.517$).
+    \item \textbf{Dao động ổn định sau đó:} Dao động của G\_loss trong vùng $[5.6, 9.0]$ là bình thường và kỳ vọng trong GAN training -- phản ánh quá trình ``cạnh tranh'' liên tục giữa Generator và Discriminator.
+    \item \textbf{D\_loss nhỏ và ổn định:} D\_loss giảm nhanh từ $0.535$ xuống $\approx 0.1$ (trung bình epoch cuối: $0.109$). Discriminator học phân biệt hiệu quả từ sớm và duy trì ổn định, không bị mode collapse.
 \end{itemize}
 
 \subsubsection{Các thành phần Loss phụ}
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.9\textwidth]{figChap3/orther_loss.png}
-    \caption{Đường cong các thành phần loss phụ}
+    \includegraphics[width=0.95\textwidth]{figChap3/component_losses.png}
+    \caption{Đường cong chi tiết bốn thành phần loss phụ trong giai đoạn adversarial training}
     \label{fig:other_loss}
 \end{figure}
-    \noindent\textit{Chú thích:} color\_loss (xanh lam, $\approx 0.6$), con\_loss (cam, $\approx 0.15$) và sty\_loss (xanh lá, dao động $[2.5, 4.0]$) qua 3.500 steps. Style loss dao động lớn phản ánh bản chất khó đo lường của phong cách anime -- đây là hành vi bình thường.
+    \noindent\textit{Chú thích:} Bốn panel hiển thị: Color Loss ($\approx 0.67 \pm 0.05$), Content Loss ($\approx 0.19 \pm 0.01$), Style Loss ($\approx 3.42 \pm 0.24$), và Region Smoothing Loss ($\approx 0.20 \pm 0.01$). Đường mờ là raw data, đường đậm là smoothed (window=200).
 
 
 Phân tích các thành phần loss trong Hình~\ref{fig:other_loss}:
 \begin{itemize}
-    \item \textbf{con\_loss (Content Loss, cam):} Rất nhỏ và ổn định ($\approx 0.15$) -- Generator bảo toàn tốt nội dung ảnh gốc trong suốt quá trình huấn luyện.
-    \item \textbf{color\_loss (Lab Color Loss, xanh lam):} Dao động nhỏ quanh $0.6$ -- màu sắc ảnh đầu ra khá nhất quán với ảnh gốc.
-    \item \textbf{sty\_loss (Style Loss, xanh lá):} Dao động lớn trong $[2.5, 4.0]$ -- phản ánh bản chất phức tạp của học phong cách: có thời điểm Generator tạo ảnh ``rất anime'' (loss nhỏ) và có lúc ``ít anime hơn'' khi cân bằng với các loss khác.
+    \item \textbf{con\_loss (Content Loss):} Ổn định quanh $0.195 \pm 0.010$ -- Generator bảo toàn rất tốt nội dung ảnh gốc trong suốt quá trình huấn luyện, dao động cực kỳ nhỏ.
+    \item \textbf{color\_loss (Lab Color Loss):} Dao động nhỏ quanh $0.669 \pm 0.052$ -- màu sắc ảnh đầu ra nhất quán với ảnh gốc trong không gian Lab.
+    \item \textbf{sty\_loss (Style Loss):} Dao động trong $[2.9, 4.5]$ với trung bình $3.422 \pm 0.237$ -- phản ánh bản chất phức tạp của học phong cách: có thời điểm Generator tạo ảnh ``rất anime'' (loss nhỏ) và có lúc ``ít anime hơn'' khi cân bằng với các loss khác.
+    \item \textbf{rs\_loss (Region Smoothing Loss):} Rất ổn định quanh $0.203 \pm 0.006$ -- vùng mịn trong ảnh sinh được duy trì tốt, hỗ trợ kết cấu bề mặt mịn đặc trưng anime.
 \end{itemize}
+
+\subsubsection{Xu hướng Loss theo Epoch}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{figChap3/epoch_avg_losses.png}
+    \caption{Giá trị loss trung bình theo epoch: (trái) G\_loss và D\_loss, (phải) các thành phần loss phụ}
+    \label{fig:epoch_avg_losses}
+\end{figure}
+    \noindent\textit{Chú thích:} Panel trái cho thấy G\_loss giảm dần từ $\approx 8.0$ (Epoch 5) xuống $\approx 6.5$ (Epoch 73), D\_loss giảm nhanh và ổn định quanh $0.1$. Panel phải cho thấy sty\_loss giảm nhẹ theo thời gian, trong khi con\_loss và color\_loss tăng nhẹ -- phản ánh qúa trình Generator dần ``hy sinh'' một phần nội dung/màu sắc để tập trung học phong cách anime.
+
+
+Hình~\ref{fig:epoch_avg_losses} cung cấp góc nhìn tổng quát hơn về xu hướng huấn luyện dài hạn. Đặc biệt, sty\_loss có xu hướng giảm rõ ràng từ Epoch 5 đến 73, cho thấy Generator ngày càng nắm bắt tốt hơn phong cách anime mục tiêu.
 
 % =====================================================
 \section{Đánh giá Định lượng}
@@ -251,22 +265,22 @@ Hệ thống được thử nghiệm trên nhiều nguyên mẫu ảnh chân dun
 \begin{figure}[H]
     \centering
     \begin{minipage}[b]{0.22\textwidth}
-        \includegraphics[width=\textwidth]{figChap3/style_results/a_trump.jpg}
+        \includegraphics[width=\textwidth]{figChap3/style_results/a1.png}
         \caption*{(a) Ảnh gốc}
     \end{minipage}
     \hfill
     \begin{minipage}[b]{0.22\textwidth}
-        \includegraphics[width=\textwidth]{figChap3/style_results/b_trump.jpg}
+        \includegraphics[width=\textwidth]{figChap3/style_results/b1.jpg}
         \caption*{(b) Phong cách 1}
     \end{minipage}
     \hfill
     \begin{minipage}[b]{0.22\textwidth}
-        \includegraphics[width=\textwidth]{figChap3/style_results/c_trump.jpg}
+        \includegraphics[width=\textwidth]{figChap3/style_results/c1.png}
         \caption*{(c) Phong cách 2}
     \end{minipage}
     \hfill
     \begin{minipage}[b]{0.22\textwidth}
-        \includegraphics[width=\textwidth]{figChap3/style_results/d_trump.jpg}
+        \includegraphics[width=\textwidth]{figChap3/style_results/d1.jpg}
         \caption*{(d) Phong cách 3}
     \end{minipage}
     \caption{Kết quả chuyển đổi phong cách anime từ ảnh chân dung gốc (a) sang 3 phong cách anime khác nhau (b), (c), (d) bằng AnimeGANv3 DTGAN với chế độ Face Mode ($512 \times 512$)}
@@ -278,22 +292,22 @@ Hệ thống được thử nghiệm trên nhiều nguyên mẫu ảnh chân dun
 \begin{figure}[H]
     \centering
     \begin{minipage}[b]{0.22\textwidth}
-        \includegraphics[width=\textwidth]{figChap3/style_results/a_trump1.jpg}
+        \includegraphics[width=\textwidth]{figChap3/style_results/a2.png}
         \caption*{(a) Ảnh gốc}
     \end{minipage}
     \hfill
     \begin{minipage}[b]{0.22\textwidth}
-        \includegraphics[width=\textwidth]{figChap3/style_results/b_trump1.jpg}
+        \includegraphics[width=\textwidth]{figChap3/style_results/b2.jpg}
         \caption*{(b) Phong cách 1}
     \end{minipage}
     \hfill
     \begin{minipage}[b]{0.22\textwidth}
-        \includegraphics[width=\textwidth]{figChap3/style_results/c_trump1.jpg}
+        \includegraphics[width=\textwidth]{figChap3/style_results/c2.png}
         \caption*{(c) Phong cách 2}
     \end{minipage}
     \hfill
     \begin{minipage}[b]{0.22\textwidth}
-        \includegraphics[width=\textwidth]{figChap3/style_results/d_trump1.jpg}
+        \includegraphics[width=\textwidth]{figChap3/style_results/d2.jpg}
         \caption*{(d) Phong cách 3}
     \end{minipage}
     \caption{Kết quả chuyển đổi với ảnh chân dung góc nghiêng nhẹ}
@@ -305,22 +319,22 @@ Hệ thống được thử nghiệm trên nhiều nguyên mẫu ảnh chân dun
 \begin{figure}[H]
     \centering
     \begin{minipage}[b]{0.22\textwidth}
-        \includegraphics[width=\textwidth]{figChap3/style_results/a_download.jpg}
+        \includegraphics[width=\textwidth]{figChap3/style_results/a3.png}
         \caption*{(a) Ảnh gốc}
     \end{minipage}
     \hfill
     \begin{minipage}[b]{0.22\textwidth}
-        \includegraphics[width=\textwidth]{figChap3/style_results/b_download.jpg}
+        \includegraphics[width=\textwidth]{figChap3/style_results/b3.jpg}
         \caption*{(b) Phong cách 1}
     \end{minipage}
     \hfill
     \begin{minipage}[b]{0.22\textwidth}
-        \includegraphics[width=\textwidth]{figChap3/style_results/c_download.jpg}
+        \includegraphics[width=\textwidth]{figChap3/style_results/c3.png}
         \caption*{(c) Phong cách 2}
     \end{minipage}
     \hfill
     \begin{minipage}[b]{0.22\textwidth}
-        \includegraphics[width=\textwidth]{figChap3/style_results/d_download.jpg}
+        \includegraphics[width=\textwidth]{figChap3/style_results/d3.jpg}
         \caption*{(d) Phong cách 3}
     \end{minipage}
     \caption{Kết quả chuyển đổi với ảnh chân dung nữ}
@@ -469,7 +483,7 @@ Góc nghiêng $>60°$ & Bounding box không chính xác & Kết quả kém; cầ
 Chương này đã trình bày đầy đủ các kết quả thực nghiệm của hệ thống AnimeGANv3 DTGAN:
 
 \begin{itemize}
-    \item \textbf{Huấn luyện hội tụ tốt:} Pre-train G\_loss giảm từ 0.9 xuống 0.12; G\_loss/D\_loss ổn định sau $\approx$500 steps adversarial training; các loss thành phần duy trì trong vùng kỳ vọng.
+    \item \textbf{Huấn luyện hội tụ tốt:} Pre-train G\_loss giảm từ 1.74 xuống 0.25 qua 2.080 steps; G\_loss giảm từ 9.3 xuống $\approx$6.5 và D\_loss ổn định ở $\approx$0.11 sau 28.632 steps adversarial training; các loss thành phần (content: $0.19$, color: $0.67$, style: $3.42$) duy trì trong vùng kỳ vọng.
     \item \textbf{Vượt trội định lượng:} FID 58.6 và LPIPS 0.384 (Face Mode) -- tốt nhất trong số các phương pháp so sánh; tốc độ 42 FPS tại $256\times256$ GPU.
     \item \textbf{Định tính đa dạng phong cách:} Hệ thống chuyển đổi thành công nhiều phong cách anime khác nhau, bảo toàn nhận dạng khuôn mặt và biểu cảm.
     \item \textbf{Face Extraction hiệu quả:} margin = 0.5 là tham số tối ưu; RetinaFace đạt $>94\%$ precision ở điều kiện thông thường; cơ chế graceful degradation đảm bảo hệ thống không trả lỗi.
