@@ -3,9 +3,9 @@
 \phantomsection
 
 \setcounter{chapter}{2}
-\chapter[{MODULE TRÍCH XUẤT KHUÔN MẶT}]{MODULE TRÍCH XUẤT KHUÔN MẶT (FACE EXTRACTION)}
+\chapter[{LUỒNG ANIME TÍCH HỢP PHÁT HIỆN KHUÔN MẶT}]{LUỒNG ANIME TÍCH HỢP PHÁT HIỆN KHUÔN MẶT}
 
-Nhằm khắc phục triệt để hạn chế của nguyên bản AnimeGANv3 khi xử lý các bức ảnh có tỷ lệ khuôn mặt thực tế nhỏ hoặc bị loãng bởi không gian bối cảnh tĩnh quá lớn, Mô-đun Trích xuất Khuôn mặt (Face Extraction) được đề xuất như một \textbf{giải pháp mở rộng và đóng góp cốt lõi của luận văn}. Mô-đun này được phát triển chuyên biệt và lập trình tích hợp chặt chẽ vào hệ thống phần mềm giao diện đồ họa (GUI) dựa trên nền tảng PyQt5 \cite{AnimeGANv3}. Xét về bản chất hoạt động, thay vì tiến hành nội suy quá trình chuyển đổi phong cách lên toàn bộ lưới ảnh thô, mô-đun này tự động quét, định vị và trích xuất khu vực chứa khuôn mặt. Quá trình này được kết hợp khéo léo với kỹ thuật mở rộng bối cảnh viền nhằm bảo toàn tỷ lệ không gian quang học hợp lý. Việc phân bổ cơ chế ưu tiên này giúp cấu trúc sinh ảnh (Generator) chỉ tính toán dồn tài nguyên vào khu vực trọng tâm của nhân vật, từ đó nâng tầm rõ rệt chất lượng chi tiết, độ sắc nét và bảo toàn tốt danh tính (identity) cho các tác phẩm chân dung anime đầu ra.
+Chương này trình bày \textbf{đóng góp cốt lõi của luận văn}: thiết kế luồng xử lý (pipeline) tích hợp phát hiện khuôn mặt vào quá trình chuyển đổi phong cách anime. Vấn đề cần giải quyết: khi áp dụng AnimeGANv3 lên toàn bộ ảnh, khuôn mặt có tỉ lệ nhỏ so với khung hình sẽ bị mất chi tiết và biến dạng danh tính. Giải pháp đề xuất là tự động phát hiện, trích xuất và mở rộng vùng khuôn mặt trước khi đưa vào Generator, giúp tập trung toàn bộ năng lực tính toán vào khu vực trọng tâm \cite{Liu2024, Deng2019RetinaFace}.
 
 % =====================================================
 \section{Tổng quan Pipeline Tích hợp}
@@ -299,10 +299,10 @@ Sau suy luận, ảnh đầu ra được chuyển ngược về $[0, 255]$:
 \text{output} = \frac{\hat{y} + 1.0}{2.0} \times 255
 \end{equation}
 
-\subsection{Luồng Xử lý Hoàn chỉnh}
+\subsection{Tóm tắt Luồng Dữ liệu}
 \label{subsec:full_pipeline}
 
-Toàn bộ luồng xử lý ảnh trong module (tham chiếu \texttt{photo\_page.py -- Thread\_01.run()}):
+Toàn bộ luồng xử lý ảnh trong pipeline:
 
 \begin{enumerate}
     \item \textbf{Đọc ảnh:} \texttt{Image.open(path).convert("RGB")}
@@ -321,58 +321,8 @@ Toàn bộ luồng xử lý ảnh trong module (tham chiếu \texttt{photo\_page
     \item \textbf{Lưu/hiển thị kết quả.}
 \end{enumerate}
 
-% =====================================================
-\section{Kiến trúc Ứng dụng GUI}
-\label{sec:gui_architecture}
-
-\subsection{Tổng quan Ứng dụng}
-\label{subsec:gui_overview}
-
-Module Face Extraction được tích hợp vào ứng dụng GUI desktop xây dựng bằng \textbf{PyQt5} \cite{AnimeGANv3}. Ứng dụng cho phép người dùng:
-\begin{itemize}
-    \item Chọn thư mục chứa ảnh đầu vào.
-    \item Chọn mô hình ONNX (Hayao, Shinkai, hoặc các phong cách khác).
-    \item Bật/tắt chế độ Face Extraction thông qua checkbox.
-    \item Theo dõi tiến trình xử lý qua thanh progress bar và log.
-    \item Xem kết quả trực tiếp trong giao diện.
-\end{itemize}
-
-\subsection{Xử lý Đa luồng}
-\label{subsec:multithreading}
-
-Để đảm bảo giao diện không bị đơ (frozen) trong quá trình xử lý ảnh (đặc biệt với batch lớn), luồng xử lý chính (\texttt{Thread\_01}) được tách riêng khỏi luồng giao diện Qt:
-
-\begin{itemize}
-    \item \textbf{Main thread (Qt):} Quản lý giao diện, nhận sự kiện người dùng, cập nhật progress bar.
-    \item \textbf{Worker thread (\texttt{Thread\_01}):} Thực hiện toàn bộ pipeline xử lý ảnh (load ảnh, face detection, ONNX inference, lưu kết quả).
-    \item \textbf{Giao tiếp:} Sử dụng Qt signals/slots để truyền kết quả từ worker thread về main thread an toàn.
-\end{itemize}
-
-Kiến trúc đa luồng này đồng thời cho phép xử lý nhiều ảnh theo batch, với mỗi ảnh trong batch được xử lý tuần tự trong worker thread.
-
-\subsection{Cấu trúc Logic của Hệ thống Tích hợp}
-\label{subsec:logical_structure}
-
-Để đảm bảo tính linh hoạt, hệ thống phần mềm được thiết kế tuân thủ nghiêm ngặt nguyên lý mô-đun hóa (modularity). Các nhóm tác vụ phức tạp không bị bó hẹp trong một luồng duy nhất mà được phân định ranh giới thành các khối logic chuyên biệt:
-
-\begin{table}[H]
-\caption{Kiến trúc các khối chức năng logic của hệ thống ứng dụng đóng gói}
-\label{tab:logical_modules}
-\centering
-\begin{tabular}{|p{4.5cm}|p{9.5cm}|}
-\hline
-\textbf{Khối Chức Năng} & \textbf{Vai trò và Nhiệm vụ} \\
-\hline
-\textbf{Khối Lõi Trích xuất (Face Extraction Engine)} & Quản lý nền tảng ONNX Runtime, khởi tạo tính toán lưới tọa độ mỏ neo (prior boxes) và giải mã (decode) bouding box cùng với các điểm mốc (landmarks). Khối này cũng trực tiếp thực thi thuật toán mở rộng biên Margin Expansion. \\
-\hline
-\textbf{Khối Xử lý Đa luồng (Pipeline \& Multithreading)} & Điều phối vòng đời của luồng xử lý ảnh hay video. Việc khởi tạo các tiến trình nền (worker threads) đảm bảo quá trình suy luận mô hình nặng không chạm tới luồng chính, tránh làm đóng băng giao diện người dùng. \\
-\hline
-\textbf{Khối Giao diện tương tác (GUI Module)} & Thiết kế trên nền tảng hướng sự kiện (event-driven), kết xuất đồ họa màn hình, thanh điều hướng ứng dụng, và tiếp nhận thiết lập từ người dùng (ví dụ: chuyển đổi qua lại chế độ Face/Landscape, nút chức năng bắt đầu trích xuất). \\
-\hline
-\textbf{Khối Quản trị Cấu hình (Configuration Storage)} & Cô lập việc lưu trữ và khởi tạo các thông số hình học đặc thù của mạng (như tập hợp anchor, bước xê lệch variance) cũng như bản đồ đường dẫn tĩnh đến các trọng số mô hình đã được tải sẵn. \\
-\hline
-\end{tabular}
-\end{table}
+% Phần kiến trúc ứng dụng GUI, xử lý đa luồng và cấu trúc logic hệ thống
+% đã được chuyển sang Chương 4 (Thực nghiệm và Đánh giá) -- mục Triển khai ứng dụng web
 
 % =====================================================
 \section{Phân tích Kỹ thuật và Đánh giá Thiết kế}
@@ -426,14 +376,14 @@ Bảng~\ref{tab:face_vs_landscape} tóm tắt sự đánh đổi chính giữa h
 
 \section*{Tổng kết chương}
 
-Chương này đã trình bày đầy đủ Module Trích xuất Khuôn mặt, phần đóng góp kỹ thuật riêng của luận văn vào hệ thống AnimeGANv3, bao gồm:
+Chương này đã trình bày luồng xử lý anime tích hợp phát hiện khuôn mặt -- đóng góp kỹ thuật cốt lõi của luận văn:
 
 \begin{itemize}
-    \item \textbf{Kiến trúc pipeline} tích hợp hai chế độ Face Mode và Landscape Mode, với cơ chế graceful degradation tự động.
-    \item \textbf{RetinaFace MobileNet 0.25} triển khai qua ONNX Runtime: kiến trúc FPN đa nhiệm, cấu hình Prior Box, và quy trình hậu xử lý 4 bước (lọc ngưỡng, NMS, sắp xếp diện tích).
-    \item \textbf{Thuật toán Margin Expansion} 6 bước: tự động mở rộng bounding box 50\% mỗi chiều, duy trì tỉ lệ 1:1, xử lý edge cases khuôn mặt gần biên ảnh.
-    \item \textbf{Luồng xử lý hoàn chỉnh}: chuẩn hóa ảnh, phân nhánh Face/Landscape, ONNX inference với chuẩn hóa $[-1, 1]$.
-    \item \textbf{Kiến trúc GUI PyQt5} đa luồng với worker thread riêng biệt, đảm bảo giao diện mượt mà.
+    \item \textbf{Pipeline end-to-end} tích hợp hai chế độ Face Mode và Landscape Mode, với cơ chế graceful degradation tự động chuyển chế độ khi không phát hiện khuôn mặt.
+    \item \textbf{Luồng dữ liệu qua RetinaFace:} tiền xử lý ImageNet $\to$ FPN đa tỉ lệ $\to$ giải mã Prior Box $\to$ lọc ngưỡng + NMS $\to$ sắp xếp diện tích.
+    \item \textbf{Thuật toán Margin Expansion} 6 bước: mở rộng bounding box 50\% mỗi chiều, duy trì tỉ lệ 1:1, xử lý edge cases khuôn mặt gần biên ảnh.
+    \item \textbf{Luồng dữ liệu qua Generator ONNX:} chuẩn hóa $[-1, 1]$, suy luận, hậu chuẩn hóa $[0, 255]$.
+    \item \textbf{Phân tích thiết kế:} Face Mode cho chất lượng vượt trội nhờ khuôn mặt chiếm 100\% diện tích đầu vào ở độ phân giải $512 \times 512$.
 \end{itemize}
 
-Chương 4 sẽ trình bày kết quả thực nghiệm định lượng và định tính của toàn bộ hệ thống, bao gồm đánh giá chất lượng ảnh anime đầu ra và hiệu năng của module Face Extraction.
+Chương 4 sẽ trình bày kết quả thực nghiệm, triển khai ứng dụng web và đánh giá hiệu năng toàn bộ hệ thống.

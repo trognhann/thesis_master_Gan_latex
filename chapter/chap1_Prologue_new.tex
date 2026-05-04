@@ -1,0 +1,411 @@
+\clearpage
+
+\phantomsection
+
+\setcounter{chapter}{0}
+\chapter[{CƠ SỞ LÝ THUYẾT VÀ TỔNG QUAN NGHIÊN CỨU}]{CƠ SỞ LÝ THUYẾT VÀ TỔNG QUAN NGHIÊN CỨU}
+
+\section{Bài toán Chuyển ảnh sang Phong cách Anime}
+\label{sec:anime_problem}
+
+\subsection{Định nghĩa bài toán}
+
+Bài toán chuyển ảnh sang phong cách anime thuộc lớp bài toán \textit{dịch ảnh giữa các miền} (image-to-image translation): cho một ảnh chụp thực tế $x \in \mathcal{X}$ thuộc miền ảnh thật, tìm ánh xạ $G: \mathcal{X} \to \mathcal{Y}$ sao cho ảnh đầu ra $G(x) \in \mathcal{Y}$ mang phong cách anime nhưng vẫn bảo toàn nội dung ngữ nghĩa của ảnh gốc \cite{Isola2017, Zhu2017}. Đặc thù của bài toán này là dữ liệu huấn luyện ở dạng \textbf{không ghép cặp} (unpaired): ta chỉ có tập ảnh thật $\{x_i\}$ và tập ảnh anime $\{y_j\}$ độc lập, không có sự tương ứng một-một giữa hai tập \cite{Zhu2017}.
+
+\subsection{Đặc trưng thị giác của phong cách Anime}
+
+Phong cách anime có các đặc trưng thị giác khác biệt rõ ràng so với ảnh chụp thực tế, bao gồm \cite{Chen2020, Liu2024}:
+\begin{itemize}
+    \item \textbf{Đường nét viền rõ ràng:} Các đối tượng được phân tách bởi các đường viền đen hoặc tối, tạo hiệu ứng ``ink outline'' đặc trưng.
+    \item \textbf{Vùng màu phẳng (cel-shading):} Thay vì gradient mịn như ảnh thật, anime sử dụng các vùng màu đồng nhất với ranh giới rõ ràng giữa vùng sáng và vùng tối.
+    \item \textbf{Đơn giản hóa chi tiết:} Kết cấu bề mặt (texture) như da, tóc, vải được tối giản hoá, loại bỏ phần lớn chi tiết thực tế.
+    \item \textbf{Phân phối màu sắc đặc thù:} Màu sắc anime thường tươi sáng hơn, bão hoà hơn và có phân phối brightness khác biệt đáng kể so với ảnh chụp.
+\end{itemize}
+
+\subsection{Thách thức kỹ thuật}
+
+Việc chuyển đổi tự động ảnh thật sang anime đặt ra ba thách thức chính:
+
+\begin{enumerate}
+    \item \textbf{Cân bằng nội dung và phong cách:} Mô hình phải đồng thời bảo toàn cấu trúc ngữ nghĩa của ảnh gốc (bố cục, hình dáng đối tượng, danh tính khuôn mặt) và chuyển đổi phong cách thị giác sang anime. Hai mục tiêu này thường mâu thuẫn: biến đổi phong cách quá mạnh sẽ phá hủy nội dung, trong khi bảo toàn quá chặt sẽ không đạt được phong cách anime đích \cite{Johnson2016, Zhu2017}.
+    \item \textbf{Dữ liệu không ghép cặp:} Không thể thu thập bộ dữ liệu gồm các cặp (ảnh thật, ảnh anime tương ứng) vì mỗi ảnh anime được vẽ theo phong cách chủ quan của hoạ sĩ. Do đó, mô hình phải học ánh xạ giữa hai miền từ dữ liệu unpaired \cite{Zhu2017, Liu2017}.
+    \item \textbf{Bảo toàn danh tính khuôn mặt:} Khi xử lý ảnh chân dung, các đặc điểm nhận dạng (ánh mắt, nụ cười, tỉ lệ khuôn mặt) cần được giữ nguyên trong phiên bản anime. Nhiều mô hình hiện tại gặp khó khăn với khuôn mặt có tỉ lệ nhỏ trong ảnh hoặc bị biến dạng chi tiết khuôn mặt \cite{Kim2020, Liu2024}.
+\end{enumerate}
+
+% =====================================================
+\section{Nền tảng Mạng Nơ-ron Tích chập}
+\label{sec:cnn_foundation}
+
+Mạng Nơ-ron Tích chập (Convolutional Neural Networks -- CNNs) là kiến trúc nền tảng trong thị giác máy tính, có khả năng tự động học các biểu diễn đặc trưng phân cấp từ dữ liệu ảnh thô \cite{Basha2020}. Mục này tóm tắt các thành phần CNN thiết yếu cho việc hiểu kiến trúc Generator và Discriminator trong các mô hình GAN ở các chương sau.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{figChap1/CNN_kien_truc.png}
+    \caption{Kiến trúc cơ bản của Mạng Nơ-ron Tích chập}
+    \label{fig:cnn_basic}
+\end{figure}
+
+\subsection{Lớp Tích chập, Pooling và Hàm kích hoạt}
+
+\textbf{Lớp tích chập} sử dụng các kernel nhỏ (thường $3 \times 3$) trượt trên ảnh đầu vào, thực hiện phép nhân tích chập cục bộ để trích xuất các đặc trưng hình học như cạnh, đường cong và kết cấu. Mỗi kernel được học tự động trong quá trình huấn luyện, thay thế hoàn toàn các đặc trưng thủ công (SIFT, HOG) của thị giác máy tính truyền thống \cite{Basha2020, Girshick2014}.
+
+\textbf{Lớp Pooling} (thường là Max Pooling) giảm độ phân giải không gian của bản đồ đặc trưng, giúp giảm chi phí tính toán và tạo tính bất biến dịch chuyển cục bộ. Tuy nhiên, pooling gây mất thông tin vị trí chính xác -- một hạn chế cần được xử lý trong các tác vụ yêu cầu độ chính xác pixel như sinh ảnh \cite{Basha2020}.
+
+\textbf{Hàm kích hoạt} đưa tính phi tuyến vào mạng. Trong các kiến trúc GAN hiện đại, hai hàm được sử dụng phổ biến nhất là \cite{Nair2010, Maas2013}:
+\begin{itemize}
+    \item \textbf{ReLU} ($\max(0, x)$): Tiêu chuẩn cho hầu hết CNN, giảm vanishing gradient nhưng có thể gây ``Dying ReLU'' khi nơ-ron nhận giá trị âm liên tục.
+    \item \textbf{Leaky ReLU} ($\max(\alpha x, x)$ với $\alpha = 0.01$): Khắc phục Dying ReLU bằng cách giữ gradient nhỏ cho giá trị âm. Được sử dụng rộng rãi trong Generator và Discriminator của AnimeGANv3 \cite{Liu2024}.
+\end{itemize}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.75\textwidth]{figChap1/activation_functions.png}
+    \caption{So sánh các hàm kích hoạt: Sigmoid, Tanh, ReLU và Leaky ReLU}
+    \label{fig:activation_functions}
+\end{figure}
+
+\subsection{Các Kỹ thuật Chuẩn hóa}
+\label{subsec:normalization}
+
+Chuẩn hóa (Normalization) là cơ chế thiết yếu để ổn định và tăng tốc quá trình huấn luyện mạng sâu. Bốn kỹ thuật chính được phân biệt theo chiều tính toán thống kê trên tensor đặc trưng $(N \times C \times H \times W)$:
+
+\begin{itemize}
+    \item \textbf{Batch Normalization (BN)} \cite{Ioffe2015}: Chuẩn hóa theo chiều batch $N$, giảm Internal Covariate Shift. Nhạy cảm với kích thước batch nhỏ.
+    \item \textbf{Layer Normalization (LN)} \cite{Ba2016}: Chuẩn hóa toàn bộ kênh $C$ của một mẫu. Phổ biến trong Transformers và RNNs.
+    \item \textbf{Group Normalization (GN)} \cite{Wu2018}: Chia kênh thành nhóm nhỏ, cân bằng giữa BN và IN. Không phụ thuộc batch size.
+    \item \textbf{Instance Normalization (IN)} \cite{Ulyanov2016}: Chuẩn hóa từng kênh của từng mẫu độc lập. \textbf{Đặc biệt quan trọng} cho bài toán chuyển phong cách vì IN loại bỏ thông tin phong cách toàn cục, cho phép mô hình học phong cách mới. IN là nền tảng trực tiếp của kỹ thuật LADE trong AnimeGANv3 (trình bày ở Chương~2).
+\end{itemize}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{figChap1/normalization_comparison.png}
+    \caption{So sánh bốn kỹ thuật chuẩn hóa trên tensor $(N \times C \times H \times W)$}
+    \label{fig:normalization_comparison}
+\end{figure}
+    \noindent\textit{Chú thích:} BN chuẩn hóa theo chiều batch $N$; LN theo toàn bộ kênh $C$ của một mẫu; GN theo nhóm kênh; IN theo từng kênh của từng mẫu độc lập \cite{Wu2018, Ulyanov2016}
+
+Ngoài ra, \textbf{Spectral Normalization (SN)} \cite{Miyato2018} chuẩn hóa ma trận trọng số $W$ bằng cách chia cho giá trị kỳ dị lớn nhất $\sigma(W)$, đảm bảo ràng buộc Lipschitz cho Discriminator. SN đã trở thành tiêu chuẩn trong hầu hết kiến trúc GAN hiện đại \cite{Zhang2019, Brock2018}.
+
+\subsection{Kiến trúc Encoder-Decoder}
+\label{subsec:encoder_decoder}
+
+Kiến trúc Encoder-Decoder là nền tảng cho các bài toán dịch ảnh (image-to-image translation). Phần \textbf{Encoder} sử dụng tích chập và downsampling để nén ảnh gốc thành vector đặc trưng ẩn, trong khi phần \textbf{Decoder} tái tạo vector ẩn thành ảnh đầu ra mong muốn \cite{Hasan2019}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{figChap1/u-net.png}
+    \caption{Kiến trúc U-Net với skip connections}
+    \label{fig:u-net}
+\end{figure}
+
+Biến thể U-Net bổ sung \textbf{skip connections} kết nối trực tiếp giữa các tầng encoder và decoder cùng độ phân giải. Cơ chế này cho phép decoder truy cập đặc trưng chi tiết cục bộ từ encoder, khắc phục hiện tượng mất thông tin không gian qua bottleneck \cite{Hasan2019}. Generator trong AnimeGANv3 sử dụng kiến trúc U-Net cho cả hai nhánh decoder (Chương~2).
+
+Trong phần decoder, việc tăng độ phân giải (upsampling) có hai lựa chọn chính:
+\begin{itemize}
+    \item \textbf{Transposed Convolution}: Lớp học được, nhưng dễ gây tạo phẩm checkerboard do chồng lấp không đều \cite{Hasan2019}.
+    \item \textbf{Bilinear/Nearest-Neighbor Interpolation + Conv}: Không học được phần upsampling, nhưng loại bỏ tạo phẩm checkerboard. AnimeGANv3 chọn phương pháp này để đảm bảo ảnh đầu ra mịn \cite{Liu2024}.
+\end{itemize}
+
+% =====================================================
+\section{Kiến trúc Mạng Đối nghịch Tạo sinh}
+\label{sec:gan}
+
+Mạng Đối nghịch Tạo sinh (Generative Adversarial Networks -- GANs) do Ian Goodfellow và cộng sự đề xuất năm 2014 \cite{Goodfellow2014} là nền tảng cho hầu hết các phương pháp chuyển đổi phong cách ảnh hiện đại. Khác với các mô hình tạo sinh trước đây dựa trên phương pháp xác suất phức tạp, GAN sử dụng trò chơi đối kháng giữa hai mạng nơ-ron để tạo ra dữ liệu có độ trung thực cao.
+
+\subsection{Nguyên lý Hoạt động và Hàm Mục tiêu}
+\subsubsection{Khung Làm việc Đối kháng}
+
+GAN gồm hai mạng nơ-ron được huấn luyện đồng thời qua trò chơi có tổng bằng không \cite{Goodfellow2014}:
+\begin{itemize}
+    \item \textbf{Generator (G):} Nhận vector nhiễu ngẫu nhiên $z \sim p_z(z)$ từ không gian tiềm ẩn và tạo ra mẫu giả $G(z)$. Mục tiêu: đánh lừa Discriminator.
+    \item \textbf{Discriminator (D):} Bộ phân loại nhị phân, nhận dữ liệu $x$ và xuất xác suất $D(x)$ dữ liệu đó là thật. Mục tiêu: phân biệt dữ liệu thật và giả.
+\end{itemize}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{figChap1/gan-architect.png}
+    \caption{Kiến trúc tổng quát của Mạng Đối nghịch Tạo sinh (GAN)}
+    \label{fig:gan}
+\end{figure}
+    \noindent\textit{Chú thích:} Generator $G$ nhận vector nhiễu $z \sim p_z(z)$ để tạo mẫu giả $G(z)$, Discriminator $D$ phân biệt dữ liệu thật $x$ với dữ liệu giả. Hai mạng huấn luyện đồng thời theo trò chơi minimax \cite{Goodfellow2014}
+
+\subsubsection{Trò chơi Minimax}
+
+Quá trình huấn luyện được mô hình hóa dưới dạng bài toán tối ưu Minimax \cite{Goodfellow2014}:
+\begin{equation}
+\min_G \max_D V(D, G) = \mathbb{E}_{x \sim p_{\text{data}}(x)}[\log D(x)] + \mathbb{E}_{z \sim p_z(z)}[\log(1 - D(G(z)))]
+\end{equation}
+
+Số hạng đầu khuyến khích $D$ gán xác suất cao cho dữ liệu thật, số hạng thứ hai khuyến khích $D$ gán xác suất thấp cho dữ liệu giả $G(z)$.
+
+\subsubsection{Điểm Cân bằng Nash và Discriminator Tối ưu}
+
+Mục tiêu cuối cùng là đạt Điểm cân bằng Nash, nơi $D$ không thể phân biệt ảnh thật và giả ($D(x) = 0.5$ cho mọi $x$), và phân phối sinh $p_g$ trùng khớp với $p_{\text{data}}$ \cite{Jabbar2021}. Goodfellow et al. \cite{Goodfellow2014} chứng minh Discriminator tối ưu có dạng:
+\begin{equation}
+D^*_G(x) = \frac{p_{\text{data}}(x)}{p_{\text{data}}(x) + p_g(x)}
+\end{equation}
+
+Khi thay $D^*$ vào hàm mục tiêu, bài toán tối thiểu hóa của Generator trở thành tối thiểu hóa khoảng cách Jensen-Shannon giữa hai phân phối:
+\begin{equation}
+C(G) = -\log(4) + 2 \cdot D_{\text{JS}}(p_{\text{data}} \parallel p_g)
+\end{equation}
+
+\subsection{Thách thức trong Huấn luyện GAN}
+
+Mặc dù lý thuyết chặt chẽ, GAN trong thực tế gặp ba vấn đề nghiêm trọng \cite{Salimans2016, Heusel2017}:
+
+\subsubsection{Biến mất Gradient (Vanishing Gradients)}
+Khi $p_{\text{data}}$ và $p_g$ nằm trong các không gian con không giao nhau (rất phổ biến với dữ liệu ảnh nhiều chiều), khoảng cách JS là hằng số $\log 2$, dẫn đến gradient bằng 0. Khi Discriminator quá mạnh, Generator ``không biết'' hướng cải thiện \cite{Goodfellow2014}.
+
+\subsubsection{Sụp đổ Mode (Mode Collapse)}
+Generator học cách tạo ra một hoặc vài mẫu ``an toàn'' thay vì phân phối đa dạng. Hai mạng đuổi bắt nhau quanh các mode mà không bao giờ hội tụ \cite{Salimans2016}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{figChap1/mode_collapse.png}
+    \caption{Minh họa hiện tượng Mode Collapse trong GAN}
+    \label{fig:mode_collapse}
+\end{figure}
+    \noindent\textit{Chú thích:} (Trái) GAN lý tưởng: không gian $z$ đa dạng ánh xạ sang nhiều mode. (Phải) Mode Collapse: mọi $z$ bị ánh xạ vào một mode duy nhất \cite{Salimans2016}
+
+\subsubsection{Không Hội tụ (Non-Convergence)}
+Gradient descent được thiết kế để tìm cực tiểu cục bộ, không phải điểm yên ngựa cần thiết cho GAN. Động lực học thường dẫn đến quỹ đạo xoay tròn thay vì hội tụ \cite{Heusel2017}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.75\textwidth]{figChap1/nash_equilibrium.png}
+    \caption{Động lực học huấn luyện GAN và vấn đề Không Hội tụ}
+    \label{fig:nash_equilibrium}
+\end{figure}
+
+\begin{longtable}{>{\bfseries}m{4cm} | m{5cm} | m{6cm}}
+\caption{Tóm tắt các chế độ thất bại của GAN} \\
+\toprule
+Vấn đề & Biểu hiện & Nguyên nhân Toán học \\
+\midrule
+Vanishing Gradients & \textit{G} ngừng học, loss không đổi & D quá mạnh, JS divergence bảo toàn \\
+\midrule
+Mode Collapse & Ảnh sinh ra giống hệt nhau & \textit{G} tối ưu hóa cục bộ, thiếu ràng buộc đa dạng \\
+\midrule
+Non-Convergence & Loss dao động mạnh & Quỹ đạo xoay quanh điểm cân bằng Nash \\
+\bottomrule
+\end{longtable}
+
+\subsection{Các Giải pháp về Hàm Mục tiêu}
+
+\subsubsection{Wasserstein GAN (WGAN)}
+Arjovsky et al. \cite{Arjovsky2017} thay thế khoảng cách JS bằng khoảng cách Wasserstein (Earth-Mover distance):
+\begin{equation}
+W(p_{\text{data}}, p_g) = \inf_{\gamma \in \Pi(p_{\text{data}}, p_g)} \mathbb{E}_{(x,y) \sim \gamma} \left[ \|x - y\| \right]
+\end{equation}
+
+Khoảng cách Wasserstein liên tục và khả vi hầu khắp mọi nơi, cung cấp gradient có ý nghĩa cho Generator ngay cả khi hai phân phối không giao nhau. Giá trị loss tương quan tốt với chất lượng ảnh \cite{Arjovsky2017}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{figChap1/wgan_vs_gan_gradient.png}
+    \caption{So sánh gradient giữa GAN gốc (JS) và WGAN (Wasserstein)}
+    \label{fig:wgan_vs_gan}
+\end{figure}
+
+\subsubsection{WGAN-GP: Gradient Penalty}
+Gulrajani et al. \cite{Gulrajani2017} cải tiến WGAN bằng Gradient Penalty thay cho Weight Clipping:
+\begin{equation}
+L_{\text{WGAN-GP}} = 
+\underbrace{\mathbb{E}_{\tilde{x} \sim p_g}[D(\tilde{x})] - \mathbb{E}_{x \sim p_{\text{data}}}[D(x)]}_{\text{WGAN Loss}} 
++ 
+\underbrace{\lambda \, \mathbb{E}_{\hat{x} \sim p_{\hat{x}}}\!\left[\left(\|\nabla_{\hat{x}} D(\hat{x})\|_2 - 1\right)^2\right]}_{\text{Gradient Penalty}}
+\end{equation}
+Kỹ thuật này ổn định đáng kể quá trình huấn luyện các kiến trúc phức tạp như ResNet \cite{Gulrajani2017}.
+
+\subsubsection{Spectral Normalization (SN-GAN)}
+Miyato et al. \cite{Miyato2018} chuẩn hóa trọng số $W$ bằng spectral norm: $W_{SN} = W / \sigma(W)$, đảm bảo Lipschitz toàn cục với chi phí tính toán thấp. SN được sử dụng trong Discriminator của AnimeGANv3 (Mục~2.4).
+
+\subsubsection{Least Squares GAN (LSGAN)}
+Mao et al. \cite{Mao2017} thay cross-entropy bằng bình phương sai số, tránh vanishing gradient khi D hội tụ:
+\begin{equation}
+\mathcal{L}_{\text{adv}}^G = \mathbb{E}\!\left[\left(D(\widehat{y}) - 1\right)^2\right]
+\end{equation}
+LSGAN được sử dụng trực tiếp trong AnimeGANv3 cho cả hai nhánh Discriminator \cite{Liu2024}.
+
+\subsection{Đánh giá Chất lượng GAN}
+
+\subsubsection{Inception Score (IS)}
+IS \cite{Salimans2016} đánh giá độ sắc nét (entropy có điều kiện thấp) và đa dạng (entropy biên cao) qua mạng Inception v3:
+\begin{equation}
+IS = \exp\!\left(\mathbb{E}_{x \sim p_g}\left[D_{KL}\!\left(p(y|x) \,\|\, p(y)\right)\right]\right)
+\end{equation}
+
+\subsubsection{Fréchet Inception Distance (FID)}
+FID \cite{Heusel2017} so sánh phân phối đặc trưng Inception v3 giữa ảnh thật và giả, giả định phân phối chuẩn:
+\begin{equation}
+FID = \|\mu_r - \mu_g\|^2 + \operatorname{Tr}\!\left(\Sigma_r + \Sigma_g - 2\left(\Sigma_r \Sigma_g\right)^{1/2}\right)
+\end{equation}
+FID thấp hơn tương ứng ảnh sinh ra gần phân phối thật hơn. FID nhạy cảm hơn IS với mode collapse và tương quan tốt với đánh giá con người \cite{Heusel2017}. Đây là chỉ số chính được sử dụng để đánh giá mô hình trong Chương~4.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{figChap1/fid_is_pipeline.png}
+    \caption{Quy trình tính FID và IS qua mạng Inception-v3}
+    \label{fig:fid_is_pipeline}
+\end{figure}
+
+% =====================================================
+\section{Các mô hình GAN tiêu biểu cho bài toán Anime}
+\label{sec:gan_anime_models}
+
+Bài toán chuyển ảnh sang phong cách anime đòi hỏi sự kết hợp giữa bảo toàn nội dung gốc và thể hiện đúng phong cách anime. Mục này phân tích ba hướng tiếp cận chính, từ đó định hướng cho việc lựa chọn AnimeGANv3 làm nền tảng.
+
+\subsection{CycleGAN và dịch ảnh không ghép cặp}
+
+\textbf{Tiền đề:} Isola et al. \cite{Isola2017} đề xuất pix2pix, mô hình dịch ảnh có điều kiện sử dụng dữ liệu ghép cặp. Tuy nhiên, việc thu thập cặp ảnh thật--anime tương ứng không khả thi. Chen et al. \cite{Chen2018CartoonGAN} giới thiệu CartoonGAN với edge loss bảo toàn đường nét -- tiền đề trực tiếp cho dòng nghiên cứu AnimeGAN.
+
+\textbf{CycleGAN} (Zhu et al., 2017) \cite{Zhu2017} giải quyết bài toán dịch ảnh không ghép cặp bằng hai Generator song song $G: X \to Y$ và $F: Y \to X$, cùng ràng buộc \textbf{nhất quán vòng lặp} (cycle consistency): $x \approx F(G(x))$ và $y \approx G(F(y))$.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{figChap1/cycleGan.png}
+    \caption{Kiến trúc CycleGAN với hai Generator và ràng buộc cycle consistency}
+    \label{fig:cycle_gan}
+\end{figure}
+
+\textbf{Ưu điểm:} Linh hoạt do không cần dữ liệu ghép cặp, bảo toàn cấu trúc tổng quát nhờ cycle consistency \cite{Zhu2017}. \textbf{Nhược điểm:} Khó bảo toàn danh tính khuôn mặt, đôi khi sinh artifact (nhiễu màu, đường viền thừa) \cite{Zhu2017}. Biến thể U-GAT-IT \cite{Kim2020} bổ sung module chú ý và Adaptive Layer-Instance Normalization để cải thiện, nhưng vẫn chưa giải quyết triệt để.
+
+\subsection{StyleGAN và GAN Inversion}
+
+\textbf{StyleGAN} (Karras et al., 2019) \cite{Karras2019} đại diện cho hướng tiếp cận tập trung vào sinh ảnh chất lượng cao. Generator gồm Mạng ánh xạ ($z \to w$) và Mạng tổng hợp sử dụng AdaIN để điều chỉnh phong cách ở từng tầng, cho phép tách biệt nội dung và phong cách \cite{Karras2019, Karras2020}.
+
+Kỹ thuật \textbf{GAN Inversion} \cite{Xia2022} chiếu ảnh thật vào không gian tiềm ẩn $W$ của StyleGAN đã huấn luyện trên ảnh anime, sau đó Generator tái tạo ảnh trong phong cách anime. Phương pháp này cho ảnh chất lượng rất cao và bảo toàn danh tính tốt \cite{Richardson2021}, nhưng đòi hỏi tài nguyên tính toán lớn và quy trình inference phức tạp (hàng triệu tham số, hàng trăm bước tối ưu latent) \cite{Xia2022}.
+
+\subsection{AnimeGANv3 (DTGAN) -- Sơ bộ kiến trúc}
+\label{subsec:animegan_overview}
+
+Loạt nghiên cứu AnimeGAN \cite{Chen2020, ChenLiu2020, Liu2024} tập trung xây dựng mô hình GAN gọn nhẹ tối ưu cho phong cách anime. Phiên bản mới nhất AnimeGANv3 đề xuất kiến trúc \textbf{Double-Tail GAN (DTGAN)} \cite{Liu2024} với ba đặc điểm nổi bật:
+
+\begin{itemize}
+    \item \textbf{Generator hai nhánh:} Encoder dùng chung + hai Decoder song song: Support Tail (học đường nét, cấu trúc) và Main Tail (tinh chỉnh màu sắc, chi tiết).
+    \item \textbf{Kỹ thuật chuẩn hóa LADE:} Tự động tính tham số chuẩn hóa từ chính feature map, vượt trội Instance Normalization truyền thống.
+    \item \textbf{Hàm mất mát chuyên biệt:} Region Smoothing Loss (vùng phẳng anime) và Fine-grained Revision Loss (tinh chỉnh chi tiết) kết hợp với Perceptual Loss.
+\end{itemize}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{figChap1/pipelineDTGan.png}
+    \caption{Sơ đồ tổng quát của Double-Tail GAN (DTGAN)}
+    \label{fig:pipeline_dtgan}
+\end{figure}
+
+Chỉ với $\sim$1.02 triệu tham số khi inference, AnimeGANv3 đạt tốc độ $\sim$115ms cho ảnh Full HD trên GPU \cite{Liu2024}. Kiến trúc chi tiết của DTGAN sẽ được phân tích đầy đủ trong Chương~2.
+
+\subsection{So sánh tổng quan và Định hướng}
+
+\begin{table}[H]
+\caption{So sánh định lượng các mô hình chuyển ảnh sang anime trên tập Selfie2Anime \cite{Selfie2Anime}}
+\label{tab:anime_gan_comparison}
+\centering
+\begin{tabular}{|l|c|c|c|c|}
+\hline
+\textbf{Mô hình} & \textbf{FID $\downarrow$} & \textbf{Params (M)} & \textbf{Inference (ms)} & \textbf{Dữ liệu} \\
+\hline
+CycleGAN \cite{Zhu2017} & 86.7 & 28.3 & 42 & Không cặp \\
+\hline
+U-GAT-IT \cite{Kim2020} & 72.1 & 29.8 & 63 & Không cặp \\
+\hline
+AnimeGANv2 \cite{ChenLiu2020} & 65.3 & 8.6 & 31 & Không cặp \\
+\hline
+AnimeGANv3 \cite{Liu2024} & 58.4 & 1.02 & 12 & Không cặp \\
+\hline
+StyleGAN+Enc \cite{Richardson2021} & 61.8 & 37.1 & 124 & Không cặp \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.82\textwidth]{figChap1/gan_comparison_radar.png}
+    \caption{Biểu đồ radar so sánh đa chiều ba hướng tiếp cận GAN cho bài toán anime}
+    \label{fig:gan_radar_comparison}
+\end{figure}
+    \noindent\textit{Chú thích:} Các tiêu chí: chất lượng ảnh, bảo toàn danh tính, độ phức tạp huấn luyện, tốc độ suy luận, yêu cầu dữ liệu, đa dạng phong cách. Thang 1--5, giá trị cao tốt hơn \cite{Zhu2017, Karras2019, Liu2024}
+
+Qua phân tích Bảng~\ref{tab:anime_gan_comparison} và Hình~\ref{fig:gan_radar_comparison}, \textbf{AnimeGANv3 (DTGAN)} được chọn làm nền tảng cho luận văn vì: (1) FID thấp nhất, (2) số tham số nhỏ nhất, (3) tốc độ suy luận nhanh nhất, phù hợp ứng dụng thời gian thực \cite{Liu2024}. Tuy nhiên, AnimeGANv3 vẫn gặp hạn chế khi xử lý khuôn mặt có tỉ lệ nhỏ trong ảnh -- động lực cho việc tích hợp module phát hiện khuôn mặt (Chương~3).
+
+% =====================================================
+\section{Phát hiện Khuôn mặt -- Sơ bộ}
+\label{sec:face_detection_overview}
+
+Phát hiện khuôn mặt (face detection) là bước tiền xử lý cho phép hệ thống tự động xác định và tách khuôn mặt người trước khi áp dụng chuyển đổi phong cách. Việc phát hiện chính xác và nhanh chóng khuôn mặt trong điều kiện tự nhiên đa dạng là thách thức đã được nghiên cứu hàng thập kỷ \cite{ViolaJones2004}.
+
+\subsection{Tổng quan các Phương pháp}
+
+Lĩnh vực phát hiện khuôn mặt đã trải qua nhiều thế hệ phát triển:
+
+\begin{itemize}
+    \item \textbf{Viola-Jones (2001)} \cite{ViolaJones2004}: Đặc trưng Haar + AdaBoost + cấu trúc cascade. Nhanh nhưng chỉ phát hiện mặt nhìn thẳng.
+    \item \textbf{MTCNN (2016)} \cite{Zhang2016MTCNN}: Ba mạng CNN cascade (P-Net, R-Net, O-Net). Hỗ trợ 5 landmarks nhưng tốc độ hạn chế do xử lý tuần tự.
+    \item \textbf{SSD và YOLO} \cite{Liu2016SSD, Redmon2016YOLO}: Detectors một giai đoạn, rất nhanh nhưng phiên bản gốc không hỗ trợ facial landmarks.
+    \item \textbf{RetinaFace (2019)} \cite{Deng2019RetinaFace}: Phát hiện đơn giai đoạn kết hợp FPN đa tỉ lệ và đa nhiệm (bbox + landmarks).
+\end{itemize}
+
+\begin{table}[H]
+\caption{So sánh các phương pháp phát hiện khuôn mặt}
+\label{tab:face_detection_comparison}
+\centering
+\begin{tabular}{|l|c|c|c|c|}
+\hline
+\textbf{Phương pháp} & \textbf{Năm} & \textbf{Landmark} & \textbf{Tốc độ} & \textbf{Multi-scale} \\
+\hline
+Viola-Jones \cite{ViolaJones2004} & 2001 & Không & Nhanh & Hạn chế \\
+\hline
+MTCNN \cite{Zhang2016MTCNN} & 2016 & 5 pts & Trung bình & Tốt \\
+\hline
+SSD \cite{Liu2016SSD} & 2016 & Không & Rất nhanh & Tốt \\
+\hline
+\textbf{RetinaFace} \cite{Deng2019RetinaFace} & \textbf{2019} & \textbf{5 pts} & \textbf{Nhanh} & \textbf{Rất tốt} \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{RetinaFace -- Sơ bộ Kiến trúc}
+\label{subsec:retinaface_overview}
+
+RetinaFace \cite{Deng2019RetinaFace} được chọn cho luận văn nhờ ba ưu điểm: (1) phát hiện đa tỉ lệ từ khuôn mặt rất nhỏ đến rất lớn, (2) đồng thời xuất bbox và 5 facial landmarks trong một lần suy luận, (3) bản MobileNet-0.25 cực nhẹ ($\sim$500KB) phù hợp triển khai thực tế.
+
+Kiến trúc RetinaFace kết hợp ba thành phần chính:
+\begin{itemize}
+    \item \textbf{Backbone MobileNet-0.25} \cite{Howard2017MobileNet}: Sử dụng Depthwise Separable Convolution, giảm 8--9$\times$ chi phí tính toán. Chỉ 25\% số kênh so với MobileNet đầy đủ.
+    \item \textbf{Feature Pyramid Network (FPN)} \cite{Lin2017FPN}: Kết hợp thông tin ngữ nghĩa (top-down) với độ phân giải cao (bottom-up), tạo ba mức đặc trưng $P_3, P_4, P_5$ phát hiện khuôn mặt ở mọi kích thước.
+    \item \textbf{Multi-task Heads:} Tại mỗi mức FPN, ba đầu ra đồng thời: phân loại mặt/nền, hồi quy bounding box, và hồi quy 5 facial landmarks.
+\end{itemize}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{figChap1/face_detection_pipeline.png}
+    \caption{Tổng quan kiến trúc RetinaFace và pipeline suy luận}
+    \label{fig:face_detection_pipeline}
+\end{figure}
+    \noindent\textit{Chú thích:} RetinaFace kết hợp backbone MobileNet-0.25, FPN đa tỉ lệ, và ba detection head đa nhiệm. Hậu xử lý bao gồm giải mã Prior Box, lọc ngưỡng tin cậy và NMS \cite{Deng2019RetinaFace, ONNX2019}
+
+Hàm mất mát đa nhiệm của RetinaFace:
+\begin{equation}
+\mathcal{L} = \mathcal{L}_{cls} + \lambda_1 \mathcal{L}_{box} + \lambda_2 \mathcal{L}_{pts}
+\end{equation}
+trong đó $\mathcal{L}_{cls}$ là binary cross-entropy phân loại khuôn mặt/nền, $\mathcal{L}_{box}$ là smooth-$\ell_1$ hồi quy bbox, và $\mathcal{L}_{pts}$ là smooth-$\ell_1$ hồi quy 5 landmarks \cite{Deng2019RetinaFace}.
+
+Chi tiết về quy trình suy luận RetinaFace và cách tích hợp vào pipeline anime sẽ được trình bày trong Chương~3.
+
+% =====================================================
+\section*{Tổng kết chương}
+
+Chương 1 đã cung cấp nền tảng lý thuyết cần thiết cho luận văn:
+
+\begin{itemize}
+    \item \textbf{Bài toán:} Chuyển ảnh sang phong cách anime là bài toán dịch ảnh không ghép cặp, đòi hỏi cân bằng giữa bảo toàn nội dung và chuyển đổi phong cách.
+    \item \textbf{CNN:} Các thành phần cơ bản (tích chập, chuẩn hóa, encoder-decoder) tạo nền tảng kiến trúc cho Generator và Discriminator.
+    \item \textbf{GAN:} Nguyên lý minimax, các thách thức huấn luyện (vanishing gradient, mode collapse), và giải pháp (WGAN-GP, SN, LSGAN). Chỉ số FID là thước đo chất lượng chính.
+    \item \textbf{GAN cho Anime:} AnimeGANv3 (DTGAN) được chọn nhờ FID thấp nhất, số tham số ít nhất và tốc độ nhanh nhất trong các mô hình so sánh.
+    \item \textbf{Face Detection:} RetinaFace MobileNet-0.25 được chọn nhờ cân bằng tốc độ, độ chính xác đa tỉ lệ và hỗ trợ facial landmarks.
+\end{itemize}
+
+Chương~2 sẽ phân tích chi tiết kiến trúc DTGAN, và Chương~3 sẽ trình bày luồng anime tích hợp phát hiện khuôn mặt.
+

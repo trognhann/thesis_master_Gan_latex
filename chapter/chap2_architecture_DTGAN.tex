@@ -13,11 +13,12 @@ Chương này trình bày chi tiết kiến trúc kỹ thuật của mô hình A
 
 Ý tưởng trung tâm của DTGAN là giải quyết bài toán chuyển đổi ảnh sang phong cách anime một cách hiệu quả bằng cách tách quá trình học thành \textbf{hai nhiệm vụ song song}: học các đường nét anime thô (Support Tail) và tinh chỉnh chi tiết màu sắc mịn (Main Tail). Hai nhánh decoder chia sẻ cùng một encoder đặc trưng nhưng có trọng số decoder độc lập, được huấn luyện với các discriminator và hàm mất mát riêng biệt.
 
-Cụ thể, kiến trúc phân nhánh của Generator trong mô hình DTGAN được cấu trúc gồm ba thành phần cơ bản, phối hợp nhịp nhàng để thực hiện từng giai đoạn của quá trình chuyển đổi phong cách:
+\textbf{Tại sao cần kiến trúc hai nhánh?} Quan sát kỹ phong cách anime cho thấy hai thuộc tính thị giác cần được học riêng biệt: (1) hệ thống đường nét và cấu trúc hình khối sáng tối, và (2) phân phối màu sắc phẳng kiểu cel-shading. Nếu dùng một decoder duy nhất, hai mục tiêu này cạnh tranh nhau trong cùng một không gian tham số, dẫn đến chất lượng thỏa hiệp. DTGAN giải quyết bằng cách chia Generator thành ba thành phần \cite{Liu2024}:
+
 \begin{itemize}
-    \item \textbf{Base Encoder (Mạng mã hóa cơ sở dùng chung):} Đây là giai đoạn đầu tiên tiếp nhận ảnh gốc đầu vào ở độ phân giải thực. Mạch mã hóa này sử dụng các lớp tích chập liên tiếp nhằm trích xuất đa dạng các đặc trưng ngữ nghĩa—từ chi tiết bậc thấp như cạnh, đường viền cho đến hình khối và cấu trúc tổng thể phức tạp. Thông qua 3 lần lấy mẫu xuống (downsampling), mạng thu nhỏ không gian ảnh thành các bản đồ đặc trưng (feature maps) có kích thước tiêu chuẩn $32 \times 32$. Thiết kế dùng chung cho cả hai nhánh (shared weights) không chỉ đảm bảo mô hình khởi nguồn từ một không gian đặc trưng thống nhất, mà còn làm giảm đáng kể số lượng tham số thừa, giúp tối ưu hóa chi phí tính toán.
-    \item \textbf{Support Tail (Nhánh giải mã hỗ trợ):} Nhánh decoder này đảm nhận vai trò tiên phong trong việc học và khôi phục các đặc điểm sơ bộ về cấu trúc tổng thể và hệ thống đường nét của phong cách anime. Kết quả trung gian sinh ra là một bức anime thô ký hiệu là $\widehat{y}_s$ (\texttt{fake\_s}). Thay vì đánh giá trực tiếp nhánh này, ảnh $\widehat{y}_s$ được xử lý qua bộ lọc bảo toàn cạnh Guided Filter để tạo ra ảnh biểu diễn $\widehat{y}$ (\texttt{generated}). Phiên bản ảnh sau khi lọc này được chuyển định dạng sang không gian ảnh xám (grayscale) và đưa vào quá trình đối kháng (adversarial training) cùng tập anime gốc, nhằm khích lệ mô hình tập trung tái tạo mảng khối sáng tối và độ tương phản đặc trưng của nét vẽ mà không bị phân tâm bởi yếu tố màu sắc.
-    \item \textbf{Main Tail (Nhánh giải mã chính):} Nhánh decoder thứ hai có nhiệm vụ cao nhất là hoàn thiện bức tranh bằng cách tinh chỉnh sâu về phân phối đa sắc, kết cấu màu và độ mịn màng. Ảnh hoàn chỉnh được sinh ra ký hiệu là $\widehat{y}_m$ (\texttt{fake\_m}). Để mô hình học được năng lực tô màu khối (cel-shading) liền mạch không phô chênh giống họa sĩ thực thụ, quá trình tối ưu nhánh này sẽ được so sánh với các bản đồ nhãn mẫu (pseudo ground-truth) — vốn được tính toán trước bằng thuật toán loại bỏ nhiễu tự nhiên Non-Local Means kết hợp quy trình làm phẳng L0 Smoothing. Thành phần này đóng vai trò quyết định giúp tác phẩm tổng hợp đầu ra đạt diện mạo thẩm mỹ cao, làm sạch các vết artifacts cục bộ.
+    \item \textbf{Base Encoder (Mạng mã hóa dùng chung):} Tiếp nhận ảnh gốc, trích xuất đặc trưng ngữ nghĩa phân cấp qua 3 lần downsampling (stride-2), thu nhỏ không gian ảnh thành bản đồ đặc trưng $32 \times 32$. Thiết kế dùng chung (shared weights) đảm bảo cả hai nhánh decoder khởi nguồn từ cùng một không gian đặc trưng thống nhất, đồng thời giảm đáng kể số tham số.
+    \item \textbf{Support Tail (Nhánh hỗ trợ):} Sinh ảnh anime thô $\widehat{y}_s$, sau đó qua bộ lọc bảo toàn cạnh Guided Filter tạo ảnh $\widehat{y}$. Ảnh này được chuyển sang grayscale trước khi đưa vào Discriminator, buộc nhánh tập trung vào đường nét và tương phản sáng tối mà không bị phân tâm bởi màu sắc.
+    \item \textbf{Main Tail (Nhánh chính):} Sinh ảnh anime hoàn chỉnh $\widehat{y}_m$ với phân phối màu sắc cel-shading mịn. Nhánh này được tối ưu dựa trên pseudo ground-truth (ảnh đã qua NL-Means + L0 Smoothing), đảm bảo vùng màu phẳng và không artifacts.
 \end{itemize}
 
 \begin{figure}[H]
@@ -219,7 +220,7 @@ External Attention, được đề xuất bởi Guo et al. \cite{Guo2021}, giả
     \caption{Kiến trúc External Attention v3 sử dụng trong DTGAN tại vị trí bottleneck $32 \times 32$}
     \label{fig:external_attention}
 \end{figure}
-    \noindent\textit{Chú thích:} Hai memory bank học được $M_k \in \mathbb{R^{C \times k}$ và $M_v \in \mathbb{R}^{k \times C}$ cho phép mô hình học phụ thuộc toàn cục với độ phức tạp $O(N \cdot k)$ thay vì $O(N^2)$ của Self-Attention \cite{Guo2021, Liu2024}.}
+    \noindent\textit{Chú thích:} Hai memory bank học được $M_k \in \mathbb{R}^{C \times k}$ và $M_v \in \mathbb{R}^{k \times C}$ cho phép mô hình học phụ thuộc toàn cục với độ phức tạp $O(N \cdot k)$ thay vì $O(N^2)$ của Self-Attention \cite{Guo2021, Liu2024}.
 
 
 Cụ thể, External Attention v3 trong DTGAN hoạt động theo các bước sau (áp dụng tại bottleneck $32 \times 32$, $k = 128$):
@@ -505,18 +506,7 @@ Style Loss & Gram Matrix & Gram Matrix & Decentralized Gram \\
 \end{tabular}
 \end{table}
 
-\subsection{Triển khai với ONNX Runtime}
-\label{subsec:onnx_deployment}
-
-Sau khi huấn luyện trong TensorFlow, mô hình DTGAN được xuất sang định dạng ONNX để suy luận đa nền tảng. Quá trình suy luận với ONNX Runtime \cite{ONNX2019} gồm:
-
-\begin{enumerate}
-    \item \textbf{Tiền xử lý:} Chuẩn hóa ảnh từ $[0, 255]$ về $[-1.0, 1.0]$: $x_{\text{norm}} = x / 127.5 - 1.0$
-    \item \textbf{Suy luận ONNX:} \texttt{session.run(None, \{'input': img\})[0]}
-    \item \textbf{Hậu xử lý:} Chuyển về $[0, 255]$: $\text{out} = (\widehat{y} + 1.0) / 2.0 \times 255$
-\end{enumerate}
-
-Mô hình ONNX hỗ trợ cả CPU và GPU inference, cho phép chạy trên nhiều thiết bị. Trên NVIDIA GPU, mô hình đạt tốc độ xử lý đủ để sử dụng trong ứng dụng thực tế \cite{Liu2024}.
+% Mục triển khai ONNX Runtime đã được chuyển sang Chương 4 (Thực nghiệm và Đánh giá)
 
 \section*{Tổng kết chương}
 

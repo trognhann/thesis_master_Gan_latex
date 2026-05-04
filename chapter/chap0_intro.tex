@@ -43,9 +43,9 @@ Luận văn được tổ chức theo cấu trúc như sau:
 
 \begin{itemize}
     \item \textbf{Mở đầu:} Trình bày lý do chọn đề tài, sự cần thiết, mục tiêu, đối tượng, phạm vi nghiên cứu và giới thiệu cấu trúc của luận văn.
-    \item \textbf{Chương 1: Cơ sở lý thuyết.} Cung cấp kiến thức nền tảng về mạng nơ-ron tích chập (CNN), mạng đối nghịch tạo sinh (GAN) và các biến thể (DCGAN, LSGAN, CycleGAN), mạng VGG19 dùng trong perceptual loss, cũng như các phương pháp phát hiện khuôn mặt (RetinaFace) và tiền xử lý ảnh.
-    \item \textbf{Chương 2: Kiến trúc mô hình AnimeGANv3 (DTGAN).} Phân tích chi tiết kiến trúc mạng Double-Tail GAN, gồm Base Encoder, Support Tail và Main Tail của Generator; hai Discriminator; kỹ thuật chuẩn hóa LADE; cơ chế External Attention v3; hệ thống hàm mất mát và quy trình huấn luyện.
-    \item \textbf{Chương 3: Module trích xuất khuôn mặt (Face Extraction).} Trình bày việc xây dựng và tích hợp module trích xuất khuôn mặt tự động dựa trên RetinaFace, kỹ thuật mở rộng vùng mặt (Margin Expansion), và so sánh hai chế độ xử lý ảnh (Face mode và Landscape mode).
-    \item \textbf{Chương 4: Thực nghiệm và đánh giá.} Trình bày môi trường thực nghiệm, bộ dữ liệu, kết quả huấn luyện, đánh giá định lượng (FID, LPIPS, FPS) và định tính (khảo sát người dùng), cùng demo ứng dụng.
+    \item \textbf{Chương 1: Cơ sở lý thuyết và tổng quan nghiên cứu.} Giới thiệu bài toán chuyển ảnh sang phong cách anime, nền tảng mạng nơ-ron tích chập (CNN), lý thuyết mạng đối nghịch tạo sinh (GAN) và các biến thể (WGAN, LSGAN, CycleGAN), các mô hình GAN tiêu biểu cho bài toán anime, và sơ bộ về phương pháp phát hiện khuôn mặt RetinaFace.
+    \item \textbf{Chương 2: Kiến trúc mô hình AnimeGANv3 (DTGAN).} Phân tích chi tiết kiến trúc mạng Double-Tail GAN: Base Encoder, Support Tail và Main Tail của Generator; hai Discriminator; kỹ thuật chuẩn hóa LADE; cơ chế External Attention v3; hệ thống hàm mất mát; pipeline tiền xử lý dữ liệu huấn luyện và quy trình huấn luyện.
+    \item \textbf{Chương 3: Luồng anime tích hợp phát hiện khuôn mặt.} Trình bày pipeline end-to-end tích hợp phát hiện khuôn mặt (RetinaFace) và chuyển đổi phong cách anime (AnimeGANv3), kỹ thuật mở rộng vùng mặt (Margin Expansion), và phân tích hai chế độ xử lý Face Mode/Landscape Mode.
+    \item \textbf{Chương 4: Thực nghiệm và đánh giá.} Trình bày môi trường thực nghiệm, bộ dữ liệu, kết quả huấn luyện, đánh giá định lượng (FID, LPIPS, FPS) và định tính, triển khai ứng dụng web (React + FastAPI) và demo hệ thống.
     \item \textbf{Kết luận:} Tóm tắt những kết quả nổi bật, đóng góp của đề tài, thảo luận các hạn chế còn tồn tại và đề xuất phương hướng mở rộng trong tương lai.
 \end{itemize}
