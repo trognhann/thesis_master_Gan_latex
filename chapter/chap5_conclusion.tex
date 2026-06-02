@@ -11,16 +11,16 @@ Chương này tổng kết các kết quả đạt được của luận văn, p
 \section{Kết luận}
 \label{sec:conclusion}
 
-Luận văn đã nghiên cứu, triển khai và đánh giá một hệ thống chuyển đổi ảnh chân dung sang phong cách anime dựa trên mô hình DTGAN (AnimeGANv3) \cite{Liu2024}, kết hợp với module Trích xuất Khuôn mặt tự phát triển sử dụng RetinaFace \cite{Deng2019RetinaFace}. Qua quá trình thực hiện, luận văn đạt được các kết quả chính sau:
+Luận văn đã nghiên cứu, triển khai và đánh giá một hệ thống chuyển đổi ảnh chân dung sang phong cách anime dựa trên mô hình DTGAN (AnimeGANv3) \cite{Liu2024}, kết hợp với pipeline tích hợp phát hiện khuôn mặt sử dụng RetinaFace \cite{Deng2019RetinaFace} hỗ trợ ba chế độ vận hành (Face Mode, Landscape Mode, Hybrid Mode). Qua quá trình thực hiện, luận văn đạt được các kết quả chính sau:
 
 \begin{enumerate}
     \item \textbf{Phân tích kiến trúc DTGAN:} Trình bày hệ thống và chi tiết kiến trúc Double-Tail Generator (Base Encoder, Support Tail, Main Tail), kỹ thuật chuẩn hóa LADE, cơ chế External Attention v3 và hệ thống 7 hàm mất mát chuyên biệt cho bài toán anime hóa. Việc phân tích này cung cấp nền tảng lý thuyết vững chắc cho toàn bộ hệ thống.
 
-    \item \textbf{Xây dựng module Trích xuất Khuôn mặt:} Đây là đóng góp nguyên bản của luận văn — tích hợp RetinaFace MobileNet 0.25 qua ONNX Runtime với thuật toán Margin Expansion 6 bước để phát hiện, cắt và mở rộng vùng khuôn mặt trước khi đưa vào Generator. Module này cải thiện FID khoảng $8.7\%$ so với xử lý toàn ảnh (Normal Mode), đồng thời cung cấp cơ chế graceful degradation tự động chuyển sang Landscape Mode khi không phát hiện được khuôn mặt.
+    \item \textbf{Xây dựng pipeline tích hợp phát hiện khuôn mặt:} Đây là đóng góp nguyên bản của luận văn — tích hợp RetinaFace MobileNet 0.25 qua ONNX Runtime với thuật toán Margin Expansion 6 bước, hỗ trợ ba chế độ: Face Mode (xử lý khuôn mặt lớn nhất, FID cải thiện $8.7\%$ so với Landscape Mode), Landscape Mode (xử lý toàn ảnh), và Hybrid Mode (kết hợp cả hai bằng kỹ thuật feathered blending cho ảnh nhóm). Pipeline cung cấp cơ chế graceful degradation tự động chuyển sang Landscape Mode khi không phát hiện được khuôn mặt.
 
     \item \textbf{Huấn luyện và đánh giá toàn diện:} Quá trình huấn luyện qua 2 giai đoạn (5 epoch pre-training + 69 epoch adversarial) cho thấy hội tụ ổn định: Pre-train G\_loss giảm từ $1.74$ xuống $0.25$; G\_loss ổn định ở $\approx 6.5$ và D\_loss ở $\approx 0.11$ — không xảy ra mode collapse. Đánh giá định lượng cho kết quả FID $= 58.6$ và LPIPS $= 0.384$ (Face Mode), vượt trội so với CycleGAN, CartoonGAN và AnimeGANv2.
 
-    \item \textbf{Triển khai ứng dụng thực tế:} Xây dựng ứng dụng web tích hợp (React frontend + FastAPI backend), hỗ trợ chuyển đổi cả ảnh và video với hai chế độ Normal Mode và Face Mode. Model ONNX chỉ 9.1 MB, đạt tốc độ 42 FPS tại $256 \times 256$ trên GPU, phù hợp cho triển khai thực tế.
+    \item \textbf{Triển khai ứng dụng thực tế:} Xây dựng ứng dụng web tích hợp (React frontend + FastAPI backend), hỗ trợ chuyển đổi cả ảnh và video với ba chế độ Face Mode, Landscape Mode và Hybrid Mode. Model ONNX chỉ 9.1 MB, đạt tốc độ 42 FPS tại $256 \times 256$ trên GPU, phù hợp cho triển khai thực tế.
 \end{enumerate}
 
 \subsection{Mức độ hoàn thành mục tiêu}
@@ -40,7 +40,7 @@ Nghiên cứu nền tảng lý thuyết CNN, GAN, RetinaFace & \checkmark\ Hoàn
 \hline
 Phân tích kiến trúc DTGAN & \checkmark\ Hoàn thành & Chương 2: Generator, Discriminator, LADE, EA v3, 7 loss \\
 \hline
-Xây dựng module Face Extraction & \checkmark\ Hoàn thành & Chương 3: RetinaFace + Margin Expansion, cải thiện FID $8.7\%$ \\
+Xây dựng pipeline Face Extraction & \checkmark\ Hoàn thành & Chương 3: RetinaFace + Margin Expansion + Hybrid Mode, FID cải thiện $8.7\%$ \\
 \hline
 Huấn luyện và đánh giá mô hình & \checkmark\ Hoàn thành & Chương 4: FID 58.6, LPIPS 0.384, 42 FPS \\
 \hline
@@ -62,7 +62,7 @@ Mặc dù đạt được các kết quả khả quan, hệ thống vẫn còn m
 
     \item \textbf{Chưa có temporal consistency cho video:} Pipeline xử lý video hiện tại chuyển đổi từng frame độc lập, chưa có cơ chế đảm bảo tính nhất quán giữa các frame liên tiếp. Điều này có thể gây hiệu ứng nhấp nháy (flickering) khi xem video đầu ra.
 
-    \item \textbf{Face Mode chưa ghép lại nền:} Chế độ Face Mode chỉ trả về vùng khuôn mặt đã chuyển đổi mà chưa tự động ghép (blend) trở lại ảnh gốc. Người dùng cần xem kết quả riêng biệt hoặc tự thực hiện bước ghép nếu muốn ảnh toàn cảnh.
+    \item \textbf{Chi phí tính toán Hybrid Mode:} Thời gian xử lý Hybrid Mode tăng tuyến tính theo số khuôn mặt ($1 + N$ lần suy luận ONNX), có thể chậm với ảnh nhóm đông ($N > 5$).
 
     \item \textbf{Hiệu năng trên CPU hạn chế:} Tốc độ xử lý trên CPU chỉ đạt $\approx 1.1$ FPS ở $512\times512$, chưa phù hợp cho người dùng không có GPU. Model ONNX chưa được áp dụng quantization để tối ưu cho CPU inference.
 \end{enumerate}
@@ -83,12 +83,7 @@ Dựa trên các hạn chế đã xác định và xu hướng phát triển c�
 I_{\text{aligned}} = \mathcal{T}_{\text{affine}}\!\left(I_{\text{crop}},\; \text{landmarks},\; \text{target\_template}\right)
 \end{equation}
 
-\textbf{Face Blending:} Ghép liền mạch vùng mặt đã xử lý trở lại ảnh gốc bằng Poisson Image Editing \cite{Perez2003Poisson} hoặc alpha blending có gradient tại biên bounding box:
-\begin{equation}
-\label{eq:face_blend}
-I_{\text{result}} = \alpha \cdot I_{\text{anime\_face}} + (1-\alpha) \cdot I_{\text{original}}
-\end{equation}
-Hướng này sẽ giải quyết hoàn toàn hạn chế về background của Face Mode.
+\textbf{Nâng cấp Face Blending:} Chế độ Hybrid Mode hiện tại đã giải quyết vấn đề ghép khuôn mặt vào nền bằng feathered blending (alpha mask + Gaussian blur). Tuy nhiên, có thể cải thiện chất lượng ghép bằng Poisson Image Editing \cite{Perez2003Poisson} -- kỹ thuật seamless cloning giải phương trình Poisson tại biên, cho kết quả tự nhiên hơn alpha blending đơn giản, đặc biệt khi có khác biệt lớn về ánh sáng và tông màu giữa vùng mặt và nền.
 
 \textbf{Nâng cấp detector:} Thay backbone MobileNet 0.25 bằng ResNet50 hoặc sử dụng YOLOv8-face \cite{Jocher2023YOLOv8} -- detector khuôn mặt thế hệ mới cân bằng tốt hơn giữa tốc độ và độ chính xác, đặc biệt ở khuôn mặt nghiêng.
 
@@ -119,8 +114,8 @@ trong đó $\mathbf{v}^{(t)}$ là optical flow từ frame $t-1$ sang $t$ \cite{H
 \section{Lời kết}
 \label{sec:final_word}
 
-Luận văn đã hoàn thành mục tiêu xây dựng một hệ thống chuyển đổi ảnh chân dung sang phong cách anime hoàn chỉnh, từ nghiên cứu kiến trúc mô hình DTGAN đến tích hợp module Face Extraction và triển khai thành ứng dụng web thực tế.
+Luận văn đã hoàn thành mục tiêu xây dựng một hệ thống chuyển đổi ảnh chân dung sang phong cách anime hoàn chỉnh, từ nghiên cứu kiến trúc mô hình DTGAN đến tích hợp pipeline phát hiện khuôn mặt với ba chế độ vận hành (Face Mode, Landscape Mode, Hybrid Mode) và triển khai thành ứng dụng web thực tế.
 
-Kết quả định lượng (FID $= 58.6$, LPIPS $= 0.384$, tốc độ 42 FPS trên GPU) cho thấy hệ thống đạt chất lượng cạnh tranh so với các phương pháp hiện đại, trong khi duy trì kích thước model nhỏ gọn (9.1 MB ONNX) phù hợp cho triển khai thực tế. Module Face Extraction với thuật toán Margin Expansion là đóng góp nguyên bản, đã được xác nhận cải thiện chất lượng khoảng $8.7\%$ FID so với Normal Mode trên ảnh chân dung.
+Kết quả định lượng (FID $= 58.6$, LPIPS $= 0.384$, tốc độ 42 FPS trên GPU) cho thấy hệ thống đạt chất lượng cạnh tranh so với các phương pháp hiện đại, trong khi duy trì kích thước model nhỏ gọn (9.1 MB ONNX) phù hợp cho triển khai thực tế. Pipeline tích hợp với thuật toán Margin Expansion và chế độ Hybrid Mode (feathered blending) là đóng góp nguyên bản, đã được xác nhận cải thiện chất lượng khoảng $8.7\%$ FID so với Landscape Mode trên ảnh chân dung, đồng thời cho phép xử lý ảnh nhóm với chất lượng khuôn mặt cao mà vẫn giữ nền.
 
-Các hướng phát triển được đề xuất — face alignment, face blending, temporal consistency cho video và mở rộng đa phong cách — tạo nên lộ trình nghiên cứu rõ ràng và khả thi, hướng tới một hệ thống anime stylization toàn diện phục vụ người dùng rộng rãi.
+Các hướng phát triển được đề xuất — face alignment, nâng cấp blending bằng Poisson editing, temporal consistency cho video và mở rộng đa phong cách — tạo nên lộ trình nghiên cứu rõ ràng và khả thi, hướng tới một hệ thống anime stylization toàn diện phục vụ người dùng rộng rãi.

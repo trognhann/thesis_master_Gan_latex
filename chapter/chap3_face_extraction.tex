@@ -11,11 +11,16 @@ Chương này trình bày \textbf{đóng góp cốt lõi của luận văn}: thi
 \section{Tổng quan Pipeline Tích hợp}
 \label{sec:fe_overview}
 
-Để hệ thống trích xuất và chuyển đổi hoạt động liền mạch với hiệu năng thời gian thực, luận văn đã thiết kế một luồng xử lý dữ liệu (pipeline) nội bộ cấu thành từ hai giai đoạn tuần tự như sau:
+Để hệ thống trích xuất và chuyển đổi hoạt động liền mạch với hiệu năng thời gian thực, luận văn đã thiết kế một luồng xử lý dữ liệu (pipeline) nội bộ hỗ trợ \textbf{ba chế độ vận hành}:
 
 \begin{enumerate}
-    \item \textbf{Định vị và quy hoạch vùng trích xuất:} Ứng dụng thành tựu của kiến trúc phát hiện khuôn mặt tiên tiến RetinaFace \cite{Deng2019RetinaFace} dựa trên lõi trục xương sống (backbone) thu gọn cực nhẹ MobileNet-0.25 \cite{Howard2017MobileNet}. Khối học sâu này được tối ưu hóa khả năng tăng tốc phần cứng thông qua bộ suy luận tiêu chuẩn ONNX Runtime \cite{ONNX2019} để có thể lấy tọa độ khuôn mặt ngay tức thì. Tiếp sau đó, cơ cấu nới rộng thuật toán (Margin Expansion) được kích hoạt nhằm phóng lớn vùng cắt xén (bounding box), đảm bảo thu gọn không chỉ ngũ quan mà còn toàn bộ chi tiết tóc, cổ và bối cảnh lân cận.
-    \item \textbf{Áp dụng phong cách hóa đồ họa (Stylization):} Phân vùng không gian khuôn mặt sau quy hoạch (được sử dụng riêng cho chế độ chân dung - Face Mode) hoặc nguyên bản toàn bộ đa dạng lưới ảnh (được linh hoạt áp dụng cho chế độ bối cảnh - Landscape Mode) sẽ được đẩy qua luồng hội tụ Generator của AnimeGANv3 (ONNX) nhằm thực thi công đoạn kết xuất và lan truyền phong cách anime tổng thể.
+    \item \textbf{Định vị và quy hoạch vùng trích xuất:} Ứng dụng kiến trúc phát hiện khuôn mặt RetinaFace \cite{Deng2019RetinaFace} với backbone thu gọn MobileNet-0.25 \cite{Howard2017MobileNet}, được tối ưu hóa thông qua ONNX Runtime \cite{ONNX2019} để lấy tọa độ khuôn mặt tức thì. Thuật toán Margin Expansion mở rộng bounding box, đảm bảo bao phủ không chỉ ngũ quan mà còn toàn bộ chi tiết tóc, cổ và bối cảnh lân cận.
+    \item \textbf{Áp dụng phong cách hóa (Stylization):} Tùy theo chế độ được chọn:
+    \begin{itemize}
+        \item \textbf{Face Mode:} Chỉ vùng khuôn mặt sau mở rộng được resize về $512 \times 512$ và đưa qua Generator.
+        \item \textbf{Landscape Mode:} Toàn bộ ảnh được resize giữ tỉ lệ (chia hết cho 8) rồi đưa qua Generator.
+        \item \textbf{Hybrid Mode:} Kết hợp cả hai -- nền được xử lý Landscape, từng khuôn mặt được xử lý Face Mode riêng rồi ghép ngược lại bằng kỹ thuật feathered blending.
+    \end{itemize}
 \end{enumerate}
 
 \begin{figure}[H]
@@ -24,10 +29,9 @@ Chương này trình bày \textbf{đóng góp cốt lõi của luận văn}: thi
     \caption{Pipeline tích hợp Face Extraction vào AnimeGANv3}
     \label{fig:face_extraction_pipeline}
 \end{figure}
-    \noindent\textit{Chú thích:} Chế độ Face Mode (có phát hiện mặt): ảnh qua RetinaFace $\to$ Margin Expansion $\to$ Crop 512$\times$512 $\to$ ONNX Inference. Chế độ Landscape: ảnh được resize giữ tỉ lệ (chia hết 8) rồi trực tiếp qua ONNX Inference \cite{AnimeGANv3}
+    \noindent\textit{Chú thích:} Face Mode: ảnh qua RetinaFace $\to$ Margin Expansion $\to$ Crop $512\times512$ $\to$ ONNX Inference. Landscape Mode: ảnh resize giữ tỉ lệ (chia hết 8) rồi trực tiếp qua ONNX Inference. Hybrid Mode: nền qua Landscape, mỗi khuôn mặt qua Face Mode rồi ghép feathered blend \cite{AnimeGANv3}.
 
-
-Kiến trúc này cho phép hệ thống xử lý linh hoạt hai loại đầu vào: ảnh chân dung cận mặt (portrait) và ảnh phong cảnh/nhóm người (landscape), tự động chọn chiến lược phù hợp dựa trên kết quả phát hiện khuôn mặt.
+Kiến trúc này cho phép hệ thống xử lý linh hoạt ba loại kịch bản: ảnh chân dung cận mặt (Face Mode), ảnh phong cảnh (Landscape Mode), và ảnh nhóm người cần giữ cả nền lẫn chất lượng mặt cao (Hybrid Mode). Khi Face Mode hoặc Hybrid Mode được kích hoạt nhưng không phát hiện khuôn mặt nào, hệ thống tự động chuyển sang Landscape Mode (graceful degradation).
 
 % =====================================================
 \section{Phát hiện Khuôn mặt với RetinaFace}
@@ -128,18 +132,21 @@ Từ output thô của mạng, bounding boxes và landmarks được giải mã 
 trong đó $(p_x, p_y, p_w, p_h)$ là tọa độ prior box, $(\text{var}_0, \text{var}_1)$ là variance parameters.
 
 \subsubsection{Lọc và Non-Maximum Suppression}
-Quá trình hậu xử lý gồm 4 bước:
+Quá trình hậu xử lý gồm 5 bước tuần tự:
 
 \begin{enumerate}
-    \item \textbf{Lọc ngưỡng tin cậy:} Chỉ giữ các detection có confidence $> 0.8$.
-    \item \textbf{Non-Maximum Suppression (NMS):} Loại bỏ các bounding box trùng lặp với $\text{IoU} > 0.3$: giữ lại box có confidence cao nhất trong mỗi nhóm box chồng lấp.
+    \item \textbf{Lọc ngưỡng tin cậy:} Chỉ giữ các detection có confidence $> 0.8$ (tham số \texttt{confidence\_threshold}).
+    \item \textbf{Giữ Top-K trước NMS:} Sắp xếp theo confidence giảm dần, chỉ giữ tối đa $K_1 = 10$ detection có điểm cao nhất (tham số \texttt{top\_k}) nhằm giảm chi phí tính toán NMS.
+    \item \textbf{Non-Maximum Suppression (NMS):} Loại bỏ các bounding box trùng lặp với $\text{IoU} > 0.3$ (tham số \texttt{nms\_threshold}): giữ lại box có confidence cao nhất trong mỗi nhóm box chồng lấp.
+    \item \textbf{Giữ Top-K sau NMS:} Chỉ giữ tối đa $K_2 = 5$ khuôn mặt (tham số \texttt{keep\_top\_k}).
     \item \textbf{Sắp xếp theo diện tích:} Khuôn mặt lớn nhất (chủ thể chính) được đặt lên đầu danh sách:
     \begin{equation}
     \label{eq:sort_area}
     \text{order} = \text{argsort}\!\left[(x_2 - x_1)(y_2 - y_1)\right]_{\text{descending}}
     \end{equation}
-    \item \textbf{Chọn khuôn mặt:} Lấy phần tử đầu tiên (\texttt{bboxes[0]}) -- khuôn mặt lớn nhất -- làm đối tượng chuyển đổi.
 \end{enumerate}
+
+Trong chế độ Face Mode, phần tử đầu tiên (\texttt{bboxes[0]}) -- khuôn mặt lớn nhất -- được chọn làm đối tượng chuyển đổi. Trong chế độ Hybrid Mode, toàn bộ danh sách khuôn mặt sau lọc đều được xử lý. Nếu kết quả rỗng (\texttt{dets.shape} chứa 0), hàm trả về \texttt{None} và pipeline chuyển sang Landscape Mode.
 
 % =====================================================
 \section{Kỹ thuật Mở rộng Vùng Khuôn mặt (Margin Expansion)}
@@ -191,15 +198,28 @@ Nếu khuôn mặt gần biên trái hoặc phải ảnh, $x_d$ sẽ nhỏ hơn 
 h' = w'
 \end{equation}
 
-\textbf{Bước 5 -- Điều chỉnh chiều dọc (căn giữa):}
+\textbf{Bước 5 -- Điều chỉnh chiều dọc (phân nhánh):}
+
+Trường hợp $h' \geq h$ (phổ biến -- cần mở rộng theo chiều dọc):
 \begin{equation}
 \label{eq:margin_step5}
-y_d = \frac{h' - h}{2}
+y_d = h' - h
 \end{equation}
 \begin{align}
 \label{eq:margin_step5b}
-y_1' &= \max(0,\; y_1 - y_d) \\
-y_2' &= \min(H,\; y_2 + y_d)
+y_1' &= \max(0,\; y_1 - \lfloor y_d / 2 \rfloor) \\
+y_2' &= \min(H,\; y_2 + \lfloor y_d / 2 \rfloor)
+\end{align}
+
+Trường hợp $h' < h$ (khuôn mặt gần biên ngang -- chiều rộng mở rộng bị hạn chế, cần thu hẹp chiều dọc):
+\begin{equation}
+\label{eq:margin_step5c}
+y_d = |h' - h|
+\end{equation}
+\begin{align}
+\label{eq:margin_step5d}
+y_1' &= \max(0,\; y_1 + \lfloor y_d / 2 \rfloor) \\
+y_2' &= \min(H,\; y_2 - \lfloor y_d / 2 \rfloor)
 \end{align}
 
 \textbf{Bước 6 -- Clamp về biên ảnh:} Các giá trị $x_1', y_1', x_2', y_2'$ được chuyển sang kiểu nguyên (\texttt{int}) và dùng làm chỉ số cắt.
@@ -244,38 +264,46 @@ Thực nghiệm trên bộ dữ liệu chân dung đa dạng cho thấy $m = 0.5
 
 Ảnh được resize về $(\lfloor W \cdot \text{scale} \rfloor, \lfloor H \cdot \text{scale} \rfloor)$ trong khi giữ nguyên tỉ lệ khung hình.
 
-\subsection{Xử lý Phân nhánh: Face vs. Landscape}
+\subsection{Xử lý Phân nhánh: Face / Landscape / Hybrid}
 \label{subsec:branching}
 
-Sau bước đọc ảnh, pipeline phân nhánh dựa trên cờ \texttt{det} (face detection enabled):
+Sau bước đọc ảnh, pipeline phân nhánh dựa trên hai cờ \texttt{face\_mode} và \texttt{hybrid\_mode}:
 
 \begin{table}[H]
-\caption{So sánh hai chế độ xử lý trong pipeline Face Extraction}
+\caption{So sánh ba chế độ xử lý trong pipeline}
 \label{tab:face_vs_landscape}
 \centering
-\begin{tabular}{|p{3cm}|p{5.5cm}|p{5.5cm}|}
+\begin{tabular}{|p{2.4cm}|p{3.8cm}|p{3.8cm}|p{3.8cm}|}
 \hline
-\textbf{Tiêu chí} & \textbf{Face Mode (\texttt{det=True})} & \textbf{Landscape Mode (\texttt{det=False})} \\
+\textbf{Tiêu chí} & \textbf{Face Mode} & \textbf{Landscape Mode} & \textbf{Hybrid Mode} \\
 \hline
-Phát hiện mặt & RetinaFace ONNX & Không \\
+Phát hiện mặt & RetinaFace (1 mặt) & Không & RetinaFace (tất cả) \\
 \hline
-Mở rộng vùng & Margin Expansion ($m=0.5$) & Không có \\
+Margin Expansion & Có ($m=0.5$) & Không & Có (mỗi mặt) \\
 \hline
-Kích thước input & Cố định $512 \times 512$ & Giữ tỉ lệ, chia hết cho 8 \\
+Kích thước input & $512 \times 512$ & Giữ tỉ lệ, chia hết 8 & Nền: chia hết 8; Mặt: $512^2$ \\
 \hline
-Ưu điểm & Chất lượng mặt cao, tập trung & Giữ toàn cảnh, xử lý nhóm \\
+Số lần inference & 1 & 1 & $1 + N_{\text{faces}}$ \\
 \hline
-Nhược điểm & Mất background & Mặt nhỏ chất lượng có thể thấp \\
+Ưu điểm & Chất lượng mặt cao & Giữ toàn cảnh & Cả nền lẫn mặt chất lượng cao \\
 \hline
-Phù hợp & Portrait, avatar, selfie & Phong cảnh, ảnh nhóm \\
+Nhược điểm & Mất background & Mặt nhỏ kém & Chi phí tính toán cao \\
+\hline
+Phù hợp & Portrait, avatar & Phong cảnh & Ảnh nhóm, gia đình \\
 \hline
 \end{tabular}
 \end{table}
 
-\textbf{Quy tắc resize Landscape mode:} Kích thước ảnh phải chia hết cho 8 (do kiến trúc encoder 3 lần downsampling stride-2 của Generator). Hàm \texttt{to\_8s(x)} tính $8 \cdot \lfloor x / 8 \rfloor$:
+\textbf{Quy tắc resize Landscape mode:} Kích thước ảnh phải chia hết cho 8 (do kiến trúc encoder 3 lần downsampling stride-2 của Generator), đồng thời có ngưỡng tối thiểu 256 pixel để đảm bảo chất lượng đầu ra. Hàm \texttt{to\_8s(x)}:
 \begin{equation}
 \label{eq:to8s}
-\texttt{to\_8s}(x) = 8 \cdot \left\lfloor \frac{x}{8} \right\rfloor
+\texttt{to\_8s}(x) = \begin{cases} 256 & \text{nếu } x < 256 \\ x - (x \bmod 8) & \text{nếu } x \geq 256 \end{cases}
+\end{equation}
+
+Đối với các mô hình biến thể nhỏ (có hậu tố \texttt{\_tiny\_} trong tên file ONNX), hệ thống sử dụng hàm \texttt{to\_16s(x)} thay thế -- yêu cầu kích thước chia hết cho 16 do kiến trúc encoder có thêm một cấp downsampling:
+\begin{equation}
+\label{eq:to16s}
+\texttt{to\_16s}(x) = \begin{cases} 256 & \text{nếu } x < 256 \\ x - (x \bmod 16) & \text{nếu } x \geq 256 \end{cases}
 \end{equation}
 
 \subsection{Chuẩn hóa và Suy luận ONNX}
@@ -321,8 +349,133 @@ Toàn bộ luồng xử lý ảnh trong pipeline:
     \item \textbf{Lưu/hiển thị kết quả.}
 \end{enumerate}
 
-% Phần kiến trúc ứng dụng GUI, xử lý đa luồng và cấu trúc logic hệ thống
-% đã được chuyển sang Chương 4 (Thực nghiệm và Đánh giá) -- mục Triển khai ứng dụng web
+% =====================================================
+\section{Chế độ Hybrid Mode}
+\label{sec:hybrid_mode}
+
+Ngoài hai chế độ Face Mode và Landscape Mode, hệ thống còn hỗ trợ chế độ \textbf{Hybrid Mode} -- kết hợp ưu điểm của cả hai chế độ để xử lý ảnh nhóm người trong đó cần giữ cả chất lượng nền lẫn chi tiết khuôn mặt cao. Đây là chế độ phức tạp nhất về mặt tính toán nhưng cho kết quả toàn diện nhất.
+
+\subsection{Nguyên lý Hoạt động}
+\label{subsec:hybrid_principle}
+
+Hybrid Mode thực hiện \textbf{nhiều lần suy luận} cho mỗi ảnh đầu vào ($1 + N_{\text{faces}}$ lần), theo bốn giai đoạn tuần tự:
+
+\begin{enumerate}
+    \item \textbf{Phát hiện khuôn mặt:} Gọi \texttt{detect\_face()} trên ảnh đã giới hạn kích thước ($\leq 1280$ pixel cạnh dài). Nếu không phát hiện khuôn mặt nào (\texttt{bboxes = None}), tự động chuyển sang Landscape Mode (graceful degradation) và chỉ thực hiện một lần suy luận duy nhất.
+    \item \textbf{Suy luận nền (Background Pass):} Toàn bộ ảnh gốc được xử lý ở chế độ Landscape (resize \texttt{to\_8s}, chuẩn hóa $[-1,1]$, suy luận ONNX, hậu chuẩn hóa) để tạo ảnh nền anime hoàn chỉnh kích thước gốc $(W, H)$.
+    \item \textbf{Suy luận từng khuôn mặt (Face Pass):} Với \textbf{mỗi} khuôn mặt phát hiện được (không chỉ khuôn mặt lớn nhất như Face Mode), áp dụng Margin Expansion, cắt vùng mặt từ ảnh giới hạn kích thước, resize về $512 \times 512$ và suy luận riêng qua cùng mô hình ONNX.
+    \item \textbf{Ghép ngược (Composite Pass):} Mỗi khuôn mặt chất lượng cao được ánh xạ tọa độ về ảnh gốc, resize về kích thước vùng mặt gốc, rồi ghép vào ảnh nền bằng kỹ thuật \textit{feathered blending}.
+\end{enumerate}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{figChap3/hybrid_mode_pipeline.png}
+    \caption{Pipeline xử lý Hybrid Mode: kết hợp Landscape Inference cho nền và Face Inference cho từng khuôn mặt}
+    \label{fig:hybrid_mode_pipeline}
+\end{figure}
+
+\subsection{Ánh xạ Tọa độ giữa Ảnh Giới hạn và Ảnh Gốc}
+\label{subsec:hybrid_coord_mapping}
+
+Do phát hiện khuôn mặt thực hiện trên ảnh đã giới hạn kích thước ($\leq 1280$ pixel), trong khi kết quả cuối cùng được ghép lên ảnh nền kích thước gốc $(W, H)$, hệ thống cần ánh xạ tọa độ bounding box từ không gian ảnh giới hạn sang không gian ảnh gốc:
+
+\begin{equation}
+\label{eq:hybrid_scale}
+s = \begin{cases} \frac{1280}{\max(W, H)} & \text{nếu } \max(W, H) > 1280 \\ 1.0 & \text{ngược lại} \end{cases}
+\end{equation}
+
+Cho bounding box sau Margin Expansion $(x_1, y_1, x_2, y_2)$ trong ảnh giới hạn, tọa độ tương ứng trên ảnh gốc:
+\begin{equation}
+\label{eq:hybrid_map}
+x_1^{\text{orig}} = \left\lfloor \frac{x_1}{s} + 0.5 \right\rfloor, \quad
+y_1^{\text{orig}} = \left\lfloor \frac{y_1}{s} + 0.5 \right\rfloor, \quad
+x_2^{\text{orig}} = \left\lfloor \frac{x_2}{s} + 0.5 \right\rfloor, \quad
+y_2^{\text{orig}} = \left\lfloor \frac{y_2}{s} + 0.5 \right\rfloor
+\end{equation}
+
+Kích thước vùng mặt trên ảnh gốc:
+\begin{equation}
+\label{eq:hybrid_face_size}
+w_f = \max(1,\; x_2^{\text{orig}} - x_1^{\text{orig}}), \quad
+h_f = \max(1,\; y_2^{\text{orig}} - y_1^{\text{orig}})
+\end{equation}
+
+Ảnh khuôn mặt sau suy luận (kích thước $512 \times 512$) được resize về $(w_f, h_f)$ bằng thuật toán nội suy Lanczos trước khi ghép.
+
+\subsection{Kỹ thuật Feathered Blending}
+\label{subsec:feathered_blending}
+
+Khi ghép trực tiếp vùng mặt (xử lý Face Mode ở $512 \times 512$) vào nền (xử lý Landscape ở độ phân giải thấp hơn), sẽ xuất hiện đường biên rõ ràng do khác biệt phong cách và độ phân giải giữa hai vùng. Kỹ thuật \textbf{feathered blending} sử dụng mặt nạ alpha với viền mờ Gaussian để tạo vùng chuyển tiếp mượt mà.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{figChap3/feathered_blending.png}
+    \caption{Kỹ thuật Feathered Blending: mặt nạ alpha với viền mờ Gaussian tạo vùng chuyển tiếp liền mạch}
+    \label{fig:feathered_blending}
+\end{figure}
+
+Quy trình tạo mặt nạ alpha gồm 3 bước:
+
+\textbf{Bước 1 -- Tạo mặt nạ nền đen:} Khởi tạo ảnh grayscale kích thước $(w_f, h_f)$ với tất cả pixel có giá trị 0 (đen hoàn toàn):
+\begin{equation}
+\label{eq:mask_init}
+M(x, y) = 0 \quad \forall\; (x, y) \in [0, w_f) \times [0, h_f)
+\end{equation}
+
+\textbf{Bước 2 -- Vẽ vùng trắng thu nhỏ:} Vẽ hình chữ nhật trắng (giá trị 255) bên trong mặt nạ, thu nhỏ mỗi cạnh một lề $\delta$:
+\begin{equation}
+\label{eq:feather_margin}
+\delta = \lfloor 0.08 \cdot \min(w_f, h_f) \rfloor
+\end{equation}
+\begin{equation}
+\label{eq:mask_rect}
+M(x, y) = \begin{cases} 255 & \text{nếu } \delta \leq x < w_f - \delta \text{ và } \delta \leq y < h_f - \delta \\ 0 & \text{ngược lại} \end{cases}
+\end{equation}
+
+\textbf{Bước 3 -- Làm mờ Gaussian:} Áp dụng bộ lọc Gaussian Blur với bán kính $\delta$ lên mặt nạ, tạo vùng chuyển tiếp gradient từ 255 (trung tâm) về 0 (biên):
+\begin{equation}
+\label{eq:gaussian_blur}
+\hat{M} = M * G_\delta, \quad G_\delta(x,y) = \frac{1}{2\pi\delta^2} e^{-\frac{x^2+y^2}{2\delta^2}}
+\end{equation}
+
+Phép ghép cuối cùng sử dụng alpha compositing theo mặt nạ $\hat{M}$:
+\begin{equation}
+\label{eq:alpha_composite}
+I_{\text{out}}(x,y) = \frac{\hat{M}(x,y)}{255} \cdot I_{\text{face}}(x,y) + \left(1 - \frac{\hat{M}(x,y)}{255}\right) \cdot I_{\text{bg}}(x,y)
+\end{equation}
+
+trong đó $I_{\text{face}}$ là ảnh khuôn mặt đã suy luận (resize về $w_f \times h_f$), $I_{\text{bg}}$ là ảnh nền anime tại vùng $(x_1^{\text{orig}}, y_1^{\text{orig}})$, và $\hat{M}$ là mặt nạ alpha đã làm mờ. Hệ số $\delta = 8\%$ kích thước cạnh nhỏ hơn của vùng mặt được chọn qua thực nghiệm: nhỏ hơn sẽ tạo đường viền rõ, lớn hơn sẽ làm mờ quá nhiều chi tiết khuôn mặt.
+
+\subsection{Phân tích Độ phức tạp}
+\label{subsec:hybrid_complexity}
+
+Gọi $T_L$ là thời gian suy luận Landscape và $T_F$ là thời gian suy luận Face ($512 \times 512$), $T_D$ là thời gian phát hiện mặt, $N$ là số khuôn mặt phát hiện được. Tổng thời gian xử lý Hybrid Mode:
+
+\begin{equation}
+\label{eq:hybrid_time}
+T_{\text{hybrid}} = T_D + T_L + N \cdot T_F + N \cdot T_{\text{blend}}
+\end{equation}
+
+trong đó $T_{\text{blend}} \ll T_F$ (tạo mask và ghép ảnh rất nhanh so với suy luận ONNX). So sánh với các chế độ khác:
+
+\begin{table}[H]
+\caption{Phân tích độ phức tạp thời gian giữa ba chế độ}
+\label{tab:mode_complexity}
+\centering
+\begin{tabular}{|l|c|c|}
+\hline
+\textbf{Chế độ} & \textbf{Số lần suy luận ONNX} & \textbf{Tổng thời gian} \\
+\hline
+Face Mode & 1 & $T_D + T_F$ \\
+\hline
+Landscape Mode & 1 & $T_L$ \\
+\hline
+Hybrid Mode & $1 + N$ & $T_D + T_L + N \cdot T_F$ \\
+\hline
+\end{tabular}
+\end{table}
+
+Chi phí tính toán của Hybrid Mode tăng tuyến tính theo số khuôn mặt. Tuy nhiên, do $T_F$ sử dụng kích thước đầu vào cố định $512 \times 512$ (thường nhỏ hơn ảnh Landscape), thời gian mỗi lần suy luận Face thường nhanh hơn suy luận Landscape. Trong thực nghiệm (Chương~4), ảnh có 2--3 khuôn mặt thường hoàn thành Hybrid Mode trong thời gian chấp nhận được cho ứng dụng tương tác.
 
 % =====================================================
 \section{Phân tích Kỹ thuật và Đánh giá Thiết kế}
@@ -365,25 +518,27 @@ Các lý do kỹ thuật cụ thể:
 \subsection{Đánh giá Pipeline Tổng thể}
 \label{subsec:pipeline_evaluation}
 
-Pipeline Face Extraction được thiết kế theo nguyên tắc \textbf{graceful degradation}: nếu không phát hiện được khuôn mặt (confidence dưới ngưỡng 0.8, hoặc khuôn mặt bị che khuất), hệ thống tự động chuyển sang chế độ Landscape để xử lý toàn bộ ảnh, tránh trả về lỗi cho người dùng.
+Pipeline được thiết kế theo nguyên tắc \textbf{graceful degradation}: nếu không phát hiện được khuôn mặt (confidence dưới ngưỡng 0.8, hoặc khuôn mặt bị che khuất), hệ thống tự động chuyển sang chế độ Landscape để xử lý toàn bộ ảnh, tránh trả về lỗi cho người dùng. Cơ chế này áp dụng cho cả Face Mode lẫn Hybrid Mode.
 
-Bảng~\ref{tab:face_vs_landscape} tóm tắt sự đánh đổi chính giữa hai chế độ. Trong thực tế, chế độ Face Mode cho chất lượng anime đáng kể cao hơn đối với ảnh chân dung, do:
+Bảng~\ref{tab:face_vs_landscape} tóm tắt sự đánh đổi giữa ba chế độ. Face Mode cho chất lượng anime cao nhất đối với ảnh chân dung do:
 \begin{enumerate}
-    \item Khuôn mặt chiếm 100\% diện tích ảnh đầu vào cho model $\Rightarrow$ model tập trung tất cả ``năng lực'' vào vùng mặt.
-    \item Loại bỏ background phức tạp giúp tránh hiện tượng style transfer không nhất quán giữa vùng mặt và nền.
-    \item Cố định kích thước $512 \times 512$ cho phép model hoạt động ở chế độ tối ưu (khác với $256 \times 256$ cho landscape mode).
+    \item Khuôn mặt chiếm 100\% diện tích ảnh đầu vào $\Rightarrow$ model tập trung toàn bộ năng lực vào vùng mặt.
+    \item Loại bỏ background phức tạp giúp tránh style transfer không nhất quán.
+    \item Cố định kích thước $512 \times 512$ cho phép model hoạt động ở chế độ tối ưu.
 \end{enumerate}
+
+Hybrid Mode khắc phục nhược điểm mất nền của Face Mode bằng cách xử lý riêng từng khu vực, nhưng đổi lại chi phí tính toán tăng tuyến tính theo số khuôn mặt.
 
 \section*{Tổng kết chương}
 
 Chương này đã trình bày luồng xử lý anime tích hợp phát hiện khuôn mặt -- đóng góp kỹ thuật cốt lõi của luận văn:
 
 \begin{itemize}
-    \item \textbf{Pipeline end-to-end} tích hợp hai chế độ Face Mode và Landscape Mode, với cơ chế graceful degradation tự động chuyển chế độ khi không phát hiện khuôn mặt.
-    \item \textbf{Luồng dữ liệu qua RetinaFace:} tiền xử lý ImageNet $\to$ FPN đa tỉ lệ $\to$ giải mã Prior Box $\to$ lọc ngưỡng + NMS $\to$ sắp xếp diện tích.
-    \item \textbf{Thuật toán Margin Expansion} 6 bước: mở rộng bounding box 50\% mỗi chiều, duy trì tỉ lệ 1:1, xử lý edge cases khuôn mặt gần biên ảnh.
-    \item \textbf{Luồng dữ liệu qua Generator ONNX:} chuẩn hóa $[-1, 1]$, suy luận, hậu chuẩn hóa $[0, 255]$.
-    \item \textbf{Phân tích thiết kế:} Face Mode cho chất lượng vượt trội nhờ khuôn mặt chiếm 100\% diện tích đầu vào ở độ phân giải $512 \times 512$.
+    \item \textbf{Pipeline end-to-end} tích hợp ba chế độ Face Mode, Landscape Mode và Hybrid Mode, với cơ chế graceful degradation tự động chuyển chế độ khi không phát hiện khuôn mặt.
+    \item \textbf{Luồng dữ liệu qua RetinaFace:} tiền xử lý ImageNet $\to$ FPN đa tỉ lệ $\to$ giải mã Prior Box $\to$ Top-K $\to$ NMS $\to$ sắp xếp diện tích.
+    \item \textbf{Thuật toán Margin Expansion} 6 bước: mở rộng bounding box 50\% mỗi chiều, duy trì tỉ lệ 1:1, xử lý phân nhánh khi $h' < h$ và edge cases khuôn mặt gần biên ảnh.
+    \item \textbf{Hybrid Mode với Feathered Blending:} xử lý nền Landscape và từng khuôn mặt Face Mode riêng biệt, ghép bằng alpha mask Gaussian.
+    \item \textbf{Luồng dữ liệu qua Generator ONNX:} chuẩn hóa $[-1, 1]$, suy luận, hậu chuẩn hóa $[0, 255]$; hỗ trợ cả \texttt{to\_8s} và \texttt{to\_16s} cho các biến thể model.
 \end{itemize}
 
 Chương 4 sẽ trình bày kết quả thực nghiệm, triển khai ứng dụng web và đánh giá hiệu năng toàn bộ hệ thống.

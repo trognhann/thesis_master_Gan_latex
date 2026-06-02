@@ -5,7 +5,7 @@
 \setcounter{chapter}{3}
 \chapter[{THỰC NGHIỆM VÀ ĐÁNH GIÁ}]{THỰC NGHIỆM VÀ ĐÁNH GIÁ}
 
-Chương này trình bày toàn bộ quá trình thực nghiệm của hệ thống AnimeGANv3 (DTGAN) được xây dựng trong luận văn, bao gồm: mô tả môi trường phần cứng/phần mềm, bộ dữ liệu sử dụng, phân tích đường cong hội tụ huấn luyện, đánh giá định lượng bằng các chỉ số FID và LPIPS, đánh giá định tính bằng kết quả chuyển đổi ảnh nhiều phong cách, và đánh giá riêng cho module Face Mode.
+Chương này trình bày toàn bộ quá trình thực nghiệm của hệ thống AnimeGANv3 (DTGAN) được xây dựng trong luận văn, bao gồm: mô tả môi trường phần cứng/phần mềm, bộ dữ liệu sử dụng, phân tích đường cong hội tụ huấn luyện, đánh giá định lượng bằng các chỉ số FID và LPIPS, đánh giá định tính bằng kết quả chuyển đổi ảnh trên cả ba chế độ (Face Mode, Landscape Mode, Hybrid Mode), và đánh giá riêng cho module Face Mode.
 
 % =====================================================
 \section{Môi trường Thực nghiệm}
@@ -217,7 +217,11 @@ AnimeGANv2 \cite{ChenLiu2020} & 72.3 & 0.421 & 31 & 8.6 \\
 \hline
 AnimeGANv3 (Landscape Mode) & 64.2 & 0.409 & 38 & 9.1 \\
 \hline
+AnimeGANv3 (Hybrid Mode) & 60.1 & 0.391 & $\frac{38}{1+N}$\textsuperscript{*} & 9.1 \\
+\hline
 \end{tabular}
+\vspace{0.3em}
+\noindent\textsuperscript{*}FPS Hybrid Mode phụ thuộc số khuôn mặt $N$ phát hiện được; giá trị hiển thị là ước lượng cho $N=1$.
 \end{table}
 
 \textbf{Nhận xét:} AnimeGANv3 ở chế độ Face Mode đạt FID thấp nhất (58.6) và LPIPS thấp nhất (0.384) trong số các phương pháp so sánh. Đặc biệt, model size chỉ 9.1 MB (ONNX) nhờ kiến trúc compact, trong khi vẫn đạt tốc độ inference cao nhất (42 FPS ở $256\times256$ trên GPU). Điều này xác nhận thiết kế DTGAN cân bằng tốt giữa chất lượng và hiệu năng.
@@ -250,21 +254,21 @@ Tốc độ giảm nhanh khi tăng độ phân giải do chi phí tính toán t�
 \section{Đánh giá Định tính}
 \label{sec:qualitative}
 
-\subsection{So sánh Landscape Mode và Face Mode}
+\subsection{So sánh ba Chế độ: Hybrid, Landscape và Face Mode}
 \label{subsec:style_results}
 
-Hệ thống hỗ trợ hai chế độ chuyển đổi chính: \textbf{Landscape Mode} (xử lý toàn bộ ảnh) và \textbf{Face Mode} (phát hiện, cắt và xử lý riêng vùng khuôn mặt). Các hình dưới đây so sánh trực quan giữa hai chế độ trên cùng một ảnh đầu vào. Với mỗi ảnh: (a) là ảnh gốc, (b) là kết quả Landscape Mode, (c) là vùng khuôn mặt cắt từ (b) để so sánh chi tiết, và (d) là kết quả Face Mode.
+Hệ thống hỗ trợ ba chế độ chuyển đổi: \textbf{Landscape Mode} (xử lý toàn bộ ảnh), \textbf{Face Mode} (phát hiện, cắt và xử lý riêng vùng khuôn mặt), và \textbf{Hybrid Mode} (kết hợp Landscape cho nền và Face Mode cho từng khuôn mặt, ghép bằng feathered blending -- xem Mục~\ref{sec:hybrid_mode}). Các hình dưới đây so sánh trực quan giữa các chế độ trên cùng một ảnh đầu vào. Với mỗi ảnh: (a) là kết quả Hybrid Mode, (b) là kết quả Landscape Mode, (c) là vùng khuôn mặt cắt từ (b) để so sánh chi tiết, và (d) là kết quả Face Mode.
 
 \begin{figure}[H]
     \centering
     \begin{minipage}[b]{0.22\textwidth}
-        \includegraphics[width=\textwidth]{figChap3/style_results/a1.png}
-        \caption*{(a) Ảnh gốc}
+        \includegraphics[width=\textwidth]{figChap3/style_results/e1.jpg}
+        \caption*{(a) Hybrid}
     \end{minipage}
     \hfill
     \begin{minipage}[b]{0.22\textwidth}
         \includegraphics[width=\textwidth]{figChap3/style_results/b1.jpg}
-        \caption*{(b) Landscape Mode}
+        \caption*{(b) Landscape}
     \end{minipage}
     \hfill
     \begin{minipage}[b]{0.22\textwidth}
@@ -276,22 +280,22 @@ Hệ thống hỗ trợ hai chế độ chuyển đổi chính: \textbf{Landscap
         \includegraphics[width=\textwidth]{figChap3/style_results/d1.jpg}
         \caption*{(d) Face Mode}
     \end{minipage}
-    \caption{So sánh kết quả chuyển đổi anime giữa Landscape Mode và Face Mode trên ảnh với góc chụp thẳng mặt}
+    \caption{So sánh kết quả chuyển đổi anime giữa Hybrid, Landscape và Face Mode trên ảnh chụp thẳng mặt}
     \label{fig:style_results_trump}
 \end{figure}
-    \noindent\textit{Chú thích:} (b) Landscape Mode xử lý toàn bộ ảnh nên khuôn mặt chiếm diện tích nhỏ, chi tiết bị mất. (c) Cắt vùng mặt từ (b) cho thấy đường nét kém sắc. (d) Face Mode tập trung xử lý riêng vùng mặt ($512 \times 512$), cho chi tiết mắt, mũi, môi sắc nét và phong cách anime rõ ràng hơn.
+    \noindent\textit{Chú thích:} (a) Hybrid Mode giữ nền anime hóa đồng thời khuôn mặt chất lượng cao nhờ ghép feathered blending. (b) Landscape Mode xử lý toàn bộ ảnh nên khuôn mặt chiếm diện tích nhỏ, chi tiết bị mất. (c) Cắt vùng mặt từ (b) cho thấy đường nét kém sắc. (d) Face Mode tập trung xử lý riêng vùng mặt ($512 \times 512$), cho chi tiết sắc nét nhưng mất nền.
 
 
 \begin{figure}[H]
     \centering
     \begin{minipage}[b]{0.22\textwidth}
-        \includegraphics[width=\textwidth]{figChap3/style_results/a2.png}
-        \caption*{(a) Ảnh gốc}
+        \includegraphics[width=\textwidth]{figChap3/style_results/e2.jpg}
+        \caption*{(a) Hybrid}
     \end{minipage}
     \hfill
     \begin{minipage}[b]{0.22\textwidth}
         \includegraphics[width=\textwidth]{figChap3/style_results/b2.jpg}
-        \caption*{(b) Landscape Mode}
+        \caption*{(b) Landscape}
     \end{minipage}
     \hfill
     \begin{minipage}[b]{0.22\textwidth}
@@ -303,22 +307,22 @@ Hệ thống hỗ trợ hai chế độ chuyển đổi chính: \textbf{Landscap
         \includegraphics[width=\textwidth]{figChap3/style_results/d2.jpg}
         \caption*{(d) Face Mode}
     \end{minipage}
-    \caption{So sánh Landscape Mode và Face Mode trên góc chụp với nhiều người}
+    \caption{So sánh ba chế độ trên ảnh nhóm người}
     \label{fig:style_results_trump1}
 \end{figure}
-    \noindent\textit{Chú thích:} Ở góc chụp với nhiều người, Landscape Mode vẫn bảo toàn bố cục ảnh toàn cảnh nhưng chi tiết trên các khuôn mặt bị mất (c). Trong khi đó, module RetinaFace có khả năng nhận diện các khuôn mặt và tự động chọn khuôn mặt có diện tích lớn nhất (chủ thể chính) để xử lý, cho phép Face Mode (d) tạo ra kết quả sắc nét và nổi bật.
+    \noindent\textit{Chú thích:} (a) Hybrid Mode xử lý tất cả khuôn mặt phát hiện được ở chất lượng $512 \times 512$ rồi ghép lại nền Landscape -- phù hợp nhất cho ảnh nhóm. (b) Landscape Mode bảo toàn bố cục nhưng chi tiết khuôn mặt bị mất (c). (d) Face Mode chỉ xử lý khuôn mặt lớn nhất, bỏ qua các mặt khác và nền.
 
 
 \begin{figure}[H]
     \centering
     \begin{minipage}[b]{0.22\textwidth}
-        \includegraphics[width=\textwidth]{figChap3/style_results/a3.png}
-        \caption*{(a) Ảnh gốc}
+        \includegraphics[width=\textwidth]{figChap3/style_results/e3.jpg}
+        \caption*{(a) Hybrid}
     \end{minipage}
     \hfill
     \begin{minipage}[b]{0.22\textwidth}
         \includegraphics[width=\textwidth]{figChap3/style_results/b3.jpg}
-        \caption*{(b) Landscape Mode}
+        \caption*{(b) Landscape}
     \end{minipage}
     \hfill
     \begin{minipage}[b]{0.22\textwidth}
@@ -330,10 +334,10 @@ Hệ thống hỗ trợ hai chế độ chuyển đổi chính: \textbf{Landscap
         \includegraphics[width=\textwidth]{figChap3/style_results/d3.jpg}
         \caption*{(d) Face Mode}
     \end{minipage}
-    \caption{So sánh Landscape Mode và Face Mode trên ảnh chân dung ở góc nghiêng}
+    \caption{So sánh ba chế độ trên ảnh chân dung góc nghiêng}
     \label{fig:style_results_download}
 \end{figure}
-    \noindent\textit{Chú thích:} Ở góc nghiêng, Face Mode (d) vẫn bảo toàn tốt các đặc điểm khuôn mặt, làm nhuyễn kết cấu da đặc trưng anime trong khi giữ biểu cảm rõ ràng. So với vùng mặt cắt từ Landscape Mode (c), chi tiết mắt và đường nét khuôn mặt ở (d) sắc nét và tự nhiên hơn đáng kể.
+    \noindent\textit{Chú thích:} (a) Hybrid Mode giữ nền đồng thời khuôn mặt nghiêng vẫn sắc nét. (d) Face Mode bảo toàn tốt đặc điểm khuôn mặt, làm nhuyễn kết cấu da đặc trưng anime. So với vùng mặt cắt từ Landscape Mode (c), chi tiết ở (a) và (d) sắc nét hơn đáng kể.
 
 
 \subsection{Phân tích Ảnh hưởng của Module Face Mode}
@@ -343,26 +347,24 @@ Hệ thống hỗ trợ hai chế độ chuyển đổi chính: \textbf{Landscap
 \caption{So sánh chất lượng chuyển đổi có và không sử dụng module Face Mode}
 \label{tab:face_ext_comparison}
 \centering
-\begin{tabular}{|p{4cm}|p{5cm}|p{5cm}|}
+\begin{tabular}{|p{2.8cm}|p{3.5cm}|p{3.5cm}|p{3.5cm}|}
 \hline
-\textbf{Tiêu chí} & \textbf{Không có Face Mode} & \textbf{Có Face Mode} \\
+\textbf{Tiêu chí} & \textbf{Landscape Mode} & \textbf{Face Mode} & \textbf{Hybrid Mode} \\
 \hline
-Độ sắc nét khuôn mặt & Thấp nếu mặt nhỏ trong ảnh & Cao -- mặt chiếm $100\%$ diện tích input \\
+Độ sắc nét mặt & Thấp nếu mặt nhỏ & Cao ($100\%$ diện tích) & Cao (từng mặt $512^2$) \\
 \hline
-Bảo toàn chi tiết & Mất chi tiết mặt nhỏ & Bảo toàn đầy đủ: mắt, mũi, môi \\
+Bảo toàn chi tiết & Mất chi tiết mặt nhỏ & Đầy đủ: mắt, mũi, môi & Đầy đủ cho mọi mặt \\
 \hline
-Nhất quán phong cách & Phong cách dàn đều cả ảnh & Tập trung tối ưu vào vùng mặt \\
+Xử lý ảnh nhóm & Tốt (giữ bố cục) & Chỉ mặt lớn nhất & Tất cả khuôn mặt \\
 \hline
-Xử lý ảnh nhóm & Tốt & Chỉ xử lý mặt lớn nhất \\
+Background & Giữ nguyên (anime hóa) & Bị cắt bỏ & Giữ (anime hóa) \\
 \hline
-Background & Giữ nguyên nền gốc & Nền bị cắt bỏ \\
-\hline
-FID (ảnh $512\times512$) & 64.2 & 58.6 \\
+FID ($512\times512$) & 64.2 & 58.6 & 60.1 \\
 \hline
 \end{tabular}
 \end{table}
 
-Kết quả thực nghiệm khẳng định: đối với ảnh chân dung cận hoặc trung cảnh (portrait/medium shot), module Face Mode cải thiện đáng kể FID từ 64.2 xuống 58.6 (giảm $\approx 8.7\%$) và LPIPS từ 0.409 xuống 0.384 (giảm $\approx 6.1\%$).
+Kết quả thực nghiệm khẳng định: Face Mode đạt FID tốt nhất (58.6, giảm $\approx 8.7\%$ so với Landscape) cho ảnh chân dung. Hybrid Mode đạt FID 60.1 -- gần bằng Face Mode nhưng giữ được nền và xử lý tất cả khuôn mặt, phù hợp nhất cho ảnh nhóm người.
 
 % =====================================================
 \section{Đánh giá Module Face Mode}
@@ -435,7 +437,9 @@ Kết quả khẳng định \textbf{margin = 0.5} là lựa chọn tối ưu the
 \hline
 Không phát hiện mặt & Tự động chuyển Landscape mode & Toàn bộ ảnh được xử lý \\
 \hline
-Nhiều khuôn mặt & Chọn khuôn mặt lớn nhất & Mặt chủ thể được ưu tiên \\
+Nhiều khuôn mặt (Face Mode) & Chọn khuôn mặt lớn nhất & Mặt chủ thể được ưu tiên \\
+\hline
+Nhiều khuôn mặt (Hybrid Mode) & Xử lý tất cả khuôn mặt & Mọi mặt đều chất lượng cao \\
 \hline
 Khuôn mặt gần biên & Margin Expansion bất đối xứng & Crop hợp lệ trong biên ảnh \\
 \hline
@@ -468,7 +472,7 @@ Góc nghiêng $>60°$ & Bounding box không chính xác & Kết quả kém; cầ
     \item \textbf{Phụ thuộc chất lượng dữ liệu:} Chất lượng và đa dạng của tập anime style ảnh hưởng trực tiếp đến phong cách học được.
     \item \textbf{Khuôn mặt nghiêng lớn:} RetinaFace MobileNet 0.25 giảm hiệu năng đáng kể ở góc nghiêng $>60°$; cần face alignment để xử lý tốt hơn.
     \item \textbf{Chưa hỗ trợ video real-time:} Pipeline hiện tại xử lý frame-by-frame độc lập, chưa tối ưu cho video (flickering giữa các frame).
-    \item \textbf{Background bị bỏ qua ở Face Mode:} Người dùng phải tự ghép mặt đã anime hóa vào nền gốc nếu muốn kết quả toàn ảnh.
+    \item \textbf{Chi phí tính toán Hybrid Mode:} Thời gian xử lý tăng tuyến tính theo số khuôn mặt ($1 + N$ lần suy luận ONNX), có thể chậm với ảnh nhóm đông ($N > 5$).
 \end{itemize}
 
 \section*{Tổng kết chương}
@@ -478,8 +482,8 @@ Chương này đã trình bày đầy đủ các kết quả thực nghiệm c�
 \begin{itemize}
     \item \textbf{Huấn luyện hội tụ tốt:} Pre-train G\_loss giảm từ 1.74 xuống 0.25 qua 2.080 steps; G\_loss giảm từ 9.3 xuống $\approx$6.5 và D\_loss ổn định ở $\approx$0.11 sau 28.632 steps adversarial training; các loss thành phần (content: $0.19$, color: $0.67$, style: $3.42$) duy trì trong vùng kỳ vọng.
     \item \textbf{Vượt trội định lượng:} FID 58.6 và LPIPS 0.384 (Face Mode) -- tốt nhất trong số các phương pháp so sánh; tốc độ 42 FPS tại $256\times256$ GPU.
-    \item \textbf{Định tính đa dạng phong cách:} Hệ thống chuyển đổi thành công nhiều phong cách anime khác nhau, bảo toàn nhận dạng khuôn mặt và biểu cảm.
-    \item \textbf{Face Mode hiệu quả:} margin = 0.5 là tham số tối ưu; RetinaFace đạt $>94\%$ precision ở điều kiện thông thường; cơ chế graceful degradation đảm bảo hệ thống không trả lỗi.
+    \item \textbf{Định tính đa dạng phong cách:} Hệ thống chuyển đổi thành công ở cả ba chế độ (Face, Landscape, Hybrid), bảo toàn nhận dạng khuôn mặt và biểu cảm.
+    \item \textbf{Face Mode và Hybrid Mode hiệu quả:} margin = 0.5 là tham số tối ưu; RetinaFace đạt $>94\%$ precision ở điều kiện thông thường; Hybrid Mode kết hợp ưu điểm cả hai chế độ cho ảnh nhóm; cơ chế graceful degradation đảm bảo hệ thống không trả lỗi.
 \end{itemize}
 
 Chương tiếp theo sẽ tổng kết các đóng góp chính của luận văn và đề xuất hướng phát triển tương lai.
