@@ -102,8 +102,8 @@ Biến thể U-Net bổ sung \textbf{skip connections} kết nối trực tiếp
 
 Trong phần decoder, việc tăng độ phân giải (upsampling) có hai lựa chọn chính:
 \begin{itemize}
-    \item \textbf{Transposed Convolution}: Lớp học được, nhưng dễ gây tạo phẩm checkerboard do chồng lấp không đều \cite{Hasan2019}.
-    \item \textbf{Bilinear/Nearest-Neighbor Interpolation + Conv}: Không học được phần upsampling, nhưng loại bỏ tạo phẩm checkerboard. AnimeGANv3 chọn phương pháp này để đảm bảo ảnh đầu ra mịn \cite{Liu2024}.
+    \item \textbf{Transposed Convolution}: Lớp học được, nhưng dễ gây lỗi đồ họa dạng checkerboard do chồng lấp không đều \cite{Hasan2019}.
+    \item \textbf{Bilinear/Nearest-Neighbor Interpolation + Conv}: Không học được phần upsampling, nhưng loại bỏ lỗi đồ họa dạng checkerboard. AnimeGANv3 chọn phương pháp này để đảm bảo ảnh đầu ra mịn \cite{Liu2024}.
 \end{itemize}
 
 % =====================================================
@@ -258,7 +258,7 @@ Bài toán chuyển ảnh sang phong cách anime đòi hỏi sự kết hợp gi
 
 \subsection{CycleGAN và dịch ảnh không ghép cặp}
 
-\textbf{Tiền đề:} Isola et al. \cite{Isola2017} đề xuất pix2pix, mô hình dịch ảnh có điều kiện sử dụng dữ liệu ghép cặp. Tuy nhiên, việc thu thập cặp ảnh thật--anime tương ứng không khả thi. Chen et al. \cite{Chen2018CartoonGAN} giới thiệu CartoonGAN với edge loss bảo toàn đường nét -- tiền đề trực tiếp cho dòng nghiên cứu AnimeGAN.
+Theo công trình của Isola et al. \cite{Isola2017}, mô hình pix2pix cho bài toán dịch ảnh có điều kiện sử dụng dữ liệu ghép cặp đã đặt nền móng cho hướng nghiên cứu này. Tuy nhiên, việc thu thập cặp ảnh thật--anime tương ứng không khả thi. Tiếp đó, Chen et al. \cite{Chen2018CartoonGAN} giới thiệu CartoonGAN với edge loss bảo toàn đường nét, mở đường trực tiếp cho dòng nghiên cứu AnimeGAN.
 
 \textbf{CycleGAN} (Zhu et al., 2017) \cite{Zhu2017} giải quyết bài toán dịch ảnh không ghép cặp bằng hai Generator song song $G: X \to Y$ và $F: Y \to X$, cùng ràng buộc \textbf{nhất quán vòng lặp} (cycle consistency): $x \approx F(G(x))$ và $y \approx G(F(y))$.
 
@@ -269,7 +269,7 @@ Bài toán chuyển ảnh sang phong cách anime đòi hỏi sự kết hợp gi
     \label{fig:cycle_gan}
 \end{figure}
 
-\textbf{Ưu điểm:} Linh hoạt do không cần dữ liệu ghép cặp, bảo toàn cấu trúc tổng quát nhờ cycle consistency \cite{Zhu2017}. \textbf{Nhược điểm:} Khó bảo toàn danh tính khuôn mặt, đôi khi sinh artifact (nhiễu màu, đường viền thừa) \cite{Zhu2017}. Biến thể U-GAT-IT \cite{Kim2020} bổ sung module chú ý và Adaptive Layer-Instance Normalization để cải thiện, nhưng vẫn chưa giải quyết triệt để.
+\textbf{Ưu điểm:} Linh hoạt do không cần dữ liệu ghép cặp, bảo toàn cấu trúc tổng quát nhờ cycle consistency \cite{Zhu2017}. \textbf{Nhược điểm:} Khó bảo toàn danh tính khuôn mặt, đôi khi sinh lỗi đồ họa (nhiễu màu, đường viền thừa) \cite{Zhu2017}. Biến thể U-GAT-IT \cite{Kim2020} bổ sung module chú ý và Adaptive Layer-Instance Normalization để cải thiện, nhưng vẫn chưa giải quyết triệt để.
 
 \subsection{StyleGAN và GAN Inversion}
 

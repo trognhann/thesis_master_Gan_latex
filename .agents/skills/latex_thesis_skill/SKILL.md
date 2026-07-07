@@ -69,6 +69,64 @@ Tối đa 4 cấp (ví dụ: 3.1.2.3). Mỗi cấp phải có ít nhất 2 tiể
 - Bìa cứng in chữ nhũ (theo mẫu Phụ lục 1)
 - Trang phụ bìa (Phụ lục 2): ghi đầy đủ Ngành, Chuyên ngành, Mã số, Người hướng dẫn
 
+### 9. Quy tắc viết nội dung (từ buổi review luận văn)
+
+#### 9.1 Phong cách viết
+- **KHÔNG viết dạng liệt kê (gạch đầu dòng)** cho ưu/nhược điểm, phân tích, thảo luận → PHẢI viết thành **văn xuôi** có dẫn dắt, phân tích, bình luận (ví dụ: "Thứ nhất... Thứ hai... Cuối cùng...").
+- Liệt kê chỉ được dùng cho: định nghĩa kỹ thuật ngắn, danh sách thành phần kiến trúc, bước thuật toán.
+- **KHÔNG viết dạng code** kiểu `I₁ × I₂ → I₃` — phải diễn giải bằng lời văn (semantic).
+- Ví dụ: thay `ReLU(128)` bằng "hàm kích hoạt ReLU với kích thước 128 nơ-ron".
+
+#### 9.2 Thuật ngữ
+- **"artifact"** → dịch thành **"lỗi đồ họa"** (không dùng "tạo tác" hay "tạo phẩm").
+- **KHÔNG dùng "tiền đề"** — thay bằng "theo công trình/tài liệu này..." hoặc "dựa trên nghiên cứu của...".
+- **TRÁNH dùng các từ toán học** như "định lý", "bổ đề", "tiền đề" trừ khi thực sự có chứng minh toán học đi kèm.
+- **Thuật ngữ tiếng Anh**: viết **tiếng Việt trước, mở ngoặc tiếng Anh** phía sau. Ví dụ: "mạng đối nghịch tạo sinh (Generative Adversarial Network — GAN)".
+
+#### 9.3 Công thức & Ký hiệu
+- **Định nghĩa ký hiệu ngay trước khi dùng**, đừng để độc giả phải tra ngược/xuôi xa.
+- Tham số γ, β (gamma, beta): định nghĩa lại ngay tại chỗ dùng.
+- **"Bản đồ đặc trưng" (feature map)**: nói rõ đại diện cho cái gì (màu sắc/identity/emotion), không viết chung chung.
+- Mỗi hàm loss viết theo **format thống nhất**: Tên → Ý nghĩa/Tác dụng → Công thức → Giải thích.
+
+#### 9.4 Cấu trúc chương/mục
+- **Không tách mục quá nhỏ** (ví dụ: 2.3.1, 2.3.2 chỉ có 2-3 dòng → gộp lại). Mỗi mục phải có đủ nội dung.
+- Tối đa 3 tầng tiểu mục nhưng mỗi mục phải đủ nội dung (ít nhất 1 đoạn văn).
+- Hình minh họa kiến trúc phải đặt **trước** phần phân tích chi tiết, không để ở cuối.
+
+#### 9.5 Đóng góp (Contribution)
+- Phải **phân biệt rõ** đâu là code/mô hình có sẵn (pretrained backbone), đâu là phần mình huấn luyện/phát triển.
+- Nêu rõ **3 đóng góp chính** của luận văn:
+  1. Tách khuôn mặt (Face Detection) — dùng RetinaFace
+  2. Xử lý riêng khuôn mặt (Face Processing) — thuật toán Margin Expansion, 5 facial landmarks
+  3. Ghép/vá vùng biên (Face Blending) — feathered blending, đồng bộ ánh sáng/đường nét/màu sắc
+- Diễn đạt contribution ở **cả Mở đầu và Kết luận**, mạnh mẽ và rõ ràng.
+
+#### 9.6 Phần thực nghiệm/đánh giá
+- **Bộ dữ liệu**: phải nêu rõ nguồn gốc, số lượng ảnh cụ thể, phong cách cho từng tập.
+- **Chỉ số đánh giá (FID, LPIPS, PSNR)**: bổ sung **công thức đầy đủ** cho từng chỉ số.
+- **Ảnh minh họa**: mỗi nhóm ảnh (đơn/nhiều người/nghiêng) nên có ít nhất 2 ảnh minh họa.
+- Tạo **Phụ lục** chứa link folder ảnh bổ sung nếu cần.
+
+### 10. Cấu trúc project hiện tại
+
+```
+main.tex              — File chính, include các chapter
+preamble.tex          — Preamble với các package và cấu hình
+refer.bib             — File bibliography
+chapter/
+  chap0_intro.tex     — MỞ ĐẦU (mục tiêu, đóng góp, phạm vi)
+  chap1_Prologue_new.tex  — Chương 1: Cơ sở lý thuyết
+  chap2_architecture_DTGAN.tex — Chương 2: Kiến trúc DTGAN
+  chap3_face_extraction.tex    — Chương 3: Face Extraction pipeline
+  chap4_experiment_end_evaluation.tex — Chương 4: Thực nghiệm
+  chap5_conclusion.tex — Kết luận
+cover/                — Bìa, lời cam đoan, tóm tắt
+figChap1/, figChap2/, figChap3/ — Hình ảnh theo chương
+scripts/form.gs       — Google Apps Script tạo Google Form khảo sát
+review/               — Checklist review và ghi chú
+```
+
 ## Hướng dẫn agent thực hiện (bắt buộc)
 
 1. Luôn đọc `main.tex` (file main) và `resources/quy-dinh-139-DT.pdf` trước khi trả lời.
@@ -86,3 +144,4 @@ Tối đa 4 cấp (ví dụ: 3.1.2.3). Mỗi cấp phải có ít nhất 2 tiể
 3. Đảm bảo file được biên dịch bằng `xelatex` hoặc `lualatex` để hỗ trợ font tiếng Việt (fontspec) và Unicode. Nếu người dùng muốn dùng `pdflatex`, nhắc họ thay thế sử dụng gói lệnh `\usepackage{mathptmx}` hoặc `\usepackage{tgtermes}` kèm theo `\usepackage[utf8]{inputenc}` và `\usepackage[T5]{fontenc}`.
 4. Tự động kiểm tra file `main.tex` hiện tại để xem các quy định 139/ĐT (margin, font, dãn dòng) đã được đáp ứng chưa. Nếu dãn dòng đang sai (ví dụ `setspace`), tự chèn dòng `\setstretch{1.2}`.
 5. Khi viết hoặc chỉnh sửa nội dung, **phải luôn update các nguồn và trích dẫn (citations) một cách đầy đủ**, đảm bảo thêm vào file `refer.bib` (nếu cần) và dùng lệnh trích dẫn chính xác trong văn bản.
+6. **Luôn tuân thủ quy tắc viết nội dung (Mục 9)** — đặc biệt: viết văn xuôi thay liệt kê, dùng đúng thuật ngữ, định nghĩa ký hiệu tại chỗ, format loss thống nhất, phân biệt rõ đóng góp.

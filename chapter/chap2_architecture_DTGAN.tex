@@ -18,7 +18,7 @@ Chương này trình bày chi tiết kiến trúc kỹ thuật của mô hình A
 \begin{itemize}
     \item \textbf{Base Encoder (Mạng mã hóa dùng chung):} Tiếp nhận ảnh gốc, trích xuất đặc trưng ngữ nghĩa phân cấp qua 3 lần downsampling (stride-2), thu nhỏ không gian ảnh thành bản đồ đặc trưng $32 \times 32$. Thiết kế dùng chung (shared weights) đảm bảo cả hai nhánh decoder khởi nguồn từ cùng một không gian đặc trưng thống nhất, đồng thời giảm đáng kể số tham số.
     \item \textbf{Support Tail (Nhánh hỗ trợ):} Sinh ảnh anime thô $\widehat{y}_s$, sau đó qua bộ lọc bảo toàn cạnh Guided Filter tạo ảnh $\widehat{y}$. Ảnh này được chuyển sang grayscale trước khi đưa vào Discriminator, buộc nhánh tập trung vào đường nét và tương phản sáng tối mà không bị phân tâm bởi màu sắc.
-    \item \textbf{Main Tail (Nhánh chính):} Sinh ảnh anime hoàn chỉnh $\widehat{y}_m$ với phân phối màu sắc cel-shading mịn. Nhánh này được tối ưu dựa trên pseudo ground-truth (ảnh đã qua NL-Means + L0 Smoothing), đảm bảo vùng màu phẳng và không artifacts.
+    \item \textbf{Main Tail (Nhánh chính):} Sinh ảnh anime hoàn chỉnh $\widehat{y}_m$ với phân phối màu sắc cel-shading mịn. Nhánh này được tối ưu dựa trên pseudo ground-truth (ảnh đã qua NL-Means + L0 Smoothing), đảm bảo vùng màu phẳng và không có lỗi đồ họa (artifacts).
 \end{itemize}
 
 \begin{figure}[H]
@@ -83,7 +83,7 @@ Support Tail nhận $x_3$ làm đầu vào, đầu tiên qua cơ chế External 
     \item \texttt{Conv2D(3, k=7, s=1)} $\to$ \texttt{tanh} $\to \widehat{y}_s$ (\texttt{fake\_s})
 \end{enumerate}
 
-Output $\widehat{y}_s$ tiếp tục qua bộ lọc \textbf{Guided Filter} để tạo $\widehat{y}$ (\texttt{generated}), được chuyển sang không gian grayscale trước khi đưa vào Discriminator Support. Bilinear upsampling được dùng thay vì transposed convolution để tránh tạo phẩm checkerboard \cite{Hasan2019}.
+Output $\widehat{y}_s$ tiếp tục qua bộ lọc \textbf{Guided Filter} để tạo $\widehat{y}$ (\texttt{generated}), được chuyển sang không gian grayscale trước khi đưa vào Discriminator Support. Bilinear upsampling được dùng thay vì transposed convolution để tránh lỗi đồ họa dạng checkerboard \cite{Hasan2019}.
 
 \subsection{Main Tail (Decoder nhánh chính)}
 \label{subsec:main_tail}
@@ -257,10 +257,10 @@ Mỗi Discriminator gồm 7 lớp tích chập sử dụng \texttt{LADE\_D} (LAD
 Việc sử dụng \textbf{grayscale} cho Support Discriminator là lựa chọn thiết kế có chủ ý: vì mục tiêu của Support Tail là học đường nét và cấu trúc anime (không phụ thuộc màu sắc), discriminator grayscale giúp mô hình tập trung vào hình dạng và độ tương phản thay vì bị nhiễu bởi sự phân bố màu.
 
 % =====================================================
-\section{Hệ thống Hàm Mất mát}
+\section{Các hàm mất mát được sử dụng trong kiến trúc}
 \label{sec:loss}
 
-DTGAN sử dụng một hệ thống hàm mất mát đa thành phần phức tạp, phản ánh mục tiêu kép của hai nhánh decoder. Hình~\ref{fig:loss_diagram} minh họa toàn bộ pipeline.
+DTGAN sử dụng một hệ thống hàm mất mát đa thành phần phức tạp, phản ánh mục tiêu kép của hai nhánh decoder. Hình~\ref{fig:loss_diagram} minh họa toàn bộ pipeline. Mỗi hàm mất mát dưới đây được trình bày theo format thống nhất: \textbf{Tên} $\to$ \textbf{Ý nghĩa/Tác dụng} $\to$ \textbf{Công thức} $\to$ \textbf{Giải thích}.
 
 \begin{figure}[H]
     \centering

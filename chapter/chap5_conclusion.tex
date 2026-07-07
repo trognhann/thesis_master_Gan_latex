@@ -53,19 +53,7 @@ Xây dựng ứng dụng demo & \checkmark\ Hoàn thành & Ứng dụng web Reac
 \section{Hạn chế}
 \label{sec:limitations}
 
-Mặc dù đạt được các kết quả khả quan, hệ thống vẫn còn một số hạn chế:
-
-\begin{enumerate}
-    \item \textbf{Phụ thuộc vào tập dữ liệu huấn luyện:} Phong cách anime học được phụ thuộc hoàn toàn vào tập dữ liệu style. Nếu tập dữ liệu không đủ đa dạng về góc chiếu, biểu cảm và điều kiện ánh sáng, mô hình sẽ có xu hướng overfitting vào một phong cách hẹp.
-
-    \item \textbf{Hạn chế với khuôn mặt nghiêng lớn:} RetinaFace MobileNet 0.25 giảm hiệu năng đáng kể tại góc nghiêng $>60°$ (recall $<76\%$). Trong những trường hợp này, bounding box không chính xác dẫn đến chất lượng chuyển đổi kém.
-
-    \item \textbf{Chưa có temporal consistency cho video:} Pipeline xử lý video hiện tại chuyển đổi từng frame độc lập, chưa có cơ chế đảm bảo tính nhất quán giữa các frame liên tiếp. Điều này có thể gây hiệu ứng nhấp nháy (flickering) khi xem video đầu ra.
-
-    \item \textbf{Chi phí tính toán Hybrid Mode:} Thời gian xử lý Hybrid Mode tăng tuyến tính theo số khuôn mặt ($1 + N$ lần suy luận ONNX), có thể chậm với ảnh nhóm đông ($N > 5$).
-
-    \item \textbf{Hiệu năng trên CPU hạn chế:} Tốc độ xử lý trên CPU chỉ đạt $\approx 1.1$ FPS ở $512\times512$, chưa phù hợp cho người dùng không có GPU. Model ONNX chưa được áp dụng quantization để tối ưu cho CPU inference.
-\end{enumerate}
+Mặc dù đạt được các kết quả khả quan, hệ thống vẫn còn một số hạn chế cần được nhận diện. Thứ nhất, phong cách anime học được phụ thuộc hoàn toàn vào tập dữ liệu style; nếu tập dữ liệu không đủ đa dạng về góc chiếu, biểu cảm và điều kiện ánh sáng, mô hình sẽ có xu hướng overfitting vào một phong cách hẹp. Thứ hai, RetinaFace MobileNet 0.25 giảm hiệu năng đáng kể tại góc nghiêng $>60°$ (recall $<76\%$), dẫn đến bounding box không chính xác và chất lượng chuyển đổi kém ở những trường hợp này. Thứ ba, pipeline xử lý video hiện tại chuyển đổi từng frame độc lập, chưa có cơ chế đảm bảo tính nhất quán giữa các frame liên tiếp (temporal consistency), có thể gây hiệu ứng nhấp nháy (flickering) khi xem video đầu ra. Thứ tư, chi phí tính toán của chế độ Hybrid Mode tăng tuyến tính theo số khuôn mặt ($1 + N$ lần suy luận ONNX), có thể chậm với ảnh nhóm đông ($N > 5$). Cuối cùng, tốc độ xử lý trên CPU chỉ đạt $\approx 1.1$ FPS ở $512\times512$, chưa phù hợp cho người dùng không có GPU; model ONNX chưa được áp dụng quantization để tối ưu cho CPU inference.
 
 % =====================================================
 \section{Hướng phát triển}

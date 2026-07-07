@@ -5,6 +5,13 @@
  * 
  * Google Apps Script tạo Google Form tự động cho luận văn thạc sĩ.
  * 
+ * PHIÊN BẢN ĐÃ CHỈNH SỬA THEO CHECKLIST REVIEW:
+ *   - Gộp Phần 2 + 3: so sánh Input → Lens mode → Hybrid mode (5 bộ ảnh)
+ *   - Phần 4: tách riêng cho nhóm chuyên môn, bỏ câu trùng, bổ sung ảnh
+ *   - Phần 5: bộ ảnh dài so sánh TikTok/Snapchat, tiêu chí đồng bộ
+ *   - Phần 6: bỏ câu "sẵn sàng chờ bao lâu"
+ *   - Phần 7: rút gọn còn 2 câu hỏi mở + điểm tổng thể
+ * 
  * HƯỚNG DẪN SỬ DỤNG:
  * 1. Truy cập https://script.google.com
  * 2. Tạo project mới (New Project)
@@ -16,10 +23,10 @@
  * 
  * SAU KHI TẠO FORM:
  * - Upload ảnh thủ công vào các vị trí đã đánh dấu [THÊM ẢNH TẠI ĐÂY]
- * - Ảnh nằm trong thư mục: figChap3/style_results/ của repo
- * - Hoặc chạy hàm uploadImagesToDrive() để upload ảnh lên Drive trước
+ * - Bố trí ảnh: phóng to khuôn mặt nhét vào góc trên bên phải của ảnh chính
+ * - Mỗi bộ ảnh gồm 3 ảnh: Input, Lens mode, Hybrid mode
  * 
- * Tác giả: Nguyễn Trọng Nhân - 24025149
+ * Tác giả: Nguyễn Trọng Nhân - MSSV: 24025149
  * Luận văn: Mạng đối nghịch tạo sinh trong chuyển đổi ảnh chân dung sang phong cách Anime
  * =============================================================================
  */
@@ -28,18 +35,17 @@ function createAnimeGANSurvey() {
   // =====================================================
   // TẠO FORM
   // =====================================================
-  var form = FormApp.create('Khảo sát đánh giá hệ thống chuyển đổi ảnh chân dung sang phong cách Anime (AnimeGANv3)');
+  var form = FormApp.create('Khảo sát đánh giá hệ thống chuyển đổi ảnh chân dung sang phong cách Anime');
   
   form.setDescription(
     '📋 KHẢO SÁT ĐÁNH GIÁ CHẤT LƯỢNG HỆ THỐNG CHUYỂN ĐỔI ẢNH ANIME\n\n' +
     'Xin chào! Cảm ơn bạn đã dành thời gian tham gia khảo sát.\n\n' +
     'Khảo sát này là một phần của luận văn thạc sĩ nghiên cứu về hệ thống chuyển đổi ảnh chân dung sang phong cách anime ' +
-    'sử dụng mạng đối nghịch tạo sinh (GAN) - cụ thể là kiến trúc AnimeGANv3 (DTGAN).\n\n' +
-    'Hệ thống có 3 chế độ xử lý:\n' +
-    '• Face Mode: Phát hiện và cắt riêng vùng khuôn mặt, chuyển đổi ở độ phân giải cao (512×512)\n' +
-    '• Landscape Mode: Xử lý toàn bộ ảnh, giữ nguyên bố cục và nền\n' +
-    '• Hybrid Mode: Kết hợp cả hai - nền được xử lý Landscape, từng khuôn mặt được xử lý Face Mode rồi ghép lại\n\n' +
-    '⏱️ Thời gian ước tính: 8-12 phút\n' +
+    'sử dụng mạng đối nghịch tạo sinh (GAN).\n\n' +
+    'Hệ thống có 2 chế độ xử lý chính:\n' +
+    '• Lens mode: Xử lý toàn bộ ảnh, giữ nguyên bố cục và nền\n' +
+    '• Hybrid mode: Phát hiện khuôn mặt, xử lý riêng từng khuôn mặt ở độ phân giải cao rồi ghép lại với nền — đây là đóng góp chính của luận văn\n\n' +
+    '⏱️ Thời gian ước tính: 7-10 phút\n' +
     '🔒 Mọi thông tin được bảo mật và chỉ phục vụ mục đích nghiên cứu.\n\n' +
     '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n' +
     'Nguyễn Trọng Nhân - MSSV: 24025149\n' +
@@ -62,7 +68,7 @@ function createAnimeGANSurvey() {
   form.setPublishingSummary(true);
 
   // =====================================================
-  // PHẦN 1: THÔNG TIN NGƯỜI THAM GIA
+  // PHẦN 1: THÔNG TIN NGƯỜI THAM GIA (GIỮ NGUYÊN)
   // =====================================================
   
   form.addSectionHeaderItem()
@@ -151,300 +157,272 @@ function createAnimeGANSurvey() {
     .setRequired(true);
 
   // =====================================================
-  // PHẦN 2: ĐÁNH GIÁ CHẤT LƯỢNG TỔNG THỂ
+  // PHẦN 2: SO SÁNH CHẤT LƯỢNG CHUYỂN ĐỔI
+  // (GỘP Phần 2 + 3 cũ theo checklist)
+  // So sánh 3 ảnh: Input → Lens mode → Hybrid mode
+  // 5 bộ ảnh đa dạng (đơn, nhóm, nghiêng)
   // =====================================================
   
   form.addPageBreakItem()
-    .setTitle('PHẦN 2: ĐÁNH GIÁ CHẤT LƯỢNG CHUYỂN ĐỔI TỔNG THỂ')
+    .setTitle('PHẦN 2: SO SÁNH CHẤT LƯỢNG CHUYỂN ĐỔI')
     .setHelpText(
-      'Dưới đây là các ảnh chân dung gốc và kết quả chuyển đổi sang phong cách anime bằng hệ thống AnimeGANv3.\n\n' +
-      'Vui lòng quan sát kỹ các cặp ảnh (gốc → anime) và đánh giá chất lượng theo các tiêu chí.\n\n' +
-      '📌 LƯU Ý: Các ảnh mẫu sẽ được hiển thị bên dưới. Hãy quan sát kỹ trước khi trả lời.'
+      'Phần này so sánh kết quả giữa 2 chế độ xử lý của hệ thống:\n\n' +
+      '🔵 Lens mode: Xử lý toàn bộ ảnh gốc → giữ bố cục nhưng khuôn mặt có thể kém chi tiết\n' +
+      '🟢 Hybrid mode: Phát hiện khuôn mặt → xử lý riêng từng khuôn mặt ở độ phân giải cao → ghép lại với nền\n\n' +
+      'Với mỗi bộ ảnh, bạn sẽ thấy 3 ảnh:\n' +
+      '• Ảnh Input (ảnh gốc)\n' +
+      '• Ảnh Lens mode (chưa xử lý riêng khuôn mặt)\n' +
+      '• Ảnh Hybrid mode (có tách và xử lý riêng khuôn mặt — đóng góp của nghiên cứu)\n\n' +
+      '📌 LƯU Ý: Khuôn mặt đã được phóng to ở góc ảnh để bạn so sánh chi tiết dễ dàng hơn.\n' +
+      'Hãy quan sát kỹ vùng KHUÔN MẶT (mắt, biểu cảm, tóc) trước khi trả lời.'
     );
 
-  // Placeholder cho ảnh - Người dùng cần thêm ảnh thủ công
+  // --- Bộ ảnh 1: Ảnh chân dung đơn (thẳng mặt) ---
   form.addSectionHeaderItem()
-    .setTitle('📸 Bộ ảnh mẫu 1: Ảnh chân dung đơn (1 người)')
+    .setTitle('📸 Bộ ảnh 1: Ảnh chân dung đơn (thẳng mặt)')
     .setHelpText(
-      '[THÊM ẢNH TẠI ĐÂY]\n' +
-      '• Ảnh gốc: figChap3/style_results/a1.png\n' +
-      '• Kết quả Hybrid Mode: figChap3/style_results/e1.jpg\n' +
-      '• Kết quả Face Mode: figChap3/style_results/d1.jpg\n\n' +
-      'Mô tả: Ảnh chân dung cô gái đứng trên bãi biển, cầm ly nước dừa, mặc áo vàng.'
+      '[THÊM 3 ẢNH TẠI ĐÂY]\n' +
+      '• Ảnh Input (gốc) — có phóng to khuôn mặt ở góc trên phải\n' +
+      '• Ảnh Lens mode — có phóng to khuôn mặt ở góc trên phải\n' +
+      '• Ảnh Hybrid mode — có phóng to khuôn mặt ở góc trên phải'
     );
 
-  // 2.1 Chất lượng tổng thể
+  form.addMultipleChoiceItem()
+    .setTitle('2.1. [Bộ 1 – Ảnh đơn thẳng mặt] Khuôn mặt ở ảnh nào sắc nét và tự nhiên hơn?')
+    .setChoiceValues([
+      'Lens mode — khuôn mặt đã đủ tốt',
+      'Hybrid mode — khuôn mặt rõ ràng sắc nét hơn',
+      'Cả hai như nhau, không thấy khác biệt'
+    ])
+    .setRequired(true);
+
   form.addScaleItem()
-    .setTitle('2.1. Chất lượng tổng thể của ảnh anime đã chuyển đổi')
-    .setHelpText('1 = Rất kém | 2 = Kém | 3 = Trung bình | 4 = Tốt | 5 = Rất tốt')
+    .setTitle('2.2. [Bộ 1] Đánh giá chi tiết MẮT trong ảnh Hybrid mode')
+    .setHelpText('Mắt có to, sáng, long lanh kiểu anime không?')
     .setBounds(1, 5)
     .setLabels('Rất kém', 'Rất tốt')
     .setRequired(true);
 
-  // 2.2 Bảo toàn nhận dạng
   form.addScaleItem()
-    .setTitle('2.2. Mức độ bảo toàn đặc điểm nhận dạng (nhận ra là cùng một người)')
-    .setHelpText('1 = Không nhận ra | 2 = Rất khó nhận ra | 3 = Nhận ra một phần | 4 = Dễ nhận ra | 5 = Nhận ra ngay')
+    .setTitle('2.3. [Bộ 1] Đánh giá BIỂU CẢM khuôn mặt trong ảnh Hybrid mode')
+    .setHelpText('Biểu cảm gốc (cười, nghiêm túc...) có được giữ lại không?')
     .setBounds(1, 5)
-    .setLabels('Không nhận ra', 'Nhận ra ngay')
+    .setLabels('Mất hoàn toàn biểu cảm', 'Giữ nguyên biểu cảm')
     .setRequired(true);
 
-  // 2.3 Tính thẩm mỹ
   form.addScaleItem()
-    .setTitle('2.3. Tính thẩm mỹ / Đẹp mắt của ảnh đầu ra')
-    .setHelpText('1 = Xấu | 2 = Không đẹp lắm | 3 = Bình thường | 4 = Đẹp | 5 = Rất đẹp')
+    .setTitle('2.4. [Bộ 1] Đánh giá TÓC TAI trong ảnh Hybrid mode')
+    .setHelpText('Kiểu tóc, đường nét tóc có đẹp và tự nhiên không?')
     .setBounds(1, 5)
-    .setLabels('Xấu', 'Rất đẹp')
+    .setLabels('Rất kém', 'Rất tốt')
     .setRequired(true);
 
-  // 2.4 Tính tự nhiên
-  form.addScaleItem()
-    .setTitle('2.4. Tính tự nhiên của ảnh (không bị méo, không có artifact bất thường)')
-    .setHelpText('1 = Rất méo/lỗi | 2 = Có nhiều lỗi | 3 = Chấp nhận được | 4 = Tự nhiên | 5 = Rất tự nhiên')
-    .setBounds(1, 5)
-    .setLabels('Rất méo/lỗi', 'Rất tự nhiên')
-    .setRequired(true);
-
-  // 2.5 Giống phong cách anime
-  form.addScaleItem()
-    .setTitle('2.5. Mức độ giống phong cách anime thực sự (so với phim hoạt hình Nhật Bản)')
-    .setHelpText('1 = Không giống anime | 2 = Hơi giống | 3 = Giống ở mức trung bình | 4 = Khá giống | 5 = Rất giống anime')
-    .setBounds(1, 5)
-    .setLabels('Không giống', 'Rất giống anime')
-    .setRequired(true);
-
-  // 2.6 Chất lượng đường nét
-  form.addScaleItem()
-    .setTitle('2.6. Chất lượng đường nét và viền (line art) trong ảnh anime')
-    .setHelpText('1 = Rất thô | 2 = Thô | 3 = Trung bình | 4 = Mịn | 5 = Rất mịn và sắc nét')
-    .setBounds(1, 5)
-    .setLabels('Rất thô', 'Rất mịn')
-    .setRequired(true);
-
-  // 2.7 Chất lượng màu sắc
-  form.addScaleItem()
-    .setTitle('2.7. Chất lượng màu sắc và tông màu của ảnh anime')
-    .setHelpText('1 = Sai màu hoàn toàn | 2 = Nhiều sai lệch | 3 = Chấp nhận được | 4 = Hài hòa | 5 = Rất đẹp và hài hòa')
-    .setBounds(1, 5)
-    .setLabels('Sai màu', 'Rất hài hòa')
-    .setRequired(true);
-
-  // 2.8 Bảo toàn chi tiết khuôn mặt
-  form.addScaleItem()
-    .setTitle('2.8. Mức độ bảo toàn chi tiết khuôn mặt (mắt, mũi, miệng, biểu cảm)')
-    .setHelpText('1 = Mất hoàn toàn | 2 = Mất nhiều | 3 = Giữ được một phần | 4 = Giữ tốt | 5 = Giữ rất tốt')
-    .setBounds(1, 5)
-    .setLabels('Mất hoàn toàn', 'Giữ rất tốt')
-    .setRequired(true);
-
-  // =====================================================
-  // PHẦN 3: SO SÁNH BỘ ẢNH MẪU 2 (ẢNH NHÓM)
-  // =====================================================
-
-  form.addPageBreakItem()
-    .setTitle('PHẦN 3: SO SÁNH CÁC CHẾ ĐỘ XỬ LÝ')
-    .setHelpText(
-      'Hệ thống có 3 chế độ xử lý ảnh:\n\n' +
-      '🔵 Hybrid Mode: Kết hợp Landscape (nền) + Face Mode (từng khuôn mặt) → ghép lại bằng feathered blending\n' +
-      '🟢 Landscape Mode: Xử lý toàn bộ ảnh gốc → giữ bố cục nhưng chi tiết mặt có thể kém\n' +
-      '🟡 Face Mode: Chỉ cắt và xử lý vùng khuôn mặt ở 512×512 → chi tiết cao nhưng mất nền\n\n' +
-      'Hãy quan sát các bộ ảnh so sánh dưới đây và trả lời câu hỏi.'
-    );
-
-  // --- Bộ so sánh 1: Ảnh 1 người ---
+  // --- Bộ ảnh 2: Ảnh nhóm nhiều người ---
   form.addSectionHeaderItem()
-    .setTitle('📸 Bộ so sánh 1: Ảnh chân dung đơn')
+    .setTitle('📸 Bộ ảnh 2: Ảnh nhóm (nhiều người)')
     .setHelpText(
-      '[THÊM 4 ẢNH TẠI ĐÂY theo thứ tự]\n' +
-      '(a) Hybrid Mode: figChap3/style_results/e1.jpg\n' +
-      '(b) Landscape Mode: figChap3/style_results/b1.jpg\n' +
-      '(c) Cắt mặt từ Landscape: figChap3/style_results/c1.png\n' +
-      '(d) Face Mode: figChap3/style_results/d1.jpg\n\n' +
-      'Ảnh gốc: figChap3/style_results/a1.png'
+      '[THÊM 3 ẢNH TẠI ĐÂY]\n' +
+      '• Ảnh Input (gốc) — có phóng to khuôn mặt ở góc trên phải\n' +
+      '• Ảnh Lens mode — có phóng to khuôn mặt ở góc trên phải\n' +
+      '• Ảnh Hybrid mode — có phóng to khuôn mặt ở góc trên phải'
     );
 
   form.addMultipleChoiceItem()
-    .setTitle('3.1. [Bộ 1] Bạn thích kết quả của chế độ nào nhất?')
+    .setTitle('2.5. [Bộ 2 – Ảnh nhóm] Khuôn mặt ở ảnh nào sắc nét và tự nhiên hơn?')
     .setChoiceValues([
-      '(a) Hybrid Mode - Kết hợp nền anime + mặt chi tiết',
-      '(b) Landscape Mode - Xử lý toàn bộ ảnh',
-      '(d) Face Mode - Chỉ xử lý vùng khuôn mặt'
+      'Lens mode — khuôn mặt đã đủ tốt',
+      'Hybrid mode — khuôn mặt rõ ràng sắc nét hơn',
+      'Cả hai như nhau, không thấy khác biệt'
     ])
     .setRequired(true);
 
-  // --- Bộ so sánh 2: Ảnh nhóm ---
+  form.addScaleItem()
+    .setTitle('2.6. [Bộ 2] Đánh giá chi tiết MẮT trong ảnh Hybrid mode')
+    .setBounds(1, 5)
+    .setLabels('Rất kém', 'Rất tốt')
+    .setRequired(true);
+
+  form.addScaleItem()
+    .setTitle('2.7. [Bộ 2] Đánh giá BIỂU CẢM khuôn mặt trong ảnh Hybrid mode')
+    .setBounds(1, 5)
+    .setLabels('Mất hoàn toàn biểu cảm', 'Giữ nguyên biểu cảm')
+    .setRequired(true);
+
+  form.addScaleItem()
+    .setTitle('2.8. [Bộ 2] Đánh giá TÓC TAI trong ảnh Hybrid mode')
+    .setBounds(1, 5)
+    .setLabels('Rất kém', 'Rất tốt')
+    .setRequired(true);
+
+  // --- Bộ ảnh 3: Ảnh chân dung góc nghiêng ---
   form.addSectionHeaderItem()
-    .setTitle('📸 Bộ so sánh 2: Ảnh nhóm (2 người)')
+    .setTitle('📸 Bộ ảnh 3: Ảnh chân dung góc nghiêng')
     .setHelpText(
-      '[THÊM 4 ẢNH TẠI ĐÂY theo thứ tự]\n' +
-      '(a) Hybrid Mode: figChap3/style_results/e2.jpg\n' +
-      '(b) Landscape Mode: figChap3/style_results/b2.jpg\n' +
-      '(c) Cắt mặt từ Landscape: figChap3/style_results/c2.png\n' +
-      '(d) Face Mode: figChap3/style_results/d2.jpg\n\n' +
-      'Ảnh gốc: figChap3/style_results/a2.png'
+      '[THÊM 3 ẢNH TẠI ĐÂY]\n' +
+      '• Ảnh Input (gốc) — có phóng to khuôn mặt ở góc trên phải\n' +
+      '• Ảnh Lens mode — có phóng to khuôn mặt ở góc trên phải\n' +
+      '• Ảnh Hybrid mode — có phóng to khuôn mặt ở góc trên phải'
     );
 
   form.addMultipleChoiceItem()
-    .setTitle('3.2. [Bộ 2] Bạn thích kết quả của chế độ nào nhất cho ảnh nhóm?')
+    .setTitle('2.9. [Bộ 3 – Ảnh nghiêng] Khuôn mặt ở ảnh nào sắc nét và tự nhiên hơn?')
     .setChoiceValues([
-      '(a) Hybrid Mode - Kết hợp nền anime + mặt chi tiết',
-      '(b) Landscape Mode - Xử lý toàn bộ ảnh',
-      '(d) Face Mode - Chỉ xử lý vùng khuôn mặt (mặt lớn nhất)'
+      'Lens mode — khuôn mặt đã đủ tốt',
+      'Hybrid mode — khuôn mặt rõ ràng sắc nét hơn',
+      'Cả hai như nhau, không thấy khác biệt'
     ])
     .setRequired(true);
 
-  // --- Bộ so sánh 3: Ảnh góc nghiêng ---
+  form.addScaleItem()
+    .setTitle('2.10. [Bộ 3] Đánh giá chi tiết MẮT trong ảnh Hybrid mode')
+    .setBounds(1, 5)
+    .setLabels('Rất kém', 'Rất tốt')
+    .setRequired(true);
+
+  form.addScaleItem()
+    .setTitle('2.11. [Bộ 3] Đánh giá BIỂU CẢM khuôn mặt trong ảnh Hybrid mode')
+    .setBounds(1, 5)
+    .setLabels('Mất hoàn toàn biểu cảm', 'Giữ nguyên biểu cảm')
+    .setRequired(true);
+
+  form.addScaleItem()
+    .setTitle('2.12. [Bộ 3] Đánh giá TÓC TAI trong ảnh Hybrid mode')
+    .setBounds(1, 5)
+    .setLabels('Rất kém', 'Rất tốt')
+    .setRequired(true);
+
+  // --- Bộ ảnh 4: Ảnh chân dung đơn (khác) ---
   form.addSectionHeaderItem()
-    .setTitle('📸 Bộ so sánh 3: Ảnh chân dung góc nghiêng')
+    .setTitle('📸 Bộ ảnh 4: Ảnh chân dung đơn (khác)')
     .setHelpText(
-      '[THÊM 4 ẢNH TẠI ĐÂY theo thứ tự]\n' +
-      '(a) Hybrid Mode: figChap3/style_results/e3.jpg\n' +
-      '(b) Landscape Mode: figChap3/style_results/b3.jpg\n' +
-      '(c) Cắt mặt từ Landscape: figChap3/style_results/c3.png\n' +
-      '(d) Face Mode: figChap3/style_results/d3.jpg\n\n' +
-      'Ảnh gốc: figChap3/style_results/a3.png'
+      '[THÊM 3 ẢNH TẠI ĐÂY]\n' +
+      '• Ảnh Input (gốc) — có phóng to khuôn mặt ở góc trên phải\n' +
+      '• Ảnh Lens mode — có phóng to khuôn mặt ở góc trên phải\n' +
+      '• Ảnh Hybrid mode — có phóng to khuôn mặt ở góc trên phải'
     );
 
   form.addMultipleChoiceItem()
-    .setTitle('3.3. [Bộ 3] Bạn thích kết quả của chế độ nào nhất cho ảnh góc nghiêng?')
+    .setTitle('2.13. [Bộ 4] Khuôn mặt ở ảnh nào sắc nét và tự nhiên hơn?')
     .setChoiceValues([
-      '(a) Hybrid Mode - Kết hợp nền anime + mặt chi tiết',
-      '(b) Landscape Mode - Xử lý toàn bộ ảnh',
-      '(d) Face Mode - Chỉ xử lý vùng khuôn mặt'
+      'Lens mode — khuôn mặt đã đủ tốt',
+      'Hybrid mode — khuôn mặt rõ ràng sắc nét hơn',
+      'Cả hai như nhau, không thấy khác biệt'
     ])
     .setRequired(true);
 
-  // --- Đánh giá chi tiết từng chế độ ---
+  form.addScaleItem()
+    .setTitle('2.14. [Bộ 4] Đánh giá chi tiết MẮT trong ảnh Hybrid mode')
+    .setBounds(1, 5)
+    .setLabels('Rất kém', 'Rất tốt')
+    .setRequired(true);
+
+  form.addScaleItem()
+    .setTitle('2.15. [Bộ 4] Đánh giá BIỂU CẢM khuôn mặt trong ảnh Hybrid mode')
+    .setBounds(1, 5)
+    .setLabels('Mất hoàn toàn biểu cảm', 'Giữ nguyên biểu cảm')
+    .setRequired(true);
+
+  form.addScaleItem()
+    .setTitle('2.16. [Bộ 4] Đánh giá TÓC TAI trong ảnh Hybrid mode')
+    .setBounds(1, 5)
+    .setLabels('Rất kém', 'Rất tốt')
+    .setRequired(true);
+
+  // --- Bộ ảnh 5: Ảnh nhóm / góc nghiêng / đa dạng ---
   form.addSectionHeaderItem()
-    .setTitle('📊 Đánh giá chi tiết từng chế độ')
-    .setHelpText('Dựa trên tất cả các bộ ảnh bạn vừa xem, hãy đánh giá từng chế độ theo các tiêu chí.');
+    .setTitle('📸 Bộ ảnh 5: Ảnh đa dạng')
+    .setHelpText(
+      '[THÊM 3 ẢNH TẠI ĐÂY]\n' +
+      '• Ảnh Input (gốc) — có phóng to khuôn mặt ở góc trên phải\n' +
+      '• Ảnh Lens mode — có phóng to khuôn mặt ở góc trên phải\n' +
+      '• Ảnh Hybrid mode — có phóng to khuôn mặt ở góc trên phải'
+    );
 
-  // Hybrid Mode
-  form.addScaleItem()
-    .setTitle('3.4. Hybrid Mode — Độ sắc nét khuôn mặt')
-    .setBounds(1, 5)
-    .setLabels('Rất mờ', 'Rất sắc nét')
+  form.addMultipleChoiceItem()
+    .setTitle('2.17. [Bộ 5] Khuôn mặt ở ảnh nào sắc nét và tự nhiên hơn?')
+    .setChoiceValues([
+      'Lens mode — khuôn mặt đã đủ tốt',
+      'Hybrid mode — khuôn mặt rõ ràng sắc nét hơn',
+      'Cả hai như nhau, không thấy khác biệt'
+    ])
     .setRequired(true);
 
   form.addScaleItem()
-    .setTitle('3.5. Hybrid Mode — Bảo toàn chi tiết (mắt, mũi, miệng)')
+    .setTitle('2.18. [Bộ 5] Đánh giá chi tiết MẮT trong ảnh Hybrid mode')
     .setBounds(1, 5)
-    .setLabels('Mất hết chi tiết', 'Giữ đầy đủ')
+    .setLabels('Rất kém', 'Rất tốt')
     .setRequired(true);
 
   form.addScaleItem()
-    .setTitle('3.6. Hybrid Mode — Bảo toàn nền / bối cảnh')
+    .setTitle('2.19. [Bộ 5] Đánh giá BIỂU CẢM khuôn mặt trong ảnh Hybrid mode')
     .setBounds(1, 5)
-    .setLabels('Mất nền', 'Giữ tốt')
+    .setLabels('Mất hoàn toàn biểu cảm', 'Giữ nguyên biểu cảm')
     .setRequired(true);
 
   form.addScaleItem()
-    .setTitle('3.7. Hybrid Mode — Tính tự nhiên tổng thể (mặt + nền hài hòa)')
+    .setTitle('2.20. [Bộ 5] Đánh giá TÓC TAI trong ảnh Hybrid mode')
     .setBounds(1, 5)
-    .setLabels('Rất giả', 'Rất tự nhiên')
+    .setLabels('Rất kém', 'Rất tốt')
+    .setRequired(true);
+
+  // --- Đánh giá tổng hợp phần 2 ---
+  form.addSectionHeaderItem()
+    .setTitle('📊 Đánh giá tổng hợp sau khi xem tất cả 5 bộ ảnh')
+    .setHelpText('Dựa trên tất cả các bộ ảnh bạn vừa xem, hãy trả lời các câu hỏi tổng hợp.');
+
+  form.addScaleItem()
+    .setTitle('2.21. Nhìn chung, Hybrid mode có cải thiện chất lượng khuôn mặt so với Lens mode không?')
+    .setHelpText('1 = Không cải thiện / tệ hơn | 5 = Cải thiện rõ rệt')
+    .setBounds(1, 5)
+    .setLabels('Không cải thiện', 'Cải thiện rõ rệt')
     .setRequired(true);
 
   form.addScaleItem()
-    .setTitle('3.8. Hybrid Mode — Đường ghép giữa mặt và nền có tự nhiên không?')
-    .setHelpText('Đánh giá xem viền ghép giữa vùng mặt (Face Mode) và nền (Landscape) có lộ không')
+    .setTitle('2.22. Đường ghép giữa vùng khuôn mặt và nền trong Hybrid mode có tự nhiên không?')
+    .setHelpText('Quan sát viền ghép giữa vùng mặt (xử lý riêng) và nền (xử lý chung)')
     .setBounds(1, 5)
     .setLabels('Rất lộ, rõ ràng', 'Hoàn toàn không thấy')
     .setRequired(true);
 
-  // Landscape Mode
   form.addScaleItem()
-    .setTitle('3.9. Landscape Mode — Độ sắc nét khuôn mặt')
+    .setTitle('2.23. Mức độ bảo toàn đặc điểm nhận dạng (nhận ra là cùng một người)')
+    .setHelpText('So sánh ảnh gốc với ảnh Hybrid mode')
     .setBounds(1, 5)
-    .setLabels('Rất mờ', 'Rất sắc nét')
-    .setRequired(true);
-
-  form.addScaleItem()
-    .setTitle('3.10. Landscape Mode — Bảo toàn chi tiết (mắt, mũi, miệng)')
-    .setBounds(1, 5)
-    .setLabels('Mất hết chi tiết', 'Giữ đầy đủ')
-    .setRequired(true);
-
-  form.addScaleItem()
-    .setTitle('3.11. Landscape Mode — Bảo toàn nền / bối cảnh')
-    .setBounds(1, 5)
-    .setLabels('Mất nền', 'Giữ tốt')
-    .setRequired(true);
-
-  form.addScaleItem()
-    .setTitle('3.12. Landscape Mode — Tính tự nhiên tổng thể')
-    .setBounds(1, 5)
-    .setLabels('Rất giả', 'Rất tự nhiên')
-    .setRequired(true);
-
-  // Face Mode
-  form.addScaleItem()
-    .setTitle('3.13. Face Mode — Độ sắc nét khuôn mặt')
-    .setBounds(1, 5)
-    .setLabels('Rất mờ', 'Rất sắc nét')
-    .setRequired(true);
-
-  form.addScaleItem()
-    .setTitle('3.14. Face Mode — Bảo toàn chi tiết (mắt, mũi, miệng)')
-    .setBounds(1, 5)
-    .setLabels('Mất hết chi tiết', 'Giữ đầy đủ')
-    .setRequired(true);
-
-  form.addScaleItem()
-    .setTitle('3.15. Face Mode — Tính tự nhiên tổng thể')
-    .setBounds(1, 5)
-    .setLabels('Rất giả', 'Rất tự nhiên')
-    .setRequired(true);
-
-  // Xếp hạng tổng thể giữa 3 chế độ
-  form.addMultipleChoiceItem()
-    .setTitle('3.16. Tổng thể, bạn thích chế độ nào nhất cho ẢNH CHÂN DUNG ĐƠN (1 người)?')
-    .setChoiceValues([
-      'Hybrid Mode (kết hợp mặt + nền)',
-      'Landscape Mode (xử lý toàn ảnh)',
-      'Face Mode (chỉ vùng mặt)'
-    ])
-    .setRequired(true);
-
-  form.addMultipleChoiceItem()
-    .setTitle('3.17. Tổng thể, bạn thích chế độ nào nhất cho ẢNH NHÓM (nhiều người)?')
-    .setChoiceValues([
-      'Hybrid Mode (kết hợp mặt + nền)',
-      'Landscape Mode (xử lý toàn ảnh)',
-      'Face Mode (chỉ mặt lớn nhất)'
-    ])
+    .setLabels('Không nhận ra', 'Nhận ra ngay')
     .setRequired(true);
 
   // =====================================================
-  // PHẦN 4: ĐÁNH GIÁ MODULE FACE EXTRACTION
+  // PHẦN 3: ĐÁNH GIÁ MODULE TRÍCH XUẤT KHUÔN MẶT
+  // (DÀNH CHO NGƯỜI CÓ CHUYÊN MÔN KỸ THUẬT)
   // =====================================================
-  
+
   form.addPageBreakItem()
-    .setTitle('PHẦN 4: ĐÁNH GIÁ MODULE TRÍCH XUẤT KHUÔN MẶT (Face Extraction)')
+    .setTitle('PHẦN 3: ĐÁNH GIÁ MODULE TRÍCH XUẤT KHUÔN MẶT')
     .setHelpText(
+      '⚙️ PHẦN NÀY DÀNH CHO NGƯỜI CÓ CHUYÊN MÔN KỸ THUẬT\n' +
+      '(Kỹ sư CNTT, lập trình viên, nhà nghiên cứu, nhiếp ảnh gia, người sáng tạo nội dung)\n\n' +
       'Module Face Extraction sử dụng RetinaFace (mạng phát hiện khuôn mặt) để:\n' +
       '1. Tự động phát hiện khuôn mặt trong ảnh\n' +
       '2. Mở rộng vùng cắt (margin = 50%) để bao gồm tóc, tai, cổ\n' +
-      '3. Cắt và resize về 512×512 trước khi chuyển đổi anime\n\n' +
-      'Hãy đánh giá tầm quan trọng và hiệu quả của module này.'
+      '3. Cắt và resize về 512×512 trước khi chuyển đổi anime\n' +
+      '4. Ghép khuôn mặt đã chuyển đổi lại vào nền bằng feathered blending\n\n' +
+      'Nếu bạn không có chuyên môn kỹ thuật, có thể bỏ qua phần này.'
     );
 
   form.addScaleItem()
-    .setTitle('4.1. Tầm quan trọng: Việc phát hiện và cắt riêng khuôn mặt trước khi chuyển đổi anime có quan trọng không?')
+    .setTitle('3.1. Tầm quan trọng: Việc phát hiện và cắt riêng khuôn mặt trước khi chuyển đổi anime có quan trọng không?')
     .setHelpText('1 = Không quan trọng, xử lý toàn ảnh là đủ | 5 = Rất quan trọng, ảnh hưởng lớn đến chất lượng')
     .setBounds(1, 5)
     .setLabels('Không quan trọng', 'Rất quan trọng')
     .setRequired(true);
 
-  form.addScaleItem()
-    .setTitle('4.2. So sánh: Khi nhìn ảnh Face Mode (cắt mặt riêng) vs vùng mặt trong Landscape Mode, mức cải thiện chất lượng là?')
-    .setHelpText('1 = Không cải thiện / tệ hơn | 3 = Cải thiện vừa phải | 5 = Cải thiện rõ rệt')
-    .setBounds(1, 5)
-    .setLabels('Không cải thiện', 'Cải thiện rõ rệt')
-    .setRequired(true);
-
   form.addMultipleChoiceItem()
-    .setTitle('4.3. Vùng cắt khuôn mặt (margin) có bao gồm đủ bối cảnh không? (tóc, tai, cổ, vai)')
-    .setHelpText('Quan sát ảnh Face Mode (d1, d2, d3) — vùng cắt có đủ rộng không?')
+    .setTitle('3.2. Vùng cắt khuôn mặt (margin) có bao gồm đủ bối cảnh không? (tóc, tai, cổ, vai)')
+    .setHelpText(
+      '[THÊM ẢNH MINH HỌA TẠI ĐÂY]\n' +
+      'Hình minh họa: ảnh Face Mode cho thấy vùng cắt bao gồm tóc, tai, cổ.\n' +
+      'Quan sát ảnh và đánh giá vùng cắt có đủ rộng không.'
+    )
     .setChoiceValues([
       'Quá ít — Cắt mất tóc, tai',
       'Vừa đủ — Bao gồm đủ tóc, tai, cổ',
@@ -454,47 +432,69 @@ function createAnimeGANSurvey() {
     .setRequired(true);
 
   form.addScaleItem()
-    .setTitle('4.4. Chất lượng kết cấu da (skin texture) trong ảnh Face Mode')
+    .setTitle('3.3. Chất lượng kết cấu da (skin texture) trong ảnh Hybrid mode')
     .setHelpText('Ảnh anime nên có da mịn, đặc trưng phong cách hoạt hình')
     .setBounds(1, 5)
     .setLabels('Thô, giữ nguyên ảnh thật', 'Mịn, rất anime')
     .setRequired(true);
 
   form.addScaleItem()
-    .setTitle('4.5. Chất lượng mắt trong ảnh Face Mode')
+    .setTitle('3.4. Chất lượng MẮT trong ảnh Hybrid mode')
     .setHelpText('Mắt là đặc trưng quan trọng nhất trong anime — nên to, sáng, long lanh')
     .setBounds(1, 5)
     .setLabels('Không giống anime', 'Rất anime, long lanh')
     .setRequired(true);
 
   form.addScaleItem()
-    .setTitle('4.6. Bảo toàn biểu cảm khuôn mặt (expression) sau chuyển đổi')
+    .setTitle('3.5. Bảo toàn BIỂU CẢM khuôn mặt (expression) sau chuyển đổi')
     .setHelpText('Biểu cảm gốc (cười, nghiêm túc...) có được giữ lại trong ảnh anime không?')
     .setBounds(1, 5)
     .setLabels('Mất hoàn toàn biểu cảm', 'Giữ nguyên biểu cảm')
     .setRequired(true);
 
   form.addScaleItem()
-    .setTitle('4.7. Bảo toàn đặc điểm nhận diện cá nhân (khuôn mặt, kiểu tóc)')
+    .setTitle('3.6. Bảo toàn TÓC TAI (kiểu tóc, đường nét tóc)')
+    .setHelpText('Kiểu tóc gốc có được giữ lại? Đường nét tóc anime có đẹp không?')
+    .setBounds(1, 5)
+    .setLabels('Mất hoàn toàn', 'Giữ rất tốt')
+    .setRequired(true);
+
+  form.addScaleItem()
+    .setTitle('3.7. Bảo toàn đặc điểm nhận diện cá nhân (identity)')
     .setHelpText('Người xem có thể nhận ra đây là cùng một người với ảnh gốc không?')
     .setBounds(1, 5)
     .setLabels('Không nhận ra', 'Nhận ra ngay lập tức')
     .setRequired(true);
 
   // =====================================================
-  // PHẦN 5: SO SÁNH VỚI CÁC PHƯƠNG PHÁP / ỨNG DỤNG KHÁC
+  // PHẦN 4: SO SÁNH VỚI CÁC PHƯƠNG PHÁP KHÁC
+  // (Bộ ảnh dài, tiêu chí đồng bộ)
   // =====================================================
 
   form.addPageBreakItem()
-    .setTitle('PHẦN 5: SO SÁNH VỚI CÁC PHƯƠNG PHÁP KHÁC')
+    .setTitle('PHẦN 4: SO SÁNH VỚI CÁC PHƯƠNG PHÁP KHÁC')
     .setHelpText(
-      'Nếu bạn đã từng sử dụng các ứng dụng/filter chuyển đổi ảnh sang phong cách anime khác, ' +
-      'hãy so sánh với kết quả của AnimeGANv3.\n\n' +
-      'Nếu chưa từng dùng, hãy trả lời dựa trên cảm nhận của bạn về kết quả AnimeGANv3.'
+      'Phần này so sánh kết quả chuyển đổi anime của hệ thống với các ứng dụng phổ biến khác.\n\n' +
+      'Dưới đây là bộ ảnh so sánh: mỗi cột là kết quả từ một phương pháp/ứng dụng khác nhau.\n' +
+      'Hãy so sánh và đánh giá dựa trên các tiêu chí: MẮT, BIỂU CẢM, TÓC TAI.'
+    );
+
+  // Bộ ảnh so sánh dài
+  form.addSectionHeaderItem()
+    .setTitle('📸 Bộ ảnh so sánh: Phương pháp của chúng tôi vs TikTok, Snapchat và ứng dụng khác')
+    .setHelpText(
+      '[THÊM BỘ ẢNH SO SÁNH DÀI TẠI ĐÂY]\n' +
+      'Bố trí: mỗi cột là output của một phương pháp:\n' +
+      '• Cột 1: Ảnh Input (gốc)\n' +
+      '• Cột 2: Kết quả TikTok Anime Filter\n' +
+      '• Cột 3: Kết quả Snapchat Anime Lens\n' +
+      '• Cột 4: Kết quả ứng dụng khác\n' +
+      '• Cột 5: Kết quả Hybrid mode (hệ thống của chúng tôi)\n\n' +
+      'Nhiều dòng ảnh khác nhau để so sánh toàn diện.'
     );
 
   form.addCheckboxItem()
-    .setTitle('5.1. Bạn đã từng sử dụng ứng dụng/filter anime nào sau đây? (Chọn tất cả đã dùng)')
+    .setTitle('4.1. Bạn đã từng sử dụng ứng dụng/filter anime nào sau đây? (Chọn tất cả đã dùng)')
     .setChoiceValues([
       'TikTok Anime Filter',
       'Snapchat Anime Lens',
@@ -509,64 +509,51 @@ function createAnimeGANSurvey() {
     .showOtherOption(true)
     .setRequired(true);
 
-  form.addScaleItem()
-    .setTitle('5.2. So với các ứng dụng/filter anime bạn đã dùng, chất lượng ảnh anime của AnimeGANv3 như thế nào?')
-    .setHelpText('Nếu chưa từng dùng app khác, hãy chọn 3 (Trung bình)')
-    .setBounds(1, 5)
-    .setLabels('Kém hơn nhiều', 'Tốt hơn nhiều')
+  form.addMultipleChoiceItem()
+    .setTitle('4.2. Dựa trên bộ ảnh so sánh trên, bạn thích kết quả của phương pháp nào nhất?')
+    .setChoiceValues([
+      'TikTok Anime Filter',
+      'Snapchat Anime Lens',
+      'Ứng dụng khác',
+      'Hybrid mode (hệ thống của chúng tôi)',
+      'Không thấy khác biệt đáng kể'
+    ])
     .setRequired(true);
 
-  // Đánh giá grid cho các tiêu chí
-  var gridItem5_3 = form.addGridItem();
-  gridItem5_3.setTitle('5.3. Đánh giá AnimeGANv3 theo các tiêu chí so với ứng dụng anime khác');
-  gridItem5_3.setHelpText('1 = Kém hơn nhiều | 2 = Kém hơn | 3 = Tương đương | 4 = Tốt hơn | 5 = Tốt hơn nhiều');
-  gridItem5_3.setRows([
-    'Chất lượng khuôn mặt',
-    'Bảo toàn nhận dạng',
-    'Tính thẩm mỹ / đẹp mắt',
-    'Phong cách anime chân thực',
-    'Xử lý nền / bối cảnh',
-    'Đa dạng phong cách'
+  // Grid đánh giá theo tiêu chí đồng bộ: mắt, biểu cảm, tóc tai
+  var gridItem4_3 = form.addGridItem();
+  gridItem4_3.setTitle('4.3. Đánh giá Hybrid mode (hệ thống của chúng tôi) theo các tiêu chí so với ứng dụng khác');
+  gridItem4_3.setHelpText('1 = Kém hơn nhiều | 2 = Kém hơn | 3 = Tương đương | 4 = Tốt hơn | 5 = Tốt hơn nhiều');
+  gridItem4_3.setRows([
+    'Chất lượng MẮT',
+    'Bảo toàn BIỂU CẢM',
+    'Chất lượng TÓC TAI',
+    'Bảo toàn đặc điểm nhận dạng (identity)',
+    'Tính thẩm mỹ / đẹp mắt tổng thể'
   ]);
-  gridItem5_3.setColumns(['1 - Kém hơn nhiều', '2 - Kém hơn', '3 - Tương đương', '4 - Tốt hơn', '5 - Tốt hơn nhiều']);
-  gridItem5_3.setRequired(true);
-
-  // Xếp hạng tiêu chí quan trọng
-  var gridItem5_4 = form.addGridItem();
-  gridItem5_4.setTitle('5.4. Khi đánh giá ảnh anime, bạn coi trọng tiêu chí nào nhất?');
-  gridItem5_4.setHelpText('1 = Ít quan trọng | 5 = Cực kỳ quan trọng');
-  gridItem5_4.setRows([
-    'Chất lượng chi tiết khuôn mặt (mắt, mũi, miệng)',
-    'Bảo toàn đặc điểm nhận dạng cá nhân',
-    'Tính thẩm mỹ / đẹp mắt',
-    'Giống phong cách anime thực sự',
-    'Bảo toàn nền / bối cảnh',
-    'Không có lỗi / artifact',
-    'Tốc độ xử lý nhanh',
-    'Đa dạng phong cách (nhiều style khác nhau)'
-  ]);
-  gridItem5_4.setColumns(['1', '2', '3', '4', '5']);
-  gridItem5_4.setRequired(true);
+  gridItem4_3.setColumns(['1 - Kém hơn nhiều', '2 - Kém hơn', '3 - Tương đương', '4 - Tốt hơn', '5 - Tốt hơn nhiều']);
+  gridItem4_3.setRequired(true);
 
   // =====================================================
-  // PHẦN 6: ĐÁNH GIÁ ỨNG DỤNG THỰC TẾ
+  // PHẦN 5: ĐÁNH GIÁ TÍNH ỨNG DỤNG THỰC TẾ
+  // (Bỏ câu "sẵn sàng chờ bao lâu")
   // =====================================================
 
   form.addPageBreakItem()
-    .setTitle('PHẦN 6: ĐÁNH GIÁ TÍNH ỨNG DỤNG THỰC TẾ')
+    .setTitle('PHẦN 5: ĐÁNH GIÁ TÍNH ỨNG DỤNG THỰC TẾ')
     .setHelpText(
-      'Đánh giá khả năng ứng dụng thực tế của hệ thống AnimeGANv3 trong đời sống.'
+      'Đánh giá khả năng ứng dụng thực tế của hệ thống trong đời sống.'
     );
 
   form.addScaleItem()
-    .setTitle('6.1. Bạn có sẵn sàng sử dụng hệ thống này để chuyển đổi ảnh cá nhân không?')
+    .setTitle('5.1. Bạn có sẵn sàng sử dụng hệ thống này để chuyển đổi ảnh cá nhân không?')
     .setHelpText('1 = Hoàn toàn không | 5 = Chắc chắn sẽ dùng')
     .setBounds(1, 5)
     .setLabels('Hoàn toàn không', 'Chắc chắn sẽ dùng')
     .setRequired(true);
 
   form.addCheckboxItem()
-    .setTitle('6.2. Bạn sẽ sử dụng ảnh anime được tạo ra cho mục đích gì? (Chọn tất cả phù hợp)')
+    .setTitle('5.2. Bạn sẽ sử dụng ảnh anime được tạo ra cho mục đích gì? (Chọn tất cả phù hợp)')
     .setChoiceValues([
       'Ảnh đại diện (avatar) trên mạng xã hội',
       'Chia sẻ trên Facebook / Instagram / TikTok',
@@ -581,14 +568,14 @@ function createAnimeGANSurvey() {
     .setRequired(true);
 
   form.addScaleItem()
-    .setTitle('6.3. Nếu hệ thống này là một ứng dụng web miễn phí, bạn có giới thiệu cho bạn bè không?')
+    .setTitle('5.3. Nếu hệ thống này là một ứng dụng web miễn phí, bạn có giới thiệu cho bạn bè không?')
     .setHelpText('1 = Chắc chắn không | 5 = Chắc chắn sẽ giới thiệu')
     .setBounds(1, 5)
     .setLabels('Chắc chắn không', 'Chắc chắn giới thiệu')
     .setRequired(true);
 
   form.addMultipleChoiceItem()
-    .setTitle('6.4. Bạn mong muốn sử dụng hệ thống trên nền tảng nào?')
+    .setTitle('5.4. Bạn mong muốn sử dụng hệ thống trên nền tảng nào?')
     .setChoiceValues([
       'Website (truy cập bằng trình duyệt)',
       'Ứng dụng điện thoại (iOS/Android)',
@@ -599,15 +586,8 @@ function createAnimeGANSurvey() {
     .showOtherOption(true)
     .setRequired(true);
 
-  form.addScaleItem()
-    .setTitle('6.5. Bạn sẵn sàng chờ bao lâu để xử lý MỘT ảnh? (Đánh giá mức chấp nhận)')
-    .setHelpText('1 = Phải dưới 1 giây | 2 = Dưới 3 giây | 3 = Dưới 10 giây | 4 = Dưới 30 giây | 5 = Không quan tâm thời gian')
-    .setBounds(1, 5)
-    .setLabels('Dưới 1 giây', 'Không quan tâm')
-    .setRequired(true);
-
   form.addMultipleChoiceItem()
-    .setTitle('6.6. Bạn có sẵn sàng trả phí cho dịch vụ chuyển đổi ảnh anime chất lượng cao không?')
+    .setTitle('5.5. Bạn có sẵn sàng trả phí cho dịch vụ chuyển đổi ảnh anime chất lượng cao không?')
     .setChoiceValues([
       'Không, tôi chỉ dùng miễn phí',
       'Có, nếu giá dưới 10.000 VNĐ/ảnh',
@@ -619,7 +599,7 @@ function createAnimeGANSurvey() {
 
   // Đánh giá giao diện web (nếu đã trải nghiệm)
   form.addMultipleChoiceItem()
-    .setTitle('6.7. Bạn đã trải nghiệm giao diện web / ứng dụng demo của hệ thống chưa?')
+    .setTitle('5.6. Bạn đã trải nghiệm giao diện web / ứng dụng demo của hệ thống chưa?')
     .setChoiceValues([
       'Đã trải nghiệm',
       'Chưa trải nghiệm'
@@ -627,25 +607,26 @@ function createAnimeGANSurvey() {
     .setRequired(true);
 
   form.addScaleItem()
-    .setTitle('6.8. [Nếu đã trải nghiệm] Đánh giá giao diện web / ứng dụng demo')
+    .setTitle('5.7. [Nếu đã trải nghiệm] Đánh giá giao diện web / ứng dụng demo')
     .setHelpText('Bỏ qua nếu chưa trải nghiệm. 1 = Rất khó dùng | 5 = Rất dễ dùng, đẹp')
     .setBounds(1, 5)
     .setLabels('Rất khó dùng', 'Rất dễ dùng')
     .setRequired(false);
 
   form.addScaleItem()
-    .setTitle('6.9. [Nếu đã trải nghiệm] Tốc độ xử lý ảnh có chấp nhận được không?')
+    .setTitle('5.8. [Nếu đã trải nghiệm] Tốc độ xử lý ảnh có chấp nhận được không?')
     .setHelpText('Bỏ qua nếu chưa trải nghiệm. 1 = Quá chậm | 5 = Rất nhanh')
     .setBounds(1, 5)
     .setLabels('Quá chậm', 'Rất nhanh')
     .setRequired(false);
 
   // =====================================================
-  // PHẦN 7: Ý KIẾN MỞ VÀ GÓP Ý
+  // PHẦN 6: Ý KIẾN MỞ VÀ GÓP Ý
+  // (Rút gọn: 2 câu hỏi mở + điểm tổng thể)
   // =====================================================
 
   form.addPageBreakItem()
-    .setTitle('PHẦN 7: Ý KIẾN MỞ VÀ GÓP Ý')
+    .setTitle('PHẦN 6: Ý KIẾN MỞ VÀ GÓP Ý')
     .setHelpText(
       'Cảm ơn bạn đã kiên nhẫn trả lời đến đây! 🙏\n\n' +
       'Phần cuối cùng này dành cho những ý kiến tự do của bạn. ' +
@@ -653,45 +634,17 @@ function createAnimeGANSurvey() {
     );
 
   form.addParagraphTextItem()
-    .setTitle('7.1. Theo bạn, ưu điểm NỔI BẬT NHẤT của hệ thống AnimeGANv3 là gì?')
+    .setTitle('6.1. Theo bạn, ưu điểm NỔI BẬT NHẤT của hệ thống là gì?')
     .setHelpText('Có thể viết ngắn gọn hoặc chi tiết tùy ý')
     .setRequired(false);
 
   form.addParagraphTextItem()
-    .setTitle('7.2. Theo bạn, nhược điểm hoặc điểm cần CẢI THIỆN nhất là gì?')
-    .setHelpText('Ví dụ: chất lượng mắt, đường nét, màu sắc, tốc độ, giao diện...')
-    .setRequired(false);
-
-  form.addParagraphTextItem()
-    .setTitle('7.3. Bạn mong muốn tính năng gì thêm cho hệ thống?')
-    .setHelpText('Ví dụ: nhiều phong cách anime, xử lý video, tùy chỉnh mức độ chuyển đổi...')
-    .setRequired(false);
-
-  form.addCheckboxItem()
-    .setTitle('7.4. Bạn muốn hệ thống hỗ trợ phong cách anime của đạo diễn/studio nào? (Chọn tất cả)')
-    .setChoiceValues([
-      'Hayao Miyazaki (Studio Ghibli) — Spirited Away, Totoro',
-      'Makoto Shinkai — Your Name, Weathering With You',
-      'Satoshi Kon — Perfect Blue, Paprika',
-      'Mamoru Hosoda — Wolf Children, The Boy and the Beast',
-      'Kyoto Animation (KyoAni) — Violet Evergarden, K-On!',
-      'Ufotable — Demon Slayer (Kimetsu no Yaiba)',
-      'MAPPA — Jujutsu Kaisen, Attack on Titan',
-      'A-1 Pictures — Sword Art Online, Kaguya-sama',
-      'Phong cách manga (trắng đen)',
-      'Phong cách chibi / dễ thương',
-      'Không có ý kiến'
-    ])
-    .showOtherOption(true)
-    .setRequired(false);
-
-  form.addParagraphTextItem()
-    .setTitle('7.5. Góp ý tự do / Bất kỳ ý kiến nào khác')
-    .setHelpText('Cảm ơn bạn! Mọi ý kiến đều được trân trọng.')
+    .setTitle('6.2. Theo bạn, nhược điểm hoặc điểm cần CẢI THIỆN nhất là gì?')
+    .setHelpText('Ví dụ: chất lượng mắt, đường nét, tóc, tốc độ, giao diện...')
     .setRequired(false);
 
   form.addScaleItem()
-    .setTitle('7.6. Đánh giá tổng thể: Bạn hài lòng bao nhiêu với kết quả chuyển đổi ảnh anime của AnimeGANv3?')
+    .setTitle('6.3. Đánh giá tổng thể: Bạn hài lòng bao nhiêu với kết quả chuyển đổi ảnh anime của hệ thống?')
     .setHelpText('Đây là đánh giá tổng hợp cuối cùng của bạn')
     .setBounds(1, 10)
     .setLabels('Rất không hài lòng', 'Cực kỳ hài lòng')
@@ -708,11 +661,13 @@ function createAnimeGANSurvey() {
   Logger.log('📌 BƯỚC TIẾP THEO:');
   Logger.log('1. Mở URL chỉnh sửa ở trên');
   Logger.log('2. Thêm ảnh vào các vị trí đã đánh dấu [THÊM ẢNH TẠI ĐÂY]');
-  Logger.log('3. Upload ảnh từ thư mục figChap3/style_results/ của repo');
-  Logger.log('4. Tùy chỉnh theme/màu sắc form theo ý muốn');
-  Logger.log('5. Gửi form cho người tham gia khảo sát');
+  Logger.log('3. Bố trí ảnh: phóng to khuôn mặt nhét vào góc trên bên phải ảnh chính');
+  Logger.log('4. Mỗi bộ ảnh gồm 3 ảnh: Input, Lens mode, Hybrid mode');
+  Logger.log('5. Phần so sánh TikTok/Snapchat: tạo ảnh dạng grid (mỗi cột = 1 phương pháp)');
+  Logger.log('6. Tùy chỉnh theme/màu sắc form theo ý muốn');
+  Logger.log('7. Gửi form cho người tham gia khảo sát');
   
-  // Hiển thị hộp thoại với URL (nếu chạy từ container-bound script, nếu không sẽ bỏ qua)
+  // Hiển thị hộp thoại với URL (nếu chạy từ container-bound script)
   try {
     var ui = FormApp.getUi();
     ui.alert(
@@ -741,22 +696,19 @@ function createImageFolder() {
   Logger.log('');
   Logger.log('Hãy upload các ảnh sau vào thư mục này:');
   Logger.log('');
-  Logger.log('Ảnh gốc:');
-  Logger.log('  • a1.png — Ảnh chân dung đơn (cô gái bãi biển)');
-  Logger.log('  • a2.png — Ảnh nhóm (2 người)');
-  Logger.log('  • a3.png — Ảnh góc nghiêng');
+  Logger.log('=== 5 BỘ ẢNH SO SÁNH (Input vs Lens vs Hybrid) ===');
+  Logger.log('Mỗi bộ gồm 3 ảnh, khuôn mặt phóng to nhét góc trên phải:');
+  Logger.log('  Bộ 1: Ảnh chân dung đơn (thẳng mặt)');
+  Logger.log('  Bộ 2: Ảnh nhóm (nhiều người)');
+  Logger.log('  Bộ 3: Ảnh chân dung góc nghiêng');
+  Logger.log('  Bộ 4: Ảnh chân dung đơn (khác)');
+  Logger.log('  Bộ 5: Ảnh đa dạng');
   Logger.log('');
-  Logger.log('Kết quả Hybrid Mode:');
-  Logger.log('  • e1.jpg, e2.jpg, e3.jpg');
+  Logger.log('=== BỘ ẢNH SO SÁNH DÀI (vs TikTok/Snapchat) ===');
+  Logger.log('  Grid: Input | TikTok | Snapchat | Ứng dụng khác | Hybrid mode');
   Logger.log('');
-  Logger.log('Kết quả Landscape Mode:');
-  Logger.log('  • b1.jpg, b2.jpg, b3.jpg');
-  Logger.log('');
-  Logger.log('Cắt mặt từ Landscape:');
-  Logger.log('  • c1.png, c2.png, c3.png');
-  Logger.log('');
-  Logger.log('Kết quả Face Mode:');
-  Logger.log('  • d1.jpg, d2.jpg, d3.jpg');
+  Logger.log('=== ẢNH MINH HỌA MODULE FACE EXTRACTION ===');
+  Logger.log('  Ảnh Face Mode cho thấy vùng cắt bao gồm tóc, tai, cổ');
   
   return folder;
 }

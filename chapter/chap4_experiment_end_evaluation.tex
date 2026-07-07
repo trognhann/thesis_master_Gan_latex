@@ -85,11 +85,10 @@ Tập dữ liệu ảnh thực dùng cho huấn luyện bao gồm ảnh chân du
 \subsection{Dữ liệu Ảnh Anime (Style)}
 \label{subsec:anime_data}
 
-Dữ liệu phong cách anime được trích xuất từ phim hoạt hình của các đạo diễn nổi tiếng:
+Dữ liệu phong cách anime được trích xuất từ phim hoạt hình của các đạo diễn nổi tiếng, bao gồm hai tập chính:
 \begin{itemize}
-    \item \textbf{Hayao Miyazaki:} Các frame từ phim \textit{Spirited Away}, \textit{My Neighbor Totoro} — phong cách warm, giàu màu sắc tự nhiên, đường nét mềm mại.
-    \item \textbf{Makoto Shinkai:} Các frame từ \textit{Your Name}, \textit{Weathering With You} — phong cách lạnh, ánh sáng cinematic, chi tiết mịn.
-    \item \textbf{Phong cách khác:} Thêm các phong cách anime đa dạng để mở rộng khả năng chuyển đổi.
+    \item \textbf{Hayao Miyazaki:} Các frame từ phim \textit{Spirited Away}, \textit{My Neighbor Totoro} — phong cách warm, giàu màu sắc tự nhiên, đường nét mềm mại. % TODO: Bổ sung số lượng ảnh cụ thể
+    \item \textbf{Makoto Shinkai:} Các frame từ \textit{Your Name}, \textit{Weathering With You} — phong cách lạnh, ánh sáng cinematic, chi tiết mịn. % TODO: Bổ sung số lượng ảnh cụ thể
 \end{itemize}
 
 Mỗi tập anime đi kèm tập \texttt{smooth/} được tạo bằng Edge Smoothing — làm mờ nhẹ vùng biên trong ảnh anime, phục vụ Discriminator tập trung vào đường nét sắc nét.
@@ -195,6 +194,15 @@ Kích thước model (MB) & -- & Dung lượng file ONNX \\
 \hline
 \end{tabular}
 \end{table}
+
+Chỉ số LPIPS (Learned Perceptual Image Patch Similarity) \cite{Zhang2018LPIPS} đo sự khác biệt tri giác giữa hai ảnh bằng cách so sánh đặc trưng sâu (deep features) tại nhiều tầng của mạng VGG hoặc AlexNet. Công thức tính LPIPS như sau:
+
+\begin{equation}
+\label{eq:lpips}
+d(x, x_0) = \sum_{l} \frac{1}{H_l W_l} \sum_{h,w} \left\| w_l \odot \left( \hat{\phi}_l^{hw}(x) - \hat{\phi}_l^{hw}(x_0) \right) \right\|_2^2
+\end{equation}
+
+trong đó $\hat{\phi}_l^{hw}$ là đặc trưng đã chuẩn hóa tại tầng $l$, vị trí $(h, w)$ của mạng tri giác (perceptual network), và $w_l$ là trọng số học được cho tầng $l$. Giá trị LPIPS thấp hơn chỉ ra hai ảnh giống nhau hơn về cảm nhận thị giác \cite{Zhang2018LPIPS}.
 
 \subsection{Kết quả So sánh Định lượng}
 \label{subsec:quantitative_results}
@@ -457,23 +465,12 @@ Góc nghiêng $>60°$ & Bounding box không chính xác & Kết quả kém; cầ
 \subsection{Điểm mạnh của Hệ thống}
 \label{subsec:strengths}
 
-\begin{itemize}
-    \item \textbf{Chất lượng ảnh đầu ra cao:} FID 58.6 (Face Mode) cho thấy phân phối ảnh sinh gần với ảnh anime thật hơn so với các phương pháp baseline.
-    \item \textbf{Hiệu năng tốt:} 42 FPS ở $256\times256$ (GPU) và model size chỉ 9.1 MB ONNX phù hợp cho deployment thực tế.
-    \item \textbf{Kiến trúc Double-Tail hiệu quả:} Hai nhánh decoder chuyên biệt học các đặc trưng bổ sung nhau -- Support Tail cho đường nét, Main Tail cho chi tiết mịn.
-    \item \textbf{LADE normalization:} Tự thích ứng tham số chuẩn hóa linh hoạt hơn Instance Norm cố định.
-    \item \textbf{Pipeline tích hợp:} Từ phát hiện mặt đến chuyển đổi và hiển thị trong một luồng seamless.
-\end{itemize}
+Hệ thống đạt được nhiều điểm mạnh đáng chú ý. Về chất lượng ảnh đầu ra, chỉ số FID 58.6 ở chế độ Face Mode cho thấy phân phối ảnh sinh ra gần với ảnh anime thật hơn đáng kể so với các phương pháp baseline như CycleGAN (FID 98.4) và CartoonGAN (FID 84.7). Đồng thời, hệ thống đạt hiệu năng cao với 42 FPS ở độ phân giải $256\times256$ trên GPU và model size chỉ 9.1 MB ONNX, phù hợp cho triển khai thực tế. Kiến trúc Double-Tail của DTGAN đóng vai trò then chốt, khi hai nhánh decoder chuyên biệt học các đặc trưng bổ sung nhau: Support Tail tập trung vào đường nét và cấu trúc hình khối, trong khi Main Tail tinh chỉnh chi tiết mịn và phân phối màu sắc. Kỹ thuật chuẩn hóa LADE cũng góp phần quan trọng nhờ khả năng tự thích ứng tham số chuẩn hóa từ chính dữ liệu, linh hoạt hơn Instance Normalization cố định. Ngoài ra, pipeline tích hợp từ phát hiện khuôn mặt đến chuyển đổi và hiển thị hoạt động liền mạch trong một luồng xử lý thống nhất.
 
 \subsection{Hạn chế và Định hướng Cải thiện}
 \label{subsec:limitations}
 
-\begin{itemize}
-    \item \textbf{Phụ thuộc chất lượng dữ liệu:} Chất lượng và đa dạng của tập anime style ảnh hưởng trực tiếp đến phong cách học được.
-    \item \textbf{Khuôn mặt nghiêng lớn:} RetinaFace MobileNet 0.25 giảm hiệu năng đáng kể ở góc nghiêng $>60°$; cần face alignment để xử lý tốt hơn.
-    \item \textbf{Chưa hỗ trợ video real-time:} Pipeline hiện tại xử lý frame-by-frame độc lập, chưa tối ưu cho video (flickering giữa các frame).
-    \item \textbf{Chi phí tính toán Hybrid Mode:} Thời gian xử lý tăng tuyến tính theo số khuôn mặt ($1 + N$ lần suy luận ONNX), có thể chậm với ảnh nhóm đông ($N > 5$).
-\end{itemize}
+Bên cạnh những điểm mạnh, hệ thống vẫn còn một số hạn chế cần lưu ý. Trước hết, chất lượng đầu ra phụ thuộc đáng kể vào chất lượng và tính đa dạng của tập dữ liệu anime phong cách — nếu tập dữ liệu không đủ đại diện, mô hình có thể bị overfitting vào một phong cách hẹp. Về mặt xử lý khuôn mặt, RetinaFace MobileNet 0.25 giảm hiệu năng đáng kể ở góc nghiêng lớn ($>60°$), khiến bounding box không chính xác và ảnh hưởng đến chất lượng chuyển đổi. Một hạn chế khác là pipeline hiện tại xử lý video theo từng frame độc lập, chưa có cơ chế đảm bảo tính nhất quán giữa các frame liên tiếp (temporal consistency), dẫn đến hiệu ứng nhấp nháy (flickering) khi xem video đầu ra. Cuối cùng, chi phí tính toán của chế độ Hybrid Mode tăng tuyến tính theo số khuôn mặt ($1 + N$ lần suy luận ONNX), có thể chậm với ảnh nhóm đông ($N > 5$).
 
 \section*{Tổng kết chương}
 
