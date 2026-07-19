@@ -331,6 +331,87 @@ StyleGAN+Enc \cite{Richardson2021} & 61.8 & 37.1 & 124 & Không cặp \\
 Qua phân tích Bảng~\ref{tab:anime_gan_comparison} và Hình~\ref{fig:gan_radar_comparison}, \textbf{AnimeGANv3 (DTGAN)} được chọn làm nền tảng cho luận văn vì: (1) FID thấp nhất, (2) số tham số nhỏ nhất, (3) tốc độ suy luận nhanh nhất, phù hợp ứng dụng thời gian thực \cite{Liu2024}. Tuy nhiên, AnimeGANv3 vẫn gặp hạn chế khi xử lý khuôn mặt có tỉ lệ nhỏ trong ảnh -- động lực cho việc tích hợp module phát hiện khuôn mặt (Chương~3).
 
 % =====================================================
+\section{Mô hình Khuếch tán và So sánh với GAN}
+\label{sec:diffusion_models}
+
+Bên cạnh các mô hình GAN được phân tích ở trên, một họ mô hình tạo sinh khác đã thu hút sự chú ý lớn trong cộng đồng nghiên cứu gần đây là mô hình khuếch tán (Diffusion Models). Dhariwal và Nichol \cite{Dhariwal2021} đã chứng minh rằng mô hình khuếch tán có thể vượt trội GAN về chất lượng sinh ảnh trên một số tập chuẩn. Mục này giới thiệu nguyên lý cơ bản của mô hình khuếch tán, các ứng dụng cho bài toán chuyển phong cách, và đặc biệt là phân tích so sánh với hướng tiếp cận GAN nhằm biện luận cho lựa chọn kiến trúc của luận văn.
+
+\subsection{Nguyên lý Hoạt động của Mô hình Khuếch tán}
+\label{subsec:diffusion_principle}
+
+Mô hình khuếch tán xác suất khử nhiễu (Denoising Diffusion Probabilistic Model -- DDPM) do Ho et al. \cite{Ho2020} đề xuất hoạt động dựa trên hai quá trình ngược chiều nhau. Quá trình \textit{khuếch tán thuận} (forward diffusion process) biến đổi dữ liệu gốc $x_0$ thành nhiễu Gaussian thuần túy $x_T$ bằng cách thêm nhiễu dần dần qua $T$ bước:
+\begin{equation}
+q(x_t | x_{t-1}) = \mathcal{N}\!\left(x_t; \sqrt{1 - \beta_t}\,x_{t-1},\; \beta_t\, \mathbf{I}\right)
+\label{eq:forward_diffusion}
+\end{equation}
+trong đó $\beta_t$ là lịch trình nhiễu (noise schedule) tăng dần theo bước thời gian $t$. Nhờ tính chất cộng tính của phân phối Gaussian, có thể tính trực tiếp $x_t$ tại bất kỳ bước nào từ $x_0$ mà không cần thực hiện tuần tự:
+\begin{equation}
+x_t = \sqrt{\bar{\alpha}_t}\,x_0 + \sqrt{1 - \bar{\alpha}_t}\,\epsilon, \quad \epsilon \sim \mathcal{N}(0, \mathbf{I})
+\label{eq:forward_closed}
+\end{equation}
+trong đó $\bar{\alpha}_t = \prod_{s=1}^{t}(1 - \beta_s)$ là tích luỹ của hệ số giữ tín hiệu.
+
+Quá trình \textit{khuếch tán ngược} (reverse diffusion process) huấn luyện một mạng nơ-ron $\epsilon_\theta(x_t, t)$ để dự đoán thành phần nhiễu $\epsilon$ đã được thêm vào, từ đó khôi phục dần dữ liệu gốc từ nhiễu. Hàm mục tiêu huấn luyện có dạng đơn giản hoá \cite{Ho2020}:
+\begin{equation}
+\mathcal{L}_{\text{simple}} = \mathbb{E}_{t,\, x_0,\, \epsilon}\!\left[\left\| \epsilon - \epsilon_\theta(x_t, t) \right\|^2\right]
+\label{eq:diffusion_loss}
+\end{equation}
+
+Song et al. \cite{Song2021} đã thống nhất DDPM và các phương pháp dựa trên hàm điểm (score-based) dưới khuôn khổ phương trình vi phân ngẫu nhiên (Stochastic Differential Equations -- SDEs), mở ra nhiều thuật toán lấy mẫu linh hoạt hơn. Tuy nhiên, điểm yếu cố hữu của mô hình khuếch tán là quá trình lấy mẫu yêu cầu nhiều bước lặp khử nhiễu (thường từ 20 đến 1000 bước), dẫn đến tốc độ sinh ảnh chậm hơn đáng kể so với GAN (chỉ cần một lần forward pass).
+
+\subsection{Mô hình Khuếch tán cho Chuyển Phong cách}
+\label{subsec:diffusion_style_transfer}
+
+Ứng dụng mô hình khuếch tán vào bài toán chuyển phong cách ảnh đã phát triển nhanh chóng qua nhiều hướng tiếp cận. Rombach et al. \cite{Rombach2022} đề xuất mô hình khuếch tán ẩn (Latent Diffusion Models -- LDMs) thực hiện quá trình khuếch tán trong không gian tiềm ẩn (latent space) của một bộ mã hóa tự động (autoencoder), giúp giảm đáng kể chi phí tính toán so với khuếch tán trực tiếp trên không gian pixel. Mô hình Stable Diffusion được xây dựng trên nền tảng LDM và đã trở thành công cụ sinh ảnh phổ biến nhất hiện nay.
+
+Để kiểm soát đầu ra theo phong cách anime, một số phương pháp bổ trợ đã được phát triển. Zhang et al. \cite{Zhang2023ControlNet} đề xuất ControlNet -- một kiến trúc cho phép thêm điều kiện hình học (cạnh, pose, bản đồ độ sâu) vào quá trình sinh ảnh của mô hình khuếch tán, qua đó giúp bảo toàn cấu trúc không gian của ảnh gốc trong khi vẫn thay đổi phong cách. Kim và Ye \cite{Kim2022DiffusionCLIP} giới thiệu DiffusionCLIP -- phương pháp kết hợp mô hình khuếch tán với CLIP để thực hiện chuyển phong cách dựa trên mô tả văn bản (text-guided). Zhang et al. \cite{Zhang2023InST} đề xuất InST (Inversion-Based Style Transfer) sử dụng nghịch đảo nhiễu học được (learned noise inversion) để trích xuất và chuyển phong cách mà không cần prompt văn bản.
+
+\subsection{So sánh GAN và Mô hình Khuếch tán cho Bài toán Anime}
+\label{subsec:gan_vs_diffusion}
+
+Để đánh giá vị trí của hướng tiếp cận GAN trong bối cảnh mô hình khuếch tán đang chiếm ưu thế, Bảng~\ref{tab:gan_vs_diffusion} so sánh hệ thống AnimeGANv3 được sử dụng trong luận văn với phương pháp Stable Diffusion kết hợp ControlNet \cite{Rombach2022, Zhang2023ControlNet} -- một trong những giải pháp dựa trên khuếch tán phổ biến nhất cho chuyển phong cách anime.
+
+\begin{table}[H]
+\caption{So sánh GAN (AnimeGANv3) và Mô hình Khuếch tán (Stable Diffusion + ControlNet) cho bài toán chuyển phong cách anime}
+\label{tab:gan_vs_diffusion}
+\centering
+\begin{tabular}{|p{3.5cm}|p{4.5cm}|p{5.5cm}|}
+\hline
+\textbf{Tiêu chí} & \textbf{AnimeGANv3 (GAN)} & \textbf{SD + ControlNet (Diffusion)} \\
+\hline
+Kích thước mô hình & 9.1~MB (ONNX) & 2--7~GB (FP16--FP32) \\
+\hline
+Tốc độ suy luận (GPU) & 42~FPS ($256^2$), 18~FPS ($512^2$) & 0.5--2~FPS ($512^2$, 20--50 steps) \\
+\hline
+Yêu cầu VRAM & $\sim$2~GB & 8--16~GB \\
+\hline
+Huấn luyện / Fine-tune & $\sim$6h trên 1 GPU (RTX A5000) & Hàng ngày trên multi-GPU (LoRA); pre-train gốc hàng tuần trên cluster \\
+\hline
+Chất lượng ảnh (FID) & 58.4 & $\sim$45--55\textsuperscript{*} \\
+\hline
+Bảo toàn danh tính & Cần module Face riêng & Hỗ trợ qua IP-Adapter, ControlNet \\
+\hline
+Tính xác định & Deterministic (cùng input $\Rightarrow$ cùng output) & Stochastic (kết quả khác nhau mỗi lần) \\
+\hline
+Triển khai Edge/Mobile & Khả thi (9.1 MB, real-time) & Không khả thi (quá nặng) \\
+\hline
+\end{tabular}
+\vspace{0.3em}
+\noindent\textsuperscript{*}Giá trị FID tham khảo từ các báo cáo cộng đồng trên tập anime tương đương; chưa đo trực tiếp trên cùng tập dữ liệu.
+\end{table}
+
+\subsection{Biện luận Lựa chọn GAN}
+\label{subsec:gan_justification}
+
+Từ Bảng~\ref{tab:gan_vs_diffusion}, có thể nhận thấy mô hình khuếch tán có tiềm năng đạt chất lượng ảnh cao hơn (FID thấp hơn) nhờ quá trình sinh ảnh nhiều bước cho phép tinh chỉnh dần dần kết quả. Tuy nhiên, ưu thế này đi kèm chi phí rất lớn về tốc độ và tài nguyên tính toán. Trong khi AnimeGANv3 đạt 42 khung hình mỗi giây ở độ phân giải $256 \times 256$ chỉ với 9.1~MB dung lượng mô hình và khoảng 2~GB bộ nhớ GPU, các phương pháp dựa trên khuếch tán yêu cầu 2--7~GB dung lượng mô hình, 8--16~GB VRAM và chỉ đạt tốc độ 0.5--2 khung hình mỗi giây -- chậm hơn từ 20 đến 80 lần.
+
+Ngoài sự khác biệt về hiệu năng, hai hướng tiếp cận còn khác nhau căn bản về tính xác định của đầu ra. GAN sinh kết quả xác định (deterministic): cùng một ảnh đầu vào luôn cho cùng một ảnh anime đầu ra, đảm bảo tính nhất quán khi triển khai trong sản phẩm thực tế. Ngược lại, mô hình khuếch tán có tính ngẫu nhiên nội tại (stochastic) do phụ thuộc vào nhiễu khởi tạo và quá trình lấy mẫu -- cùng một ảnh đầu vào có thể cho kết quả khác nhau ở mỗi lần chạy, gây khó khăn cho các ứng dụng yêu cầu đầu ra ổn định.
+
+Một điểm quan trọng khác là khả năng triển khai thực tế. Trong kỷ nguyên của các mô hình khuếch tán khổng lồ tiêu tốn hàng chục gigabyte bộ nhớ GPU và mất vài giây để sinh một bức ảnh, hệ thống GAN nhẹ như AnimeGANv3 đại diện cho một hướng tiếp cận cực kỳ thực tế: khả năng triển khai trên thiết bị di động, máy chủ web cấu hình thấp, hoặc các hệ thống nhúng -- những môi trường mà mô hình khuếch tán hiện tại không thể hoạt động. Hướng nghiên cứu này thuộc nhánh trí tuệ nhân tạo trên thiết bị cấu hình hạn chế (Resource-Constrained Edge AI) \cite{Ho2020, Rombach2022} -- một lĩnh vực ngày càng quan trọng khi nhu cầu xử lý AI tại biên (edge computing) gia tăng.
+
+Tóm lại, luận văn lựa chọn hướng tiếp cận GAN (cụ thể là AnimeGANv3/DTGAN) thay vì mô hình khuếch tán dựa trên ba tiêu chí: tốc độ thời gian thực (42~FPS so với dưới 2~FPS), dung lượng triển khai nhỏ gọn (9.1~MB so với hàng gigabyte), và tính xác định của đầu ra. So sánh chi tiết hơn về hiệu năng thực tế sẽ được trình bày trong phần Thảo luận (Chương~4).
+
+% =====================================================
 \section{Phát hiện Khuôn mặt -- Sơ bộ}
 \label{sec:face_detection_overview}
 
@@ -405,6 +486,7 @@ Chương 1 đã cung cấp nền tảng lý thuyết cần thiết cho luận v�
     \item \textbf{CNN:} Các thành phần cơ bản (tích chập, chuẩn hóa, encoder-decoder) tạo nền tảng kiến trúc cho Generator và Discriminator.
     \item \textbf{GAN:} Nguyên lý minimax, các thách thức huấn luyện (vanishing gradient, mode collapse), và giải pháp (WGAN-GP, SN, LSGAN). Chỉ số FID là thước đo chất lượng chính.
     \item \textbf{GAN cho Anime:} AnimeGANv3 (DTGAN) được chọn nhờ FID thấp nhất, số tham số ít nhất và tốc độ nhanh nhất trong các mô hình so sánh.
+    \item \textbf{Diffusion Models:} Mô hình khuếch tán đạt chất lượng ảnh tiềm năng cao hơn, nhưng tốc độ chậm hơn 20--80 lần, dung lượng lớn hơn hàng trăm lần, và yêu cầu tài nguyên tính toán vượt quá khả năng triển khai trên thiết bị cấu hình hạn chế. GAN được lựa chọn dựa trên tiêu chí tốc độ thời gian thực, dung lượng nhỏ gọn, và tính xác định đầu ra.
     \item \textbf{Face Detection:} RetinaFace MobileNet-0.25 được chọn nhờ cân bằng tốc độ, độ chính xác đa tỉ lệ và hỗ trợ facial landmarks.
 \end{itemize}
 

@@ -472,6 +472,34 @@ Hệ thống đạt được nhiều điểm mạnh đáng chú ý. Về chất 
 
 Bên cạnh những điểm mạnh, hệ thống vẫn còn một số hạn chế cần lưu ý. Trước hết, chất lượng đầu ra phụ thuộc đáng kể vào chất lượng và tính đa dạng của tập dữ liệu anime phong cách — nếu tập dữ liệu không đủ đại diện, mô hình có thể bị overfitting vào một phong cách hẹp. Về mặt xử lý khuôn mặt, RetinaFace MobileNet 0.25 giảm hiệu năng đáng kể ở góc nghiêng lớn ($>60°$), khiến bounding box không chính xác và ảnh hưởng đến chất lượng chuyển đổi. Một hạn chế khác là pipeline hiện tại xử lý video theo từng frame độc lập, chưa có cơ chế đảm bảo tính nhất quán giữa các frame liên tiếp (temporal consistency), dẫn đến hiệu ứng nhấp nháy (flickering) khi xem video đầu ra. Cuối cùng, chi phí tính toán của chế độ Hybrid Mode tăng tuyến tính theo số khuôn mặt ($1 + N$ lần suy luận ONNX), có thể chậm với ảnh nhóm đông ($N > 5$).
 
+\subsection{So sánh với Mô hình Khuếch tán}
+\label{subsec:diffusion_comparison}
+
+Như đã phân tích lý thuyết ở Chương~1 (Mục~\ref{subsec:gan_vs_diffusion}), mô hình khuếch tán (Diffusion Models) đã trở thành hướng tiếp cận thống trị trong lĩnh vực sinh ảnh. Tuy nhiên, kết quả thực nghiệm của luận văn khẳng định rằng hướng tiếp cận GAN gọn nhẹ vẫn có giá trị thực tiễn rất lớn trong ngữ cảnh triển khai có ràng buộc tài nguyên.
+
+\begin{table}[H]
+\caption{So sánh hiệu năng thực tế giữa hệ thống AnimeGANv3 và phương pháp dựa trên Diffusion cho bài toán chuyển phong cách anime}
+\label{tab:diffusion_comparison_chap4}
+\centering
+\begin{tabular}{|p{3cm}|c|c|c|c|}
+\hline
+\textbf{Tiêu chí} & \textbf{AnimeGANv3} & \textbf{SD 1.5 + ControlNet} & \textbf{SDXL + ControlNet} & \textbf{Chênh lệch} \\
+\hline
+Model size & 9.1 MB & $\sim$2 GB & $\sim$6.5 GB & 220--714$\times$ \\
+\hline
+VRAM (inference) & $\sim$2 GB & $\sim$8 GB & $\sim$12 GB & 4--6$\times$ \\
+\hline
+FPS ($512^2$, GPU) & 18 & $\sim$1.5 & $\sim$0.5 & 12--36$\times$ \\
+\hline
+Latency / ảnh & 56 ms & $\sim$0.7 s & $\sim$2 s & 12--36$\times$ \\
+\hline
+\end{tabular}
+\end{table}
+
+Bảng~\ref{tab:diffusion_comparison_chap4} minh họa khoảng cách rất lớn về hiệu năng triển khai giữa hai hướng tiếp cận. Hệ thống AnimeGANv3 nhỏ hơn từ 220 đến 714 lần về dung lượng mô hình và nhanh hơn từ 12 đến 36 lần về tốc độ xử lý so với các phương pháp dựa trên khuếch tán phổ biến nhất hiện nay. Sự chênh lệch này có ý nghĩa quyết định trong các kịch bản triển khai thực tế: ứng dụng web phục vụ nhiều người dùng đồng thời, ứng dụng di động với bộ nhớ hạn chế, hoặc xử lý hàng loạt ảnh trong thời gian ngắn.
+
+Cần nhấn mạnh rằng mô hình khuếch tán có thế mạnh riêng mà GAN khó đạt được: khả năng sinh ảnh đa dạng hơn nhờ tính ngẫu nhiên nội tại, linh hoạt hơn nhờ điều kiện hóa bằng văn bản (text conditioning), và tiềm năng chất lượng cao hơn ở độ phân giải lớn. Tuy nhiên, với mục tiêu thiết kế của hệ thống trong luận văn -- tối ưu cho triển khai thời gian thực trên thiết bị cấu hình hạn chế -- hướng tiếp cận GAN gọn nhẹ vẫn là lựa chọn phù hợp nhất ở thời điểm hiện tại. Hướng phát triển tương lai có thể khai thác các kỹ thuật chưng cất mô hình khuếch tán (diffusion distillation) để kết hợp chất lượng của Diffusion với tốc độ của GAN.
+
 \section*{Tổng kết chương}
 
 Chương này đã trình bày đầy đủ các kết quả thực nghiệm của hệ thống AnimeGANv3 DTGAN:
