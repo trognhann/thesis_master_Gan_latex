@@ -131,7 +131,7 @@ function createAnimeGANSurvey() {
   // 1.6 Mức độ quen thuộc với anime
   form.addScaleItem()
     .setTitle('1.6. Mức độ quen thuộc của bạn với phong cách anime/manga')
-    .setHelpText('1 = Không biết gì | 2 = Biết sơ qua | 3 = Thỉnh thoảng xem | 4 = Xem thường xuyên | 5 = Fan cuồng nhiệt')
+    .setHelpText('𝟏: Không biết gì | 𝟐: Biết sơ qua | 𝟑: Thỉnh thoảng xem | 𝟒: Xem thường xuyên | 𝟓: Fan cuồng nhiệt')
     .setBounds(1, 5)
     .setLabels('Không biết gì', 'Fan cuồng nhiệt')
     .setRequired(true);
@@ -139,7 +139,7 @@ function createAnimeGANSurvey() {
   // 1.7 Mức độ quen thuộc với AI
   form.addScaleItem()
     .setTitle('1.7. Mức độ hiểu biết của bạn về AI / Deep Learning')
-    .setHelpText('1 = Không biết | 2 = Nghe qua | 3 = Hiểu cơ bản | 4 = Có kinh nghiệm | 5 = Chuyên gia')
+    .setHelpText('𝟏: Không biết | 𝟐: Nghe qua | 𝟑: Hiểu cơ bản | 𝟒: Có kinh nghiệm | 𝟓: Chuyên gia')
     .setBounds(1, 5)
     .setLabels('Không biết', 'Chuyên gia')
     .setRequired(true);
@@ -372,7 +372,7 @@ function createAnimeGANSurvey() {
 
   form.addScaleItem()
     .setTitle('2.21. Nhìn chung, Hybrid mode có cải thiện chất lượng khuôn mặt so với Lens mode không?')
-    .setHelpText('1 = Không cải thiện / tệ hơn | 5 = Cải thiện rõ rệt')
+    .setHelpText('𝟏: Không cải thiện / tệ hơn | 𝟓: Cải thiện rõ rệt')
     .setBounds(1, 5)
     .setLabels('Không cải thiện', 'Cải thiện rõ rệt')
     .setRequired(true);
@@ -411,7 +411,7 @@ function createAnimeGANSurvey() {
 
   form.addScaleItem()
     .setTitle('3.1. Tầm quan trọng: Việc phát hiện và cắt riêng khuôn mặt trước khi chuyển đổi anime có quan trọng không?')
-    .setHelpText('1 = Không quan trọng, xử lý toàn ảnh là đủ | 5 = Rất quan trọng, ảnh hưởng lớn đến chất lượng')
+    .setHelpText('𝟏: Không quan trọng, xử lý toàn ảnh là đủ | 𝟓: Rất quan trọng, ảnh hưởng lớn đến chất lượng')
     .setBounds(1, 5)
     .setLabels('Không quan trọng', 'Rất quan trọng')
     .setRequired(true);
@@ -523,7 +523,7 @@ function createAnimeGANSurvey() {
   // Grid đánh giá theo tiêu chí đồng bộ: mắt, biểu cảm, tóc tai
   var gridItem4_3 = form.addGridItem();
   gridItem4_3.setTitle('4.3. Đánh giá Hybrid mode (hệ thống của chúng tôi) theo các tiêu chí so với ứng dụng khác');
-  gridItem4_3.setHelpText('1 = Kém hơn nhiều | 2 = Kém hơn | 3 = Tương đương | 4 = Tốt hơn | 5 = Tốt hơn nhiều');
+  gridItem4_3.setHelpText('𝟏: Kém hơn nhiều | 𝟐: Kém hơn | 𝟑: Tương đương | 𝟒: Tốt hơn | 𝟓: Tốt hơn nhiều');
   gridItem4_3.setRows([
     'Chất lượng MẮT',
     'Bảo toàn BIỂU CẢM',
@@ -531,7 +531,7 @@ function createAnimeGANSurvey() {
     'Bảo toàn đặc điểm nhận dạng (identity)',
     'Tính thẩm mỹ / đẹp mắt tổng thể'
   ]);
-  gridItem4_3.setColumns(['1 - Kém hơn nhiều', '2 - Kém hơn', '3 - Tương đương', '4 - Tốt hơn', '5 - Tốt hơn nhiều']);
+  gridItem4_3.setColumns(['𝟏: Kém hơn nhiều', '𝟐: Kém hơn', '𝟑: Tương đương', '𝟒: Tốt hơn', '𝟓: Tốt hơn nhiều']);
   gridItem4_3.setRequired(true);
 
   // =====================================================
@@ -547,7 +547,7 @@ function createAnimeGANSurvey() {
 
   form.addScaleItem()
     .setTitle('5.1. Bạn có sẵn sàng sử dụng hệ thống này để chuyển đổi ảnh cá nhân không?')
-    .setHelpText('1 = Hoàn toàn không | 5 = Chắc chắn sẽ dùng')
+    .setHelpText('𝟏: Hoàn toàn không | 𝟓: Chắc chắn sẽ dùng')
     .setBounds(1, 5)
     .setLabels('Hoàn toàn không', 'Chắc chắn sẽ dùng')
     .setRequired(true);
@@ -569,7 +569,7 @@ function createAnimeGANSurvey() {
 
   form.addScaleItem()
     .setTitle('5.3. Nếu hệ thống này là một ứng dụng web miễn phí, bạn có giới thiệu cho bạn bè không?')
-    .setHelpText('1 = Chắc chắn không | 5 = Chắc chắn sẽ giới thiệu')
+    .setHelpText('𝟏: Chắc chắn không | 𝟓: Chắc chắn sẽ giới thiệu')
     .setBounds(1, 5)
     .setLabels('Chắc chắn không', 'Chắc chắn giới thiệu')
     .setRequired(true);
@@ -608,14 +608,14 @@ function createAnimeGANSurvey() {
 
   form.addScaleItem()
     .setTitle('5.7. [Nếu đã trải nghiệm] Đánh giá giao diện web / ứng dụng demo')
-    .setHelpText('Bỏ qua nếu chưa trải nghiệm. 1 = Rất khó dùng | 5 = Rất dễ dùng, đẹp')
+    .setHelpText('Bỏ qua nếu chưa trải nghiệm. 𝟏: Rất khó dùng | 𝟓: Rất dễ dùng, đẹp')
     .setBounds(1, 5)
     .setLabels('Rất khó dùng', 'Rất dễ dùng')
     .setRequired(false);
 
   form.addScaleItem()
     .setTitle('5.8. [Nếu đã trải nghiệm] Tốc độ xử lý ảnh có chấp nhận được không?')
-    .setHelpText('Bỏ qua nếu chưa trải nghiệm. 1 = Quá chậm | 5 = Rất nhanh')
+    .setHelpText('Bỏ qua nếu chưa trải nghiệm. 𝟏: Quá chậm | 𝟓: Rất nhanh')
     .setBounds(1, 5)
     .setLabels('Quá chậm', 'Rất nhanh')
     .setRequired(false);
