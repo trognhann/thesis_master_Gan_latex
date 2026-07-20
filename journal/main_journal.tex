@@ -52,7 +52,7 @@ Email: \IEEEauthorrefmark{1}24025149@vnu.edu.vn,
 % ABSTRACT
 % =====================================================
 \begin{abstract}
-Recent advances in generative adversarial networks (GANs) have enabled automatic photo-to-anime translation, yet existing approaches struggle to simultaneously preserve facial identity and maintain real-time inference on resource-constrained devices. Meanwhile, diffusion-based methods achieve impressive visual quality but demand gigabytes of model storage and seconds per image, rendering them impractical for edge deployment. In this paper, we propose a \textit{Face-Preserved Hybrid Framework} that integrates a lightweight Double-Tail GAN (DTGAN) backbone with an automated face detection and enhancement pipeline. Our framework operates in three adaptive modes---Face, Landscape, and Hybrid---with graceful degradation when no face is detected. We introduce two novel algorithmic contributions: (1)~a \textit{Symmetric Margin Expansion} algorithm that formulates face region extraction as a constrained geometric optimization problem, preserving critical facial context (hair, ears, neck) under strict 1:1 aspect ratio constraints; and (2)~a \textit{Feathered Blending} technique modeled as a spatially-adaptive low-pass filter that eliminates boundary artifacts during face-background compositing. Our system achieves a Fr\'{e}chet Inception Distance (FID) of 58.6 and LPIPS of 0.384 in Face Mode, while requiring only 9.1\,MB of model storage and running at 42\,FPS---over 20$\times$ faster and 200$\times$ smaller than comparable diffusion-based solutions. A structured user study with 42 participants confirms statistically significant improvements in identity preservation and visual quality over baseline methods.
+Recent advances in generative adversarial networks (GANs) have enabled automatic photo-to-anime translation, yet existing approaches struggle to simultaneously preserve facial identity and maintain real-time inference on resource-constrained devices. Meanwhile, diffusion-based methods achieve impressive visual quality but demand gigabytes of model storage and seconds per image, rendering them impractical for edge deployment. In this paper, we propose a \textit{Face-Preserved Hybrid Framework} that integrates a lightweight Double-Tail GAN (DTGAN) backbone with an automated face detection and enhancement pipeline. Our framework operates in three adaptive modes---Face, Landscape, and Hybrid---with graceful degradation when no face is detected. Two key engineering design choices drive quality: (1)~a \textit{Symmetric Margin Expansion} procedure that pads face bounding boxes with a 50\% margin, enforces a 1:1 aspect ratio, and clamps to image boundaries---preserving critical facial context (hair, ears, neck) for the generator; and (2)~\textit{Feathered Blending} via Gaussian-smoothed alpha compositing that eliminates visible seams when merging high-resolution face crops onto landscape-processed backgrounds. Our system achieves a Fr\'{e}chet Inception Distance (FID) of 58.6 and LPIPS of 0.384 in Face Mode, while requiring only 9.1\,MB of model storage and running at 42\,FPS---over 20$\times$ faster and 200$\times$ smaller than comparable diffusion-based solutions. A structured user study with 42 participants confirms statistically significant improvements in identity preservation and visual quality over baseline methods.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -73,11 +73,11 @@ This paper proposes a \textit{Face-Preserved Hybrid Framework} for lightweight p
 
 The main contributions of this paper are summarized as follows:
 \begin{enumerate}
-\item We propose an end-to-end, constraint-aware hybrid framework for photo-to-anime translation, which adaptively coordinates global landscape stylization and high-resolution local face synthesis within a unified pipeline. The system includes a parallelized CPU-GPU training pipeline that enables real-time loss computation for superpixel segmentation and $L_0$ smoothing.
+\item We propose an end-to-end hybrid framework for photo-to-anime translation that adaptively coordinates global landscape stylization and high-resolution local face synthesis within a unified pipeline, including a parallelized CPU-GPU training workflow for real-time loss computation.
 
-\item We design a \textit{Symmetric Margin Expansion} algorithm that formulates face region extraction as a constrained geometric optimization problem with four constraints (1:1 aspect ratio, target area, image bounds, and center symmetry), achieving optimal context coverage at margin $m = 0.5$ as validated by information-theoretic analysis.
+\item We design a \textit{Symmetric Margin Expansion} procedure that pads, squares, and clamps detected face bounding boxes to include surrounding context (hair, ears, neck) needed for natural anime rendering. We empirically validate $m = 0.5$ as the optimal expansion ratio through ablation over FID and LPIPS.
 
-\item We develop a \textit{Feathered Blending} technique modeled as a spatially-adaptive low-pass filter based on Gaussian scale-space convolution, which eliminates high-frequency boundary artifacts during face-background compositing while maintaining $O(N)$ computational complexity suitable for real-time operation.
+\item We employ \textit{Feathered Blending}---Gaussian-smoothed alpha compositing---to seamlessly merge high-resolution face crops with landscape-processed backgrounds, avoiding the color bleeding introduced by Poisson editing while adding negligible latency ($<$5\,ms per face).
 
 \item We conduct extensive quantitative evaluations (FID, LPIPS, FPS) and a structured user study with 42 participants, demonstrating statistically significant superiority of our hybrid approach in identity preservation and visual quality, with the complete system requiring only 9.1\,MB and running at 42\,FPS.
 \end{enumerate}
@@ -149,25 +149,9 @@ While we do not claim the DTGAN architecture as our contribution, our engineerin
 \subsection{Symmetric Margin Expansion}
 \label{subsec:margin}
 
-\subsubsection{Problem Formulation}
+Given a raw face bounding box $B = [x_1, y_1, x_2, y_2]$ from RetinaFace and an image $I$ of dimensions $H \times W$, we need to produce a square crop region that includes sufficient context around the face for the generator to render natural hair, ears, and neck transitions. The procedure must satisfy three requirements: (i)~the crop has a 1:1 aspect ratio to match the generator's $512 \times 512$ input without anisotropic distortion; (ii)~the crop stays within image bounds; and (iii)~the expansion is symmetric about the face center where possible.
 
-Given a raw face bounding box $B = [x_1, y_1, x_2, y_2]$ from RetinaFace and an image $I$ of dimensions $H \times W$, we seek an expanded bounding box $B^* = [x_1^*, y_1^*, x_2^*, y_2^*]$ that provides sufficient context for high-quality anime stylization. We formulate this as a constrained multi-objective optimization problem:
-\begin{equation}
-B^* = \arg\min_{B'} \; \mathcal{L}_{\text{context}}(B') \quad \text{subject to:}
-\label{eq:margin_opt}
-\end{equation}
-\begin{align}
-\text{C1:} &\quad (x_2' - x_1') = (y_2' - y_1') \quad \text{(1:1 aspect ratio)} \label{eq:c1}\\
-\text{C2:} &\quad \text{area}(B') \approx (1 + 2m)^2 \cdot \text{area}(B) \quad \text{(target area)} \label{eq:c2}\\
-\text{C3:} &\quad B' \subseteq I \quad \text{(within image bounds)} \label{eq:c3}\\
-\text{C4:} &\quad \text{center}(B') \approx \text{center}(B) \quad \text{(symmetric)} \label{eq:c4}
-\end{align}
-
-where $m = 0.5$ is the expansion ratio (expanding 50\% of face width on each side) and $\mathcal{L}_{\text{context}}$ measures the loss of contextual information (hair, ears, neck) needed for natural anime rendering.
-
-\subsubsection{Closed-Form Solution}
-
-The solution proceeds in six deterministic steps, providing a closed-form algorithm without iterative optimization:
+We use an expansion ratio $m = 0.5$, meaning the crop extends 50\% of the face width beyond each side of the bounding box. The procedure proceeds in six deterministic steps:
 
 \textbf{Step 1} -- Compute original dimensions:
 \begin{equation}
@@ -179,44 +163,32 @@ w = x_2 - x_1, \quad h = y_2 - y_1
 x_1' = \max(0, \; x_1 - m \cdot w), \quad x_2' = \min(W, \; x_2 + m \cdot w)
 \end{equation}
 
-\textbf{Step 3} -- Enforce symmetric expansion (C4):
+\textbf{Step 3} -- Enforce symmetric expansion:
 \begin{equation}
 x_d = \min(x_1 - x_1', \; x_2' - x_2), \quad w' = w + 2x_d
 \end{equation}
-This step guarantees equal expansion on both sides even when the face is near an image boundary, satisfying C3 and C4 simultaneously.
+When the face is near an image boundary, the tentative expansion from Step~2 may be asymmetric. This step takes the smaller of the two achieved expansions and applies it to both sides.
 
-\textbf{Step 4} -- Enforce 1:1 aspect ratio (C1): $h' = w'$
+\textbf{Step 4} -- Enforce 1:1 aspect ratio: $h' = w'$
 
 \textbf{Step 5} -- Vertical adjustment with boundary clamping:
-\begin{equation}
-y_d = |h' - h|, \quad
-y_1' = \max(0, \; y_c - \lfloor h'/2 \rfloor), \quad
-y_2' = \min(H, \; y_c + \lceil h'/2 \rceil)
-\end{equation}
+\begin{align}
+y_d &= |h' - h|, \\
+y_1' &= \max(0, \; y_c - \lfloor h'/2 \rfloor), \\
+y_2' &= \min(H, \; y_c + \lceil h'/2 \rceil)
+\end{align}
 where $y_c = (y_1 + y_2) / 2$ is the vertical center of the original box.
 
 \textbf{Step 6} -- Integer conversion and final clamping to pixel coordinates.
 
-\subsubsection{Information-Theoretic Justification}
-
-The choice of $m = 0.5$ is grounded in two complementary principles:
-
-\textit{Local Structural Entropy Preservation}: At $m = 0$ (tight crop), the generator lacks boundary context---hair transitions and shoulder regions are abruptly truncated, producing discontinuous edge artifacts. At $m = 0.5$, contextual information is maximized, providing sufficient input for the region smoothing loss and content loss to operate effectively. Beyond $m = 0.5$, background noise begins to dominate the face region, degrading the signal-to-noise ratio for identity-sensitive features.
-
-\textit{Scale Distortion Elimination}: The 1:1 aspect ratio constraint (C1) ensures that resizing to the generator's $512 \times 512$ input constitutes an isometric scaling transformation, preserving facial proportions exactly. Without this constraint, arbitrary resizing would introduce anisotropic distortion, destroying the geometric relationships between facial features critical for identity preservation.
+The choice of $m = 0.5$ was determined empirically. At $m = 0.3$, insufficient context leads to truncated hair and ear regions, forcing the generator to hallucinate boundary content. At $m = 0.7$, excessive background introduces style artifacts from non-facial elements. Section~\ref{subsec:ablation_margin} validates $m = 0.5$ quantitatively via FID and LPIPS. The 1:1 constraint ensures that resizing to $512 \times 512$ is a uniform scale---preserving facial proportions without distortion.
 
 \subsection{Feathered Blending}
 \label{subsec:blending}
 
-\subsubsection{Problem: High-Frequency Boundary Artifacts}
+In Hybrid Mode, the face region is processed at $512 \times 512$ and pasted back onto a landscape-processed background. A hard cut-and-paste creates visible seams at the boundary due to differences in resolution, color distribution, and stylization intensity between the two regions. We use Gaussian-smoothed alpha compositing to produce a gradual transition.
 
-In Hybrid Mode, directly pasting a face region processed at $512 \times 512$ onto a landscape-processed background creates visible boundary artifacts due to two phenomena. First, \textit{spectral inconsistency}: the abrupt pixel value discontinuity at the boundary corresponds to a step function whose Fourier transform contains spurious high-frequency harmonics absent from both the source anime face and the target anime background. Second, the \textit{Mach bands effect}: the human visual system's lateral inhibition mechanism amplifies perceived contrast at sharp boundaries, making even small intensity differences visually prominent.
-
-\subsubsection{Spatially-Adaptive Transition Filter}
-
-We model the blending operation as a spatially-adaptive low-pass filter constructed through three steps:
-
-\textbf{Step 1 -- Boundary-Aware Binary Mask}: For a face region of dimensions $w_f \times h_f$, we create a binary mask $M$ with an inset white rectangle:
+\textbf{Step 1 -- Binary Mask with Inset Border}: For a face region of dimensions $w_f \times h_f$, we create a binary mask $M$ with a border of width $\delta$:
 \begin{equation}
 \delta = \lfloor 0.08 \cdot \min(w_f, h_f) \rfloor
 \label{eq:delta}
@@ -226,15 +198,15 @@ M(x,y) = \begin{cases} 255 & \text{if } \delta \leq x < w_f - \delta \text{ and 
 \label{eq:mask}
 \end{equation}
 
-The parameter $\delta$ (8\% of the smaller dimension) determines the transition zone width. This value was selected empirically: smaller values produce visible seams, while larger values blur facial details near the boundary.
+The inset $\delta$ (8\% of the smaller dimension) defines the transition zone. This value was selected empirically: smaller values produce visible seams, while larger values blur facial details near the boundary.
 
-\textbf{Step 2 -- Gaussian Scale-Space Convolution}: The binary mask is convolved with a Gaussian kernel:
+\textbf{Step 2 -- Gaussian Blur}: The binary mask is smoothed by convolution with a Gaussian kernel:
 \begin{equation}
 \hat{M} = M * G_\delta, \quad G_\delta(x,y) = \frac{1}{2\pi\delta^2} \exp\!\left(-\frac{x^2 + y^2}{2\delta^2}\right)
 \label{eq:gaussian}
 \end{equation}
 
-By the scale-space axiom~\cite{He2013GuidedFilter}, the Gaussian kernel is the unique linear filter that does not introduce spurious extrema at the boundary---it monotonically transitions from full face contribution at the center to full background contribution at the edges.
+This produces a smooth alpha gradient that transitions monotonically from full face contribution at the center to full background contribution at the edges.
 
 \textbf{Step 3 -- Alpha Compositing}:
 \begin{equation}
@@ -244,9 +216,7 @@ I_{\text{out}}(x,y) = \frac{\hat{M}(x,y)}{255} \cdot I_{\text{face}}(x,y) + \lef
 
 where $I_{\text{face}}$ is the anime-stylized face resized to $w_f \times h_f$ and $I_{\text{bg}}$ is the landscape-processed background at the corresponding region.
 
-\subsubsection{Comparison with Poisson Image Editing}
-
-A natural alternative is Poisson image editing~\cite{Perez2003Poisson}, which solves a Laplacian equation to seamlessly blend two images. However, Poisson editing is unsuitable for anime style transfer for two reasons. First, it enforces gradient compatibility between source and target, which \textit{alters the color distribution} of the face region to match the background---destroying the carefully learned cel-shading palette. Second, solving the sparse linear system requires $O(N \log N)$ or $O(N)$ with many iterations, significantly slower than our separable Gaussian convolution at $O(N)$ with guaranteed real-time performance. Our ablation study (Section~\ref{subsec:ablation_blend}) validates this analysis empirically.
+We considered Poisson image editing~\cite{Perez2003Poisson} as an alternative. However, it enforces gradient compatibility between source and target, which \textit{alters the color distribution} of the face region to match the background---destroying the cel-shading palette learned by the generator. It also requires solving a sparse linear system, adding $\sim$200\,ms per face compared to $<$5\,ms for our approach. Section~\ref{subsec:ablation_blend} compares both methods empirically.
 
 
 % =====================================================
@@ -394,7 +364,7 @@ Results indicate that Hybrid Mode received strong positive ratings across all th
 \section{Conclusion}
 \label{sec:conclusion}
 
-We have presented a Face-Preserved Hybrid Framework for lightweight photo-to-anime translation that addresses the critical gap between visual quality and deployment efficiency. By integrating a DTGAN backbone with automated face detection, Symmetric Margin Expansion, and Feathered Blending, our system achieves state-of-the-art FID (58.6) and LPIPS (0.384) while requiring only 9.1\,MB of storage and running at 42\,FPS---over 20$\times$ faster and 200$\times$ smaller than diffusion-based alternatives. The Symmetric Margin Expansion algorithm, formulated as constrained geometric optimization, and the Feathered Blending technique, modeled as a spatially-adaptive low-pass filter, represent novel algorithmic contributions validated through extensive ablation studies and a 42-participant user study demonstrating statistically significant improvements in identity preservation ($p < 0.001$). Our work demonstrates that carefully engineered lightweight GAN systems remain a compelling solution for resource-constrained edge AI applications.
+We have presented a Face-Preserved Hybrid Framework for lightweight photo-to-anime translation that addresses the critical gap between visual quality and deployment efficiency. By integrating a DTGAN backbone with automated face detection, Symmetric Margin Expansion, and Feathered Blending, our system achieves state-of-the-art FID (58.6) and LPIPS (0.384) while requiring only 9.1\,MB of storage and running at 42\,FPS---over 20$\times$ faster and 200$\times$ smaller than diffusion-based alternatives. Ablation studies validate each design choice---margin $m = 0.5$ maximizes facial context without introducing background noise, and Gaussian-smoothed alpha blending eliminates boundary seams without the color bleeding of Poisson editing---while a 42-participant user study confirms statistically significant improvements in identity preservation ($p < 0.001$). Our work demonstrates that carefully engineered lightweight GAN systems remain a compelling solution for resource-constrained edge AI applications.
 
 
 % =====================================================
@@ -402,5 +372,50 @@ We have presented a Face-Preserved Hybrid Framework for lightweight photo-to-ani
 % =====================================================
 \bibliographystyle{IEEEtran}
 \bibliography{references}
+
+
+% =====================================================
+% APPENDIX: Additional Qualitative Results
+% =====================================================
+\appendices
+\section{Additional Qualitative Results}
+\label{appendix:qualitative}
+
+This appendix presents additional qualitative comparisons between Landscape Mode and Hybrid Mode across diverse scenarios, including single-person portraits, multi-face images, varying age groups, and different background complexities. Each figure shows the original photograph (left), Landscape Mode output (center), and Hybrid Mode output (right), with zoomed-in facial regions displayed in the top-right corner of each stylized result.
+
+\begin{figure}[!ht]
+\centering
+\includegraphics[width=\linewidth]{phuluc/anh1.png}
+\caption{Single-person portrait at an outdoor beach scene. Landscape Mode produces visible facial distortion with unnatural eye shapes, while Hybrid Mode preserves the subject's identity with accurate eye geometry, smooth skin texture, and natural hair transitions.}
+\label{fig:appendix_single1}
+\end{figure}
+
+\begin{figure}[!ht]
+\centering
+\includegraphics[width=\linewidth]{phuluc/anh2.png}
+\caption{Multi-face scenario with two subjects. Landscape Mode exhibits distorted facial features on both faces, particularly noticeable in the eye and mouth regions. Hybrid Mode independently processes each face through the Symmetric Margin Expansion pipeline, producing well-preserved identities for both subjects simultaneously.}
+\label{fig:appendix_couple}
+\end{figure}
+
+\begin{figure}[!ht]
+\centering
+\includegraphics[width=\linewidth]{phuluc/anh3.png}
+\caption{Single-person portrait with complex background (ocean waves, vegetation). Hybrid Mode maintains clean facial contours and natural expression while Landscape Mode introduces noticeable distortion in the eye area and overall facial proportions.}
+\label{fig:appendix_single2}
+\end{figure}
+
+\begin{figure}[!ht]
+\centering
+\includegraphics[width=\linewidth]{phuluc/anh4.png}
+\caption{Child subject with a challenging background. This example demonstrates the framework's robustness across different age groups. Hybrid Mode produces more defined and natural-looking facial features compared to the over-smoothed result from Landscape Mode.}
+\label{fig:appendix_child}
+\end{figure}
+
+\begin{figure}[!ht]
+\centering
+\includegraphics[width=\linewidth]{phuluc/anh5.png}
+\caption{Elderly couple in an indoor setting. Both Landscape and Hybrid modes handle the formal background well, but Hybrid Mode significantly improves facial clarity and preserves individual identities---including glasses, facial structure, and expression---while Landscape Mode produces less distinguishable facial features.}
+\label{fig:appendix_elderly}
+\end{figure}
 
 \end{document}
