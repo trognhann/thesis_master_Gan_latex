@@ -344,6 +344,67 @@ We conducted a structured user study with 42 participants divided into two group
 
 Results indicate that Hybrid Mode received strong positive ratings across all three criteria (mean scores: identity $3.7 \pm 1.1$; sharpness $3.4 \pm 1.1$; naturalness $3.7 \pm 1.1$). Furthermore, in direct comparisons of facial sharpness and naturalness, participants strongly preferred the Hybrid Mode over the standard Landscape Mode in 88.8\% of the evaluations. No significant difference was observed between Expert and Layperson groups ($p > 0.75$, Mann-Whitney U test), suggesting that the quality improvement is universally perceptible regardless of artistic background.
 
+\subsection{Multi-Model Pipeline Evaluation and Scalability}
+\label{subsec:multimodel_pipeline}
+
+To evaluate the operational efficiency, latency accumulation, and scalability of our framework when operating multiple interconnected models within a single execution pipeline, we model the end-to-end processing pipeline as a multi-stage workflow combining face detection, background stylization, face crop inference, and feathered compositing.
+
+\subsubsection{End-to-End Multi-Model Latency Formulation}
+The total processing latency $T_{\text{pipeline}}$ for an input image containing $N$ detected face regions processed through a pipeline composed of a detector model $\mathcal{M}_{\text{det}}$ and a generator backbone $\mathcal{M}_{\text{gen}}$ can be formulated as:
+\begin{equation}
+\begin{aligned}
+T_{\text{pipeline}} = \; & T_{\text{detect}}(\mathcal{M}_{\text{det}}) + T_{\text{bg\_infer}}(\mathcal{M}_{\text{gen}}) \\
+& + \sum_{i=1}^{N} \left( T_{\text{margin}}^{(i)} + T_{\text{face\_infer}}^{(i)}(\mathcal{M}_{\text{gen}}) + T_{\text{blend}}^{(i)} \right)
+\end{aligned}
+\label{eq:pipeline_latency}
+\end{equation}
+where $T_{\text{detect}}$ is the forward pass latency of the face detector model, $T_{\text{bg\_infer}}$ represents full-image background transformation time, $T_{\text{margin}}$ is the Symmetric Margin Expansion bounding box adjustment overhead, $T_{\text{face\_infer}}$ denotes high-resolution face stylization latency ($512 \times 512$), and $T_{\text{blend}}$ is the spatial feathered compositing time.
+
+\subsubsection{Multi-Model Performance and Latency Breakdown}
+Table~\ref{tab:multimodel_breakdown} presents the detailed latency breakdown, throughput (FPS), and peak memory (VRAM) overhead when combining different model pipelines under varying numbers of detected faces ($N = 0, 1, 3$).
+
+\begin{table*}[t]
+\caption{Stage-wise performance breakdown and multi-model pipeline scalability comparison across varying face counts ($N$).}
+\label{tab:multimodel_breakdown}
+\centering
+\small
+\begin{tabular}{l l c c c c}
+\toprule
+\textbf{Pipeline Combination} & \textbf{Stage / Sub-Model} & \textbf{$N=0$ (No Face)} & \textbf{$N=1$ (Single Face)} & \textbf{$N=3$ (Group Photo)} & \textbf{Peak VRAM} \\
+\midrule
+\multirow{4}{*}{\shortstack[l]{\textbf{Ours (Lightweight Pipeline)}\\(RetinaFace + DTGAN)}} 
+ & Detection ($T_{\text{detect}}$) & [8.2 ms] & [8.2 ms] & [8.5 ms] & \multirow{4}{*}{[$\sim$1.2\,GB]} \\
+ & Background ($T_{\text{bg\_infer}}$) & [18.1 ms] & [18.1 ms] & [18.1 ms] & \\
+ & Per-Face Crop+Infer ($T_{\text{margin}} + T_{\text{face\_infer}}$) & [--] & [9.4 ms] & [28.2 ms] & \\
+ & Feathered Blending ($T_{\text{blend}}$) & [--] & [2.1 ms] & [6.3 ms] & \\
+ \cmidrule{2-6}
+ & \textbf{Total End-to-End Latency} & \textbf{[26.3 ms]} & \textbf{[37.8 ms]} & \textbf{[61.1 ms]} & \textbf{[$\sim$1.2\,GB]} \\
+ & \textbf{Throughput (FPS)} & \textbf{[38.0 FPS]} & \textbf{[26.5 FPS]} & \textbf{[16.4 FPS]} & -- \\
+\midrule
+\multirow{4}{*}{\shortstack[l]{\textbf{Pipeline Baseline 1}\\(MTCNN + AnimeGANv2)}} 
+ & Detection ($T_{\text{detect}}$) & [35.0 ms] & [36.2 ms] & [41.0 ms] & \multirow{4}{*}{[$\sim$1.8\,GB]} \\
+ & Background ($T_{\text{bg\_infer}}$) & [22.0 ms] & [22.0 ms] & [22.0 ms] & \\
+ & Per-Face Crop+Infer & [--] & [12.5 ms] & [37.5 ms] & \\
+ & Poisson Blending & [--] & [195.0 ms] & [585.0 ms] & \\
+ \cmidrule{2-6}
+ & \textbf{Total End-to-End Latency} & \textbf{[57.0 ms]} & \textbf{[265.7 ms]} & \textbf{[685.5 ms]} & \textbf{[$\sim$1.8\,GB]} \\
+ & \textbf{Throughput (FPS)} & \textbf{[17.5 FPS]} & \textbf{[3.76 FPS]} & \textbf{[1.46 FPS]} & -- \\
+\midrule
+\multirow{4}{*}{\shortstack[l]{\textbf{Pipeline Baseline 2}\\(YOLOv8-Face + CartoonGAN)}} 
+ & Detection ($T_{\text{detect}}$) & [14.0 ms] & [14.2 ms] & [14.8 ms] & \multirow{4}{*}{[$\sim$2.4\,GB]} \\
+ & Background ($T_{\text{bg\_infer}}$) & [28.0 ms] & [28.0 ms] & [28.0 ms] & \\
+ & Per-Face Crop+Infer & [--] & [15.0 ms] & [45.0 ms] & \\
+ & Alpha Blending & [--] & [1.8 ms] & [5.4 ms] & \\
+ \cmidrule{2-6}
+ & \textbf{Total End-to-End Latency} & \textbf{[42.0 ms]} & \textbf{[59.0 ms]} & \textbf{[93.2 ms]} & \textbf{[$\sim$2.4\,GB]} \\
+ & \textbf{Throughput (FPS)} & \textbf{[23.8 FPS]} & \textbf{[16.9 FPS]} & \textbf{[10.7 FPS]} & -- \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+\subsubsection{Discussion on Multi-Model Concurrency and Scalability}
+[PLACEHOLDER: Insert experimental analysis on multi-model concurrent execution, pipeline memory management, and ONNX Runtime session reuse. Explain how executing RetinaFace MobileNet-0.25 ($\sim$0.5\,MB) in lockstep with DTGAN ($\sim$9.1\,MB) avoids GPU VRAM thrashing, maintaining tight latency bounds ($<65$\,ms for $N=3$ faces) compared to heavy cascaded models.]
+
 
 % =====================================================
 % VI. DISCUSSION
@@ -353,7 +414,7 @@ Results indicate that Hybrid Mode received strong positive ratings across all th
 
 \textbf{Why GAN over Diffusion for Edge AI.} Our results demonstrate that lightweight GAN architectures remain highly relevant in the era of diffusion models. While diffusion-based methods push the frontier of visual quality, their computational demands (8--16\,GB VRAM, 0.5--2\,FPS) preclude deployment on the vast majority of consumer devices. Our framework occupies a fundamentally different design point: 9.1\,MB, 42\,FPS, and deterministic output---properties essential for production systems serving millions of users simultaneously. We position this work within the emerging field of \textit{Resource-Constrained Edge AI}, where the objective is to maximize task performance under strict computational budgets.
 
-\textbf{Limitations.} Several limitations warrant discussion. First, RetinaFace MobileNet-0.25 exhibits degraded performance at large pose angles ($>60°$), with recall dropping to $\sim$76\%. Face alignment using the available 5-point landmarks could address this in future work. Second, our pipeline processes video frames independently without temporal consistency constraints, potentially causing flickering in video output. Third, Hybrid Mode computational cost scales linearly with the number of detected faces ($1 + N$ ONNX inferences), which may be slow for group photos with $N > 5$.
+\textbf{Limitations.} Several limitations warrant discussion. First, RetinaFace MobileNet-0.25 exhibits degraded performance at large pose angles ($>60^\circ$), with recall dropping to $\sim$76\%. Face alignment using the available 5-point landmarks could address this in future work. Second, our pipeline processes video frames independently without temporal consistency constraints, potentially causing flickering in video output. Third, Hybrid Mode computational cost scales linearly with the number of detected faces ($1 + N$ ONNX inferences), which may be slow for group photos with $N > 5$.
 
 \textbf{Future Directions.} Promising extensions include: (1)~diffusion distillation~\cite{Ho2020} to combine diffusion quality with GAN speed; (2)~affine face alignment using RetinaFace landmarks for improved pose handling; (3)~temporal consistency via optical flow warping for video; and (4)~multi-style interpolation through LADE parameter blending.
 
