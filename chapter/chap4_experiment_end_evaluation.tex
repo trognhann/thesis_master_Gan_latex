@@ -78,20 +78,23 @@ Thư viện xử lý ảnh & OpenCV 4.5.x, Pillow 8.x, scikit-image 0.18.x \\
 \subsection{Dữ liệu Ảnh Thực (Photo)}
 \label{subsec:photo_data}
 
-Tập dữ liệu ảnh thực dùng cho huấn luyện bao gồm ảnh chân dung từ nhiều nguồn, mang tính đa dạng cao về giới tính, độ tuổi, sắc tộc và điều kiện ánh sáng. Toàn bộ tập ảnh đã được chọn lọc kỹ lưỡng nhằm loại bỏ các trường hợp quá mờ, quá tối hoặc không có khuôn mặt nổi bật. Trước khi đưa vào mô hình, kích thước mỗi ảnh được chuẩn hóa về $256 \times 256$ (đối với chế độ landscape) hoặc $512 \times 512$ (đối với chế độ Face Mode).
+Tập dữ liệu ảnh thực dùng cho huấn luyện bao gồm ảnh chân dung từ nhiều nguồn, mang tính đa dạng cao về giới tính, độ tuổi, sắc tộc và điều kiện ánh sáng (tập \textit{train\_photo} dùng chung với 6.656 ảnh, và tập \texttt{train/images} của Ghibli\_o1 với 4.991 ảnh). Toàn bộ tập ảnh đã được chọn lọc kỹ lưỡng nhằm loại bỏ các trường hợp quá mờ, quá tối hoặc không có khuôn mặt nổi bật. Trước khi đưa vào mô hình, kích thước mỗi ảnh được chuẩn hóa về $256 \times 256$ (đối với cả chế độ Landscape và Face Mode).
 
 Ở bước tiền xử lý, hệ thống tạo thêm một tập dữ liệu phụ mang tên \texttt{seg\_train\_5-0.8-50/}. Tập dữ liệu này chứa các ảnh đã qua phân mảnh bề mặt bằng thuật toán Felzenszwalb superpixel segmentation (với tham số $\sigma=5$, $k=0.8$ và $\text{min\_size}=50$), được sử dụng chuyên biệt để phục vụ việc tính toán thành phần Region Smoothing Loss trong quá trình huấn luyện.
 
 \subsection{Dữ liệu Ảnh Anime (Style)}
 \label{subsec:anime_data}
 
-Dữ liệu phong cách anime được trích xuất từ phim hoạt hình của các đạo diễn nổi tiếng, bao gồm hai tập chính:
+Dữ liệu phong cách anime được trích xuất từ phim hoạt hình của các đạo diễn nổi tiếng và được chia thành ba tập chính:
 \begin{itemize}
-    \item \textbf{Hayao Miyazaki:} Các frame từ phim \textit{Spirited Away}, \textit{My Neighbor Totoro} — phong cách warm, giàu màu sắc tự nhiên, đường nét mềm mại. % TODO: Bổ sung số lượng ảnh cụ thể
-    \item \textbf{Makoto Shinkai:} Các frame từ \textit{Your Name}, \textit{Weathering With You} — phong cách lạnh, ánh sáng cinematic, chi tiết mịn. % TODO: Bổ sung số lượng ảnh cụ thể
+    \item \textbf{Hayao Miyazaki (1.792 ảnh):} Các frame từ phim \textit{Spirited Away}, \textit{My Neighbor Totoro} — phong cách ấm áp (warm), giàu màu sắc tự nhiên, đường nét mềm mại. Chủ yếu là phong cảnh (landscape).
+    \item \textbf{Makoto Shinkai (1.650 ảnh):} Các frame từ \textit{Your Name}, \textit{Weathering With You} — phong cách lạnh, ánh sáng cinematic, chi tiết mịn. Chủ yếu là phong cảnh (landscape).
+    \item \textbf{Ghibli\_o1 (4.991 ảnh ghép cặp):} Tập dữ liệu chuyên biệt về chân dung (portrait), bao gồm \texttt{train/images} (ảnh thực) và \texttt{train/gt} (ground-truth anime tương ứng). Tính chất ghép cặp (paired) giúp cung cấp tín hiệu giám sát mạnh mẽ cho việc học chi tiết khuôn mặt.
 \end{itemize}
 
-Mỗi tập anime đi kèm tập \texttt{smooth/} được tạo bằng Edge Smoothing — làm mờ nhẹ vùng biên trong ảnh anime, phục vụ Discriminator tập trung vào đường nét sắc nét.
+Mỗi tập anime không ghép cặp (Hayao, Shinkai) đi kèm tập \texttt{smooth/} được tạo bằng Edge Smoothing — làm mờ nhẹ vùng biên trong ảnh anime, phục vụ Discriminator tập trung vào đường nét sắc nét.
+
+\textbf{Lưu ý về Bản quyền và Đạo đức (Copyright and Ethical Consideration):} Toàn bộ các ảnh anime và frame cắt từ phim có bản quyền thuộc Studio Ghibli (\textit{Ghibli\_o1} và \textit{Hayao}) cũng như CoMix Wave Films (\textit{Shinkai}) là tài sản sở hữu trí tuệ độc quyền của tác giả và chủ sở hữu bản quyền tương ứng. Trong phạm vi luận văn này, các tập dữ liệu trên chỉ được sử dụng nghiêm ngặt cho mục đích nghiên cứu học thuật phi thương mại và đánh giá thuật toán theo nguyên tắc sử dụng hợp lý (fair use), và không được phân phối lại cho các ứng dụng thương mại.
 
 % =====================================================
 \section{Kết quả Huấn luyện}
@@ -249,14 +252,13 @@ $256 \times 256$ & Landscape & 38 & 4.2 \\
 \hline
 $512 \times 512$ & Face Mode & 18 & 1.1 \\
 \hline
-$768 \times 768$ & Landscape (lớn) & 8 & 0.5 \\
-\hline
-$1280 \times 720$ & Landscape & 5 & 0.3 \\
+$256 \times 256$ & Face Mode & 42 & 1.1 \\
+$256 \times 256$ & Landscape & 38 & 1.3 \\
 \hline
 \end{tabular}
 \end{table}
 
-Tốc độ giảm nhanh khi tăng độ phân giải do chi phí tính toán tỉ lệ bậc hai với số pixel. Đây là hạn chế chung của các kiến trúc encoder-decoder. Trong thực tế ứng dụng, chế độ Face Mode ($512\times512$) đạt 18 FPS trên GPU -- đủ nhanh cho xử lý ảnh theo batch.
+Tốc độ giảm nhanh khi tăng độ phân giải do chi phí tính toán tỉ lệ bậc hai với số pixel. Đây là hạn chế chung của các kiến trúc encoder-decoder. Trong thực tế ứng dụng, hệ thống (chạy ở độ phân giải tiêu chuẩn $256\times256$) đạt 42 FPS trên GPU -- đáp ứng tốt yêu cầu xử lý thời gian thực.
 
 % =====================================================
 \section{Đánh giá Định tính}
@@ -291,7 +293,7 @@ Hệ thống hỗ trợ ba chế độ chuyển đổi: \textbf{Landscape Mode} 
     \caption{So sánh kết quả chuyển đổi anime giữa Hybrid, Landscape và Face Mode trên ảnh chụp thẳng mặt}
     \label{fig:style_results_trump}
 \end{figure}
-    \noindent\textit{Chú thích:} (a) Hybrid Mode giữ nền anime hóa đồng thời khuôn mặt chất lượng cao nhờ ghép feathered blending. (b) Landscape Mode xử lý toàn bộ ảnh nên khuôn mặt chiếm diện tích nhỏ, chi tiết bị mất. (c) Cắt vùng mặt từ (b) cho thấy đường nét kém sắc. (d) Face Mode tập trung xử lý riêng vùng mặt ($512 \times 512$), cho chi tiết sắc nét nhưng mất nền.
+    \noindent\textit{Chú thích:} (a) Hybrid Mode giữ nền anime hóa đồng thời khuôn mặt chất lượng cao nhờ ghép feathered blending. (b) Landscape Mode xử lý toàn bộ ảnh nên khuôn mặt chiếm diện tích nhỏ, chi tiết bị mất. (c) Cắt vùng mặt từ (b) cho thấy đường nét kém sắc. (d) Face Mode tập trung xử lý riêng vùng mặt ($256 \times 256$), cho chi tiết sắc nét nhưng mất nền.
 
 
 \begin{figure}[H]
@@ -318,7 +320,7 @@ Hệ thống hỗ trợ ba chế độ chuyển đổi: \textbf{Landscape Mode} 
     \caption{So sánh ba chế độ trên ảnh nhóm người}
     \label{fig:style_results_trump1}
 \end{figure}
-    \noindent\textit{Chú thích:} (a) Hybrid Mode xử lý tất cả khuôn mặt phát hiện được ở chất lượng $512 \times 512$ rồi ghép lại nền Landscape -- phù hợp nhất cho ảnh nhóm. (b) Landscape Mode bảo toàn bố cục nhưng chi tiết khuôn mặt bị mất (c). (d) Face Mode chỉ xử lý khuôn mặt lớn nhất, bỏ qua các mặt khác và nền.
+    \noindent\textit{Chú thích:} (a) Hybrid Mode xử lý tất cả khuôn mặt phát hiện được ở chất lượng $256 \times 256$ rồi ghép lại nền Landscape -- phù hợp nhất cho ảnh nhóm. (b) Landscape Mode bảo toàn bố cục nhưng chi tiết khuôn mặt bị mất (c). (d) Face Mode chỉ xử lý khuôn mặt lớn nhất, bỏ qua các mặt khác và nền.
 
 
 \begin{figure}[H]
@@ -359,7 +361,7 @@ Hệ thống hỗ trợ ba chế độ chuyển đổi: \textbf{Landscape Mode} 
 \hline
 \textbf{Tiêu chí} & \textbf{Landscape Mode} & \textbf{Face Mode} & \textbf{Hybrid Mode} \\
 \hline
-Độ sắc nét mặt & Thấp nếu mặt nhỏ & Cao ($100\%$ diện tích) & Cao (từng mặt $512^2$) \\
+Độ sắc nét mặt & Thấp nếu mặt nhỏ & Cao ($100\%$ diện tích) & Cao (từng mặt $256^2$) \\
 \hline
 Bảo toàn chi tiết & Mất chi tiết mặt nhỏ & Đầy đủ: mắt, mũi, môi & Đầy đủ cho mọi mặt \\
 \hline
@@ -367,7 +369,7 @@ Xử lý ảnh nhóm & Tốt (giữ bố cục) & Chỉ mặt lớn nhất & T�
 \hline
 Background & Giữ nguyên (anime hóa) & Bị cắt bỏ & Giữ (anime hóa) \\
 \hline
-FID ($512\times512$) & 64.2 & 58.6 & 60.1 \\
+FID ($256\times256$) & 64.2 & 58.6 & 60.1 \\
 \hline
 \end{tabular}
 \end{table}
@@ -489,7 +491,7 @@ Model size & 9.1 MB & $\sim$2 GB & $\sim$6.5 GB & 220--714$\times$ \\
 \hline
 VRAM (inference) & $\sim$2 GB & $\sim$8 GB & $\sim$12 GB & 4--6$\times$ \\
 \hline
-FPS ($512^2$, GPU) & 18 & $\sim$1.5 & $\sim$0.5 & 12--36$\times$ \\
+FPS ($256^2$, GPU)\textsuperscript{*} & 42 & $\sim$1.5 & $\sim$0.5 & 28--84$\times$ \\
 \hline
 Latency / ảnh & 56 ms & $\sim$0.7 s & $\sim$2 s & 12--36$\times$ \\
 \hline

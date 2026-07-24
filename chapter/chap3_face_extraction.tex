@@ -17,7 +17,7 @@ Chương này trình bày \textbf{đóng góp cốt lõi của luận văn}: thi
     \item \textbf{Định vị và quy hoạch vùng trích xuất:} Ứng dụng kiến trúc phát hiện khuôn mặt RetinaFace \cite{Deng2019RetinaFace} với backbone thu gọn MobileNet-0.25 \cite{Howard2017MobileNet}, được tối ưu hóa thông qua ONNX Runtime \cite{ONNX2019} để lấy tọa độ khuôn mặt tức thì. Thuật toán Margin Expansion mở rộng bounding box, đảm bảo bao phủ không chỉ ngũ quan mà còn toàn bộ chi tiết tóc, cổ và bối cảnh lân cận.
     \item \textbf{Áp dụng phong cách hóa (Stylization):} Tùy theo chế độ được chọn:
     \begin{itemize}
-        \item \textbf{Face Mode:} Chỉ vùng khuôn mặt sau mở rộng được resize về $512 \times 512$ và đưa qua Generator.
+        \item \textbf{Face Mode:} Chỉ vùng khuôn mặt sau mở rộng được resize về $256 \times 256$ và đưa qua Generator.
         \item \textbf{Landscape Mode:} Toàn bộ ảnh được resize giữ tỉ lệ (chia hết cho 8) rồi đưa qua Generator.
         \item \textbf{Hybrid Mode:} Kết hợp cả hai -- nền được xử lý Landscape, từng khuôn mặt được xử lý Face Mode riêng rồi ghép ngược lại bằng kỹ thuật feathered blending.
     \end{itemize}
@@ -29,7 +29,7 @@ Chương này trình bày \textbf{đóng góp cốt lõi của luận văn}: thi
     \caption{Pipeline tích hợp Face Extraction vào AnimeGANv3}
     \label{fig:face_extraction_pipeline}
 \end{figure}
-    \noindent\textit{Chú thích:} Face Mode: ảnh qua RetinaFace $\to$ Margin Expansion $\to$ Crop $512\times512$ $\to$ ONNX Inference. Landscape Mode: ảnh resize giữ tỉ lệ (chia hết 8) rồi trực tiếp qua ONNX Inference. Hybrid Mode: nền qua Landscape, mỗi khuôn mặt qua Face Mode rồi ghép feathered blend \cite{AnimeGANv3}.
+    \noindent\textit{Chú thích:} Face Mode: ảnh qua RetinaFace $\to$ Margin Expansion $\to$ Crop $256\times256$ $\to$ ONNX Inference. Landscape Mode: ảnh resize giữ tỉ lệ (chia hết 8) rồi trực tiếp qua ONNX Inference. Hybrid Mode: nền qua Landscape, mỗi khuôn mặt qua Face Mode rồi ghép feathered blend \cite{AnimeGANv3}.
 
 Kiến trúc này cho phép hệ thống xử lý linh hoạt ba loại kịch bản: ảnh chân dung cận mặt (Face Mode), ảnh phong cảnh (Landscape Mode), và ảnh nhóm người cần giữ cả nền lẫn chất lượng mặt cao (Hybrid Mode). Khi Face Mode hoặc Hybrid Mode được kích hoạt nhưng không phát hiện khuôn mặt nào, hệ thống tự động chuyển sang Landscape Mode (graceful degradation).
 
@@ -157,7 +157,7 @@ Trong chế độ Face Mode, phần tử đầu tiên (\texttt{bboxes[0]}) -- kh
 
 Bounding box khuôn mặt trả về bởi RetinaFace thường chỉ bao quanh phần khuôn mặt thuần túy (từ trán đến cằm, từ tai này đến tai kia). Nếu cắt đúng theo bounding box này để đưa vào mô hình AnimeGANv3, ảnh đầu ra sẽ thiếu ngữ cảnh quan trọng: tóc, cổ, vai -- những thành phần không thể thiếu để tạo ra ảnh anime chân dung trông tự nhiên và hoàn chỉnh.
 
-Kỹ thuật \textbf{Margin Expansion} (mở rộng lề) được phát triển trong luận văn để giải quyết vấn đề này: tự động mở rộng bounding box theo tỉ lệ phần trăm kích thước mặt, đồng thời duy trì tỉ lệ khung hình 1:1 (vuông) phù hợp với yêu cầu đầu vào $512 \times 512$ của mô hình.
+Kỹ thuật \textbf{Margin Expansion} (mở rộng lề) được phát triển trong luận văn để giải quyết vấn đề này: tự động mở rộng bounding box theo tỉ lệ phần trăm kích thước mặt, đồng thời duy trì tỉ lệ khung hình 1:1 (vuông) phù hợp với yêu cầu đầu vào $256 \times 256$ của mô hình.
 
 \begin{figure}[H]
     \centering
@@ -281,7 +281,7 @@ Phát hiện mặt & RetinaFace (1 mặt) & Không & RetinaFace (tất cả) \\
 \hline
 Margin Expansion & Có ($m=0.5$) & Không & Có (mỗi mặt) \\
 \hline
-Kích thước input & $512 \times 512$ & Giữ tỉ lệ, chia hết 8 & Nền: chia hết 8; Mặt: $512^2$ \\
+Kích thước input & $256 \times 256$ & Giữ tỉ lệ, chia hết 8 & Nền: chia hết 8; Mặt: $256^2$ \\
 \hline
 Số lần inference & 1 & 1 & $1 + N_{\text{faces}}$ \\
 \hline
@@ -340,7 +340,7 @@ Toàn bộ luồng xử lý ảnh trong pipeline:
     \item \textbf{[Face Mode] Cắt ảnh:} \texttt{img = img[y1:y2, x0:x2]}
     \item \textbf{Resize cho model:}
         \begin{itemize}
-            \item Face mode: \texttt{img.resize((512, 512))}
+            \item Face mode: \texttt{img.resize((256, 256))}
             \item Landscape: \texttt{img.resize((to\_8s(w), to\_8s(h)))}
         \end{itemize}
     \item \textbf{Chuẩn hóa:} $x_{\text{norm}} = x / 127.5 - 1.0$
@@ -363,7 +363,7 @@ Hybrid Mode thực hiện \textbf{nhiều lần suy luận} cho mỗi ảnh đ�
 \begin{enumerate}
     \item \textbf{Phát hiện khuôn mặt:} Gọi \texttt{detect\_face()} trên ảnh đã giới hạn kích thước ($\leq 1280$ pixel cạnh dài). Nếu không phát hiện khuôn mặt nào (\texttt{bboxes = None}), tự động chuyển sang Landscape Mode (graceful degradation) và chỉ thực hiện một lần suy luận duy nhất.
     \item \textbf{Suy luận nền (Background Pass):} Toàn bộ ảnh gốc được xử lý ở chế độ Landscape (resize \texttt{to\_8s}, chuẩn hóa $[-1,1]$, suy luận ONNX, hậu chuẩn hóa) để tạo ảnh nền anime hoàn chỉnh kích thước gốc $(W, H)$.
-    \item \textbf{Suy luận từng khuôn mặt (Face Pass):} Với \textbf{mỗi} khuôn mặt phát hiện được (không chỉ khuôn mặt lớn nhất như Face Mode), áp dụng Margin Expansion, cắt vùng mặt từ ảnh giới hạn kích thước, resize về $512 \times 512$ và suy luận riêng qua cùng mô hình ONNX.
+    \item \textbf{Suy luận từng khuôn mặt (Face Pass):} Với \textbf{mỗi} khuôn mặt phát hiện được (không chỉ khuôn mặt lớn nhất như Face Mode), áp dụng Margin Expansion, cắt vùng mặt từ ảnh giới hạn kích thước, resize về $256 \times 256$ và suy luận riêng qua cùng mô hình ONNX.
     \item \textbf{Ghép ngược (Composite Pass):} Mỗi khuôn mặt chất lượng cao được ánh xạ tọa độ về ảnh gốc, resize về kích thước vùng mặt gốc, rồi ghép vào ảnh nền bằng kỹ thuật \textit{feathered blending}.
 \end{enumerate}
 
@@ -400,12 +400,12 @@ w_f = \max(1,\; x_2^{\text{orig}} - x_1^{\text{orig}}), \quad
 h_f = \max(1,\; y_2^{\text{orig}} - y_1^{\text{orig}})
 \end{equation}
 
-Ảnh khuôn mặt sau suy luận (kích thước $512 \times 512$) được resize về $(w_f, h_f)$ bằng thuật toán nội suy Lanczos trước khi ghép.
+Ảnh khuôn mặt sau suy luận (kích thước $256 \times 256$) được resize về $(w_f, h_f)$ bằng thuật toán nội suy Lanczos trước khi ghép.
 
 \subsection{Kỹ thuật Feathered Blending}
 \label{subsec:feathered_blending}
 
-Khi ghép trực tiếp vùng mặt (xử lý Face Mode ở $512 \times 512$) vào nền (xử lý Landscape ở độ phân giải thấp hơn), sẽ xuất hiện đường biên rõ ràng do khác biệt phong cách và độ phân giải giữa hai vùng. Kỹ thuật \textbf{feathered blending} sử dụng mặt nạ alpha với viền mờ Gaussian để tạo vùng chuyển tiếp mượt mà.
+Khi ghép trực tiếp vùng mặt (xử lý Face Mode ở $256 \times 256$) vào nền (xử lý Landscape ở độ phân giải thấp hơn), sẽ xuất hiện đường biên rõ ràng do khác biệt phong cách và độ phân giải giữa hai vùng. Kỹ thuật \textbf{feathered blending} sử dụng mặt nạ alpha với viền mờ Gaussian để tạo vùng chuyển tiếp mượt mà.
 
 \begin{figure}[H]
     \centering
@@ -449,7 +449,7 @@ trong đó $I_{\text{face}}$ là ảnh khuôn mặt đã suy luận (resize về
 \subsection{Phân tích Độ phức tạp}
 \label{subsec:hybrid_complexity}
 
-Gọi $T_L$ là thời gian suy luận Landscape và $T_F$ là thời gian suy luận Face ($512 \times 512$), $T_D$ là thời gian phát hiện mặt, $N$ là số khuôn mặt phát hiện được. Tổng thời gian xử lý Hybrid Mode:
+Gọi $T_L$ là thời gian suy luận Landscape và $T_F$ là thời gian suy luận Face ($256 \times 256$), $T_D$ là thời gian phát hiện mặt, $N$ là số khuôn mặt phát hiện được. Tổng thời gian xử lý Hybrid Mode:
 
 \begin{equation}
 \label{eq:hybrid_time}
@@ -475,7 +475,7 @@ Hybrid Mode & $1 + N$ & $T_D + T_L + N \cdot T_F$ \\
 \end{tabular}
 \end{table}
 
-Chi phí tính toán của Hybrid Mode tăng tuyến tính theo số khuôn mặt. Tuy nhiên, do $T_F$ sử dụng kích thước đầu vào cố định $512 \times 512$ (thường nhỏ hơn ảnh Landscape), thời gian mỗi lần suy luận Face thường nhanh hơn suy luận Landscape. Trong thực nghiệm (Chương~4), ảnh có 2--3 khuôn mặt thường hoàn thành Hybrid Mode trong thời gian chấp nhận được cho ứng dụng tương tác.
+Chi phí tính toán của Hybrid Mode tăng tuyến tính theo số khuôn mặt. Tuy nhiên, do $T_F$ sử dụng kích thước đầu vào cố định $256 \times 256$ (thường nhỏ hơn ảnh Landscape), thời gian mỗi lần suy luận Face thường nhanh hơn suy luận Landscape. Trong thực nghiệm (Chương~4), ảnh có 2--3 khuôn mặt thường hoàn thành Hybrid Mode trong thời gian chấp nhận được cho ứng dụng tương tác.
 
 % =====================================================
 \section{Phân tích Kỹ thuật và Đánh giá Thiết kế}
@@ -524,7 +524,7 @@ Bảng~\ref{tab:face_vs_landscape} tóm tắt sự đánh đổi giữa ba chế
 \begin{enumerate}
     \item Khuôn mặt chiếm 100\% diện tích ảnh đầu vào $\Rightarrow$ model tập trung toàn bộ năng lực vào vùng mặt.
     \item Loại bỏ background phức tạp giúp tránh style transfer không nhất quán.
-    \item Cố định kích thước $512 \times 512$ cho phép model hoạt động ở chế độ tối ưu.
+    \item Cố định kích thước $256 \times 256$ cho phép model hoạt động ở chế độ tối ưu.
 \end{enumerate}
 
 Hybrid Mode khắc phục nhược điểm mất nền của Face Mode bằng cách xử lý riêng từng khu vực, nhưng đổi lại chi phí tính toán tăng tuyến tính theo số khuôn mặt.

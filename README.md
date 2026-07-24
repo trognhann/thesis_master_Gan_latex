@@ -87,7 +87,7 @@ Graduate_Thesis_master_GAN/
 ```bash
 pdflatex -interaction=nonstopmode main.tex
 pdflatex -interaction=nonstopmode main.tex  # Chạy 2 lần để cập nhật tham chiếu
-biber main    # Nếu dùng biblatex
+biber main    # Nếu dùng biblatex/ bibtex main_journal
 pdflatex -interaction=nonstopmode main.tex  # Chạy lần thứ 3
 ```
 

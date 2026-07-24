@@ -381,7 +381,7 @@ Song et al. \cite{Song2021} đã thống nhất DDPM và các phương pháp d�
 \hline
 Kích thước mô hình & 9.1~MB (ONNX) & 2--7~GB (FP16--FP32) \\
 \hline
-Tốc độ suy luận (GPU) & 42~FPS ($256^2$), 18~FPS ($512^2$) & 0.5--2~FPS ($512^2$, 20--50 steps) \\
+Tốc độ suy luận (GPU) & 42~FPS ($256^2$) & 0.5--1.5~FPS ($512^2$, 20--50 steps) \\
 \hline
 Yêu cầu VRAM & $\sim$2~GB & 8--16~GB \\
 \hline
@@ -403,13 +403,13 @@ Triển khai Edge/Mobile & Khả thi (9.1 MB, real-time) & Không khả thi (qu�
 \subsection{Biện luận Lựa chọn GAN}
 \label{subsec:gan_justification}
 
-Từ Bảng~\ref{tab:gan_vs_diffusion}, có thể nhận thấy mô hình khuếch tán có tiềm năng đạt chất lượng ảnh cao hơn (FID thấp hơn) nhờ quá trình sinh ảnh nhiều bước cho phép tinh chỉnh dần dần kết quả. Tuy nhiên, ưu thế này đi kèm chi phí rất lớn về tốc độ và tài nguyên tính toán. Trong khi AnimeGANv3 đạt 42 khung hình mỗi giây ở độ phân giải $256 \times 256$ chỉ với 9.1~MB dung lượng mô hình và khoảng 2~GB bộ nhớ GPU, các phương pháp dựa trên khuếch tán yêu cầu 2--7~GB dung lượng mô hình, 8--16~GB VRAM và chỉ đạt tốc độ 0.5--2 khung hình mỗi giây -- chậm hơn từ 20 đến 80 lần.
+Từ Bảng~\ref{tab:gan_vs_diffusion}, có thể nhận thấy mô hình khuếch tán có tiềm năng đạt chất lượng ảnh cao hơn (FID thấp hơn) nhờ quá trình sinh ảnh nhiều bước cho phép tinh chỉnh dần dần kết quả. Tuy nhiên, ưu thế này đi kèm chi phí rất lớn về tốc độ và tài nguyên tính toán. Trong khi AnimeGANv3 đạt 42 khung hình mỗi giây ở độ phân giải tiêu chuẩn $256 \times 256$ chỉ với 9.1~MB dung lượng mô hình và khoảng 2~GB bộ nhớ GPU, các phương pháp dựa trên khuếch tán yêu cầu 2--7~GB dung lượng mô hình, 8--16~GB VRAM và chỉ đạt tốc độ 0.5--1.5 khung hình mỗi giây -- chậm hơn từ 28 đến 84 lần. Sự so sánh khác biệt về độ phân giải ($256^2$ cho GAN và $512^2$ cho Diffusion) phản ánh cấu hình vận hành điển hình (typical operating resolution) nhằm cân bằng giữa chất lượng đầu ra và chi phí phần cứng của mỗi phương pháp trong thực tế.
 
 Ngoài sự khác biệt về hiệu năng, hai hướng tiếp cận còn khác nhau căn bản về tính xác định của đầu ra. GAN sinh kết quả xác định (deterministic): cùng một ảnh đầu vào luôn cho cùng một ảnh anime đầu ra, đảm bảo tính nhất quán khi triển khai trong sản phẩm thực tế. Ngược lại, mô hình khuếch tán có tính ngẫu nhiên nội tại (stochastic) do phụ thuộc vào nhiễu khởi tạo và quá trình lấy mẫu -- cùng một ảnh đầu vào có thể cho kết quả khác nhau ở mỗi lần chạy, gây khó khăn cho các ứng dụng yêu cầu đầu ra ổn định.
 
 Một điểm quan trọng khác là khả năng triển khai thực tế. Trong kỷ nguyên của các mô hình khuếch tán khổng lồ tiêu tốn hàng chục gigabyte bộ nhớ GPU và mất vài giây để sinh một bức ảnh, hệ thống GAN nhẹ như AnimeGANv3 đại diện cho một hướng tiếp cận cực kỳ thực tế: khả năng triển khai trên thiết bị di động, máy chủ web cấu hình thấp, hoặc các hệ thống nhúng -- những môi trường mà mô hình khuếch tán hiện tại không thể hoạt động. Hướng nghiên cứu này thuộc nhánh trí tuệ nhân tạo trên thiết bị cấu hình hạn chế (Resource-Constrained Edge AI) \cite{Ho2020, Rombach2022} -- một lĩnh vực ngày càng quan trọng khi nhu cầu xử lý AI tại biên (edge computing) gia tăng.
 
-Tóm lại, luận văn lựa chọn hướng tiếp cận GAN (cụ thể là AnimeGANv3/DTGAN) thay vì mô hình khuếch tán dựa trên ba tiêu chí: tốc độ thời gian thực (42~FPS so với dưới 2~FPS), dung lượng triển khai nhỏ gọn (9.1~MB so với hàng gigabyte), và tính xác định của đầu ra. So sánh chi tiết hơn về hiệu năng thực tế sẽ được trình bày trong phần Thảo luận (Chương~4).
+Tóm lại, luận văn lựa chọn hướng tiếp cận GAN (cụ thể là AnimeGANv3/DTGAN) thay vì mô hình khuếch tán dựa trên ba tiêu chí: tốc độ thời gian thực (42~FPS so với 0.5-1.5~FPS), dung lượng triển khai nhỏ gọn (9.1~MB so với hàng gigabyte), và tính xác định của đầu ra. So sánh chi tiết hơn về hiệu năng thực tế sẽ được trình bày trong phần Thảo luận (Chương~4).
 
 % =====================================================
 \section{Phát hiện Khuôn mặt -- Sơ bộ}
