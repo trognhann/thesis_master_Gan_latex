@@ -29,7 +29,7 @@ Chương này trình bày \textbf{đóng góp cốt lõi của luận văn}: thi
     \caption{Pipeline tích hợp Face Extraction vào AnimeGANv3}
     \label{fig:face_extraction_pipeline}
 \end{figure}
-    \noindent\textit{Chú thích:} Face Mode: ảnh qua RetinaFace $\to$ Margin Expansion $\to$ Crop $256\times256$ $\to$ ONNX Inference. Landscape Mode: ảnh resize giữ tỉ lệ (chia hết 8) rồi trực tiếp qua ONNX Inference. Hybrid Mode: nền qua Landscape, mỗi khuôn mặt qua Face Mode rồi ghép feathered blend \cite{AnimeGANv3}.
+    \noindent\textit{Chú thích:} Face Mode: ảnh qua RetinaFace $\to$ Margin Expansion $\to$ Crop $256\times256$ $\to$ ONNX Inference. Landscape Mode: ảnh resize giữ tỉ lệ (chia hết 8) rồi trực tiếp qua ONNX Inference. Hybrid Mode: nền qua Landscape, mỗi khuôn mặt qua Face Mode rồi ghép feathered blend \cite{Liu2024}.
 
 Kiến trúc này cho phép hệ thống xử lý linh hoạt ba loại kịch bản: ảnh chân dung cận mặt (Face Mode), ảnh phong cảnh (Landscape Mode), và ảnh nhóm người cần giữ cả nền lẫn chất lượng mặt cao (Hybrid Mode). Khi Face Mode hoặc Hybrid Mode được kích hoạt nhưng không phát hiện khuôn mặt nào, hệ thống tự động chuyển sang Landscape Mode (graceful degradation).
 

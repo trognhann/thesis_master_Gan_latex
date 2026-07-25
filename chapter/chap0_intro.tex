@@ -43,7 +43,7 @@ Luận văn sử dụng mô hình AnimeGANv3 (DTGAN) \cite{Liu2024} làm nền t
 \begin{itemize}
     \item \textit{Dữ liệu:} Ảnh chân dung người thật (portrait photos) làm đầu vào; ba bộ dữ liệu anime làm tập phong cách mục tiêu: \textbf{Hayao Miyazaki} (1.792 ảnh, không ghép cặp), \textbf{Makoto Shinkai} (1.650 ảnh, không ghép cặp) và \textbf{Ghibli\_o1} (4.991 cặp ảnh thực--anime, ghép cặp có giám sát). Dữ liệu nguồn gồm tập \textit{train\_photo} (6.656 ảnh) dùng chung cho Hayao và Shinkai, và tập \texttt{train/images} của Ghibli\_o1 cho bộ dữ liệu chân dung có giám sát.
 
-    \item \textit{Mô hình:} Sử dụng mô hình AnimeGANv3 (DTGAN) \cite{Liu2024} làm nền tảng, có mở rộng thêm module Face Extraction dựa trên RetinaFace \cite{Deng2020} với backbone MobileNet 0.25.
+    \item \textit{Mô hình:} Sử dụng mô hình AnimeGANv3 (DTGAN) \cite{Liu2024} làm nền tảng, có mở rộng thêm module Face Extraction dựa trên RetinaFace \cite{Deng2019RetinaFace} với backbone MobileNet 0.25.
     \item \textit{Triển khai:} Mô hình được chuyển đổi và triển khai suy luận qua ONNX Runtime, hỗ trợ cả ảnh đơn và xử lý theo lô (batch processing).
     \item \textit{Ngoài phạm vi:} Chuyển đổi phong cách cho video thời gian thực và các phong cách hoạt hình khác (cartoon phương Tây, 3D). Mặc dù các kiến trúc mới hơn như mô hình khuếch tán (Diffusion Models) đạt chất lượng sinh ảnh ấn tượng, chúng yêu cầu dung lượng mô hình lớn gấp hàng trăm lần và tốc độ chậm hơn 20--80 lần so với GAN, không phù hợp cho mục tiêu triển khai thời gian thực trên thiết bị cấu hình hạn chế của luận văn (phân tích chi tiết tại Mục~1.5).
 \end{itemize}
