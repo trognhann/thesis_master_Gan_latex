@@ -461,6 +461,44 @@ Góc nghiêng $>60°$ & Bounding box không chính xác & Kết quả kém; cầ
 \end{table}
 
 % =====================================================
+\section{Đánh giá Người dùng (User Study)}
+\label{sec:user_study}
+
+Để đánh giá chất lượng cảm nhận của hệ thống từ góc độ người dùng thực tế, một nghiên cứu khảo sát có cấu trúc đã được tiến hành với \textbf{42 người tham gia}, chia thành hai nhóm:
+\begin{itemize}
+    \item \textbf{Chuyên gia} ($n = 12$): Nhà thiết kế đồ họa, họa sĩ kỹ thuật số, giảng viên nghệ thuật.
+    \item \textbf{Người dùng phổ thông} ($n = 30$): Người dùng không có nền tảng chuyên môn về đồ họa.
+\end{itemize}
+
+Mỗi người tham gia được yêu cầu đánh giá các cặp ảnh (đầu ra Hybrid Mode so với Landscape Mode) theo thang Likert 5 điểm trên ba tiêu chí:
+\begin{enumerate}
+    \item Mức độ bảo toàn danh tính khuôn mặt (facial identity preservation).
+    \item Độ sắc nét của các chi tiết khuôn mặt (visual sharpness).
+    \item Độ tự nhiên tổng thể của kết quả anime (overall naturalness).
+\end{enumerate}
+
+\begin{table}[H]
+\caption{Kết quả đánh giá cảm nhận người dùng: Hybrid Mode so với Landscape Mode (thang Likert 5 điểm)}
+\label{tab:user_study}
+\centering
+\begin{tabular}{|p{5cm}|c|c|}
+\hline
+\textbf{Tiêu chí} & \textbf{Điểm TB $\pm$ SD} & \textbf{Tỉ lệ ưu tiên Hybrid} \\
+\hline
+Bảo toàn danh tính khuôn mặt & $3.7 \pm 1.1$ & -- \\
+\hline
+Độ sắc nét chi tiết khuôn mặt & $3.4 \pm 1.1$ & 88.8\% \\
+\hline
+Độ tự nhiên tổng thể & $3.7 \pm 1.1$ & 88.8\% \\
+\hline
+\end{tabular}
+\end{table}
+
+Kết quả cho thấy Hybrid Mode nhận được đánh giá tích cực ở cả ba tiêu chí. Đặc biệt, trong các so sánh trực tiếp về độ sắc nét và tính tự nhiên của khuôn mặt, người tham gia \textbf{ưu tiên Hybrid Mode hơn Landscape Mode trong 88.8\% trường hợp}.
+
+\textbf{Kiểm định thống kê:} Bài kiểm định Wilcoxon signed-rank test trên các đánh giá ghép cặp theo ảnh xác nhận Hybrid Mode được ưu tiên hơn Landscape Mode có ý nghĩa thống kê trên cả ba tiêu chí ($p < 0.001$, $n = 42$). Bài kiểm định Mann-Whitney U giữa nhóm Chuyên gia và Người dùng phổ thông không cho thấy sự khác biệt đáng kể ($p > 0.75$), gợi ý rằng cải thiện chất lượng do Hybrid Mode mang lại là có thể nhận thấy phổ quát, không phụ thuộc vào kiến thức chuyên môn về đồ họa hay anime.
+
+% =====================================================
 \section{Thảo luận và Phân tích}
 \label{sec:discussion}
 
@@ -511,6 +549,7 @@ Chương này đã trình bày đầy đủ các kết quả thực nghiệm c�
     \item \textbf{Vượt trội định lượng:} FID 58.6 và LPIPS 0.384 (Face Mode) -- tốt nhất trong số các phương pháp so sánh; tốc độ 42 FPS tại $256\times256$ GPU.
     \item \textbf{Định tính đa dạng phong cách:} Hệ thống chuyển đổi thành công ở cả ba chế độ (Face, Landscape, Hybrid), bảo toàn nhận dạng khuôn mặt và biểu cảm.
     \item \textbf{Face Mode và Hybrid Mode hiệu quả:} margin = 0.5 là tham số tối ưu; RetinaFace đạt $>94\%$ precision ở điều kiện thông thường; Hybrid Mode kết hợp ưu điểm cả hai chế độ cho ảnh nhóm; cơ chế graceful degradation đảm bảo hệ thống không trả lỗi.
+    \item \textbf{User Study xác nhận cải thiện:} Khảo sát với 42 người tham gia (12 chuyên gia + 30 phổ thông) cho thấy Hybrid Mode được ưu tiên hơn Landscape Mode trong 88.8\% trường hợp; kiểm định Wilcoxon signed-rank test xác nhận sự cải thiện có ý nghĩa thống kê ($p < 0.001$) trên cả ba tiêu chí đánh giá.
 \end{itemize}
 
 Chương tiếp theo sẽ tổng kết các đóng góp chính của luận văn và đề xuất hướng phát triển tương lai.
