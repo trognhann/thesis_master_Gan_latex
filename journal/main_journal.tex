@@ -166,12 +166,12 @@ Second, the vertical bias is not zero-mean. The forehead, crown and hair volume 
 
 We therefore keep the total budget fixed at $2m \cdot w$ horizontally and instead \textit{redistribute} it as a function of the observed head pose. Fig.~\ref{fig:adaptive_margin} illustrates the complete four-step procedure on a non-frontal example: the green box is the raw detection $B$, and the blue box is the adaptive crop $B'$.
 
-\begin{figure*}[!t]
+\begin{figure}[!t]
 \centering
-\includegraphics[width=\textwidth]{adaptive_margin_pipeline.png}
+\includegraphics[width=\linewidth]{adaptive_margin_pipeline.png}
 \caption{Adaptive Gaze-Dependent Margin Expansion (AGME). \textbf{Step~1:} the raw RetinaFace box $B$ (green) and the five-point landmark set (yellow) are received. \textbf{Step~2:} the horizontal nose-to-eye distances $d_{\text{left}}$ and $d_{\text{right}}$ yield the shift factor $S$ of Eq.~\eqref{eq:shift}. \textbf{Step~3:} the fixed budget $2m \cdot w$ is split into $m(1-S)w$ and $m(1+S)w$, translating the expansion towards the occipital side of the head. \textbf{Step~4:} the square constraint generates a vertical surplus $dy$, distributed $70\%$ to the crown and $30\%$ to the chin. The resulting adaptive box $B'$ (blue) captures the hair volume and the ear that symmetric padding would truncate, without admitting background on the gaze side.}
 \label{fig:adaptive_margin}
-\end{figure*}
+\end{figure}
 
 \subsubsection{Formulation}
 Let $m$ denote the base expansion ratio ($m = 0.3$ throughout, see Section~\ref{subsec:ablation_margin}). The procedure comprises six deterministic steps.
@@ -287,14 +287,17 @@ In Hybrid Mode, the face region is processed at $512 \times 512$ and pasted back
 
 \begin{figure*}[t]
 \centering
-\includegraphics[width=\textwidth]{feathered_blending.jpeg}
-\caption{Feathered Blending, with a composite computed by the deployed implementation rather than illustrated. \textbf{(a)}~The landscape pass renders the whole frame at once, so the face region (dashed) emerges with low effective resolution. \textbf{(b)}~The face pass renders the same region at $512 \times 512$ and resizes it to $w_f \times h_f$. \textbf{(c)}~The alpha mask $\hat{M}$: a binary mask inset by $\delta = \lfloor 0.08 \cdot \min(w_f,h_f) \rfloor$, blurred by a Gaussian of the same radius. \textbf{(d)}~The composite of Eq.~\eqref{eq:composite}. \textbf{(e)--(f)}~Boundary detail at $3\times$ zoom: a hard paste leaves a step edge along the crop border, whereas the feathered mask spreads it over a band of width $\approx 2\delta$. The residual weight at the outermost pixel of the paste rectangle is $\bar{\alpha} \approx 0.18$, not $0$, so the seam is attenuated rather than eliminated; see the discussion following Eq.~\eqref{eq:composite}.}
+\includegraphics[width=\textwidth]{feathered_blending}
+\caption{Feathered Blending, with a composite computed by the deployed implementation rather than illustrated. \textbf{(a)}~The landscape pass renders the whole frame at once, so the face region (dashed) emerges with low effective resolution. \textbf{(b)}~The face pass renders the same region at $512 \times 512$ and resizes it to $w_f \times h_f$. \textbf{(c)}~The alpha mask $\hat{M}$: a binary mask inset by $\delta$ (Eq.~\eqref{eq:delta}), blurred by a Gaussian of bandwidth $\sigma = \delta/3$. \textbf{(d)}~The composite of Eq.~\eqref{eq:composite}. \textbf{(e)--(f)}~Boundary detail at $3\times$ zoom: a hard paste leaves a step edge along the crop border, whereas the feathered mask spreads it over a band of width $\approx 2\delta$. Because $\sigma = \delta/3$, the three-sigma rule confines the ramp to the inset band, so the residual weight at the outermost pixel of the paste rectangle is $\bar{\alpha} < 10^{-3}$ and the background is preserved at the paste boundary; see the discussion following Eq.~\eqref{eq:composite}.}
 \label{fig:feathered_blending}
 \end{figure*}
 
 \textbf{Step 1 -- Binary Mask with Inset Border}: For a face region of dimensions $w_f \times h_f$, we create a binary mask $M$ with a border of width $\delta$:
 \begin{equation}
-\delta = \lfloor 0.08 \cdot \min(w_f, h_f) \rfloor
+\begin{aligned}
+m &= \min(w_f, h_f), \qquad \delta_0 = \lfloor 0.08\, m \rfloor, \\[2pt]
+\delta &= \min\!\left( \max(\delta_0,\, \delta_{\min}),\;\left\lfloor \tfrac{m-1}{4} \right\rfloor \right), \qquad \delta_{\min} = 3
+\end{aligned}
 \label{eq:delta}
 \end{equation}
 \begin{equation}
@@ -302,15 +305,18 @@ M(x,y) = \begin{cases} 255 & \text{if } \delta \leq x < w_f - \delta \text{ and 
 \label{eq:mask}
 \end{equation}
 
-The inset $\delta$ (8\% of the smaller dimension) defines the transition zone. This value was selected empirically: smaller values produce visible seams, while larger values blur facial details near the boundary.
+The inset $\delta$ (8\% of the smaller dimension) defines the transition zone. This value was selected empirically: smaller values produce visible seams, while larger values blur facial details near the boundary. The two clamps in Eq.~\eqref{eq:delta} guard the degenerate regime. The lower bound $\delta_{\min} = 3$ keeps the transition band wide enough to remain perceptually smooth for small crops, while the upper bound $\lfloor (\min(w_f,h_f)-1)/4 \rfloor$ guarantees that the saturated core of the mask retains at least half of the shorter side. Without the upper bound the inset region would meet in the middle for crops narrower than $2\delta_{\min}+1 = 7$ pixels, collapsing $M$ to the all-zero mask and silently discarding the stylized face; the bound is inactive for $\min(w_f,h_f) \geq 13$ and therefore does not affect any result reported in this paper. In deployment we additionally skip the face branch entirely when $\min(w_f,h_f) < 16$, since a $512 \times 512$ upsample of such a crop contributes no detail over the landscape pass.
 
 \textbf{Step 2 -- Gaussian Blur}: The binary mask is smoothed by convolution with a Gaussian kernel:
 \begin{equation}
-\hat{M} = M * G_\delta, \quad G_\delta(x,y) = \frac{1}{2\pi\delta^2} \exp\!\left(-\frac{x^2 + y^2}{2\delta^2}\right)
+\begin{aligned}
+\hat{M} &= M * G_\sigma, \qquad \sigma = \frac{\delta}{3}, \\[2pt]
+G_\sigma(x,y) &= \frac{1}{2\pi\sigma^2} \exp\!\left(-\frac{x^2 + y^2}{2\sigma^2}\right)
+\end{aligned}
 \label{eq:gaussian}
 \end{equation}
 
-This produces a smooth alpha gradient that transitions monotonically from full face contribution at the center to full background contribution at the edges.
+This produces a smooth alpha gradient that transitions monotonically from full face contribution at the center to full background contribution at the edges. The bandwidth is tied to the inset by the \emph{three-sigma rule}: setting $\sigma = \delta/3$ places over $99.7\%$ of the kernel mass within $\pm 3\sigma = \pm\delta$ of the mask edge, so the entire ramp is contained in the inset band and spans a width of $2\delta$. Two properties follow, and we verified both numerically on the deployed implementation. First, $\hat{M} \to 0$ at the outer rectangle, so the background is reproduced exactly at the paste boundary and no step edge survives. Second, $\hat{M} = 255$ everywhere at depth $2\delta$ or more, \emph{including at the four corners}, so no facial detail is attenuated. The naive alternative $\sigma = \delta$ fails on both counts: the measured alpha at the paste border is $\bar{\alpha} \approx 0.18$, and because the two orthogonal edge responses multiply near a corner, the mask peaks at only $0.70$ there, visibly diluting the stylized face at the corners of the crop.
 
 \textbf{Step 3 -- Alpha Compositing}:
 \begin{equation}
@@ -318,7 +324,7 @@ I_{\text{out}}(x,y) = \frac{\hat{M}(x,y)}{255} \cdot I_{\text{face}}(x,y) + \lef
 \label{eq:composite}
 \end{equation}
 
-where $I_{\text{face}}$ is the anime-stylized face resized to $w_f \times h_f$ and $I_{\text{bg}}$ is the landscape-processed background at the corresponding region. Note that Eq.~\eqref{eq:composite} is a convex combination: the two weights sum to unity at every pixel, so the operator is energy-preserving and cannot introduce the brightness discontinuity that an additive overlay would produce at the mask boundary. One caveat deserves stating precisely. Because the inset and the blur radius are both $\delta$, the Gaussian tail has not fully decayed when it reaches the edge of the pasted rectangle: the residual weight there is $\bar{\alpha} \approx 0.18$ rather than $0$, so a step of that magnitude survives at the paste boundary. The seam is thus attenuated by roughly $82\%$ relative to a hard paste rather than removed outright, which is sufficient for it to fall below the visibility threshold in practice but is not the same as exact background preservation. Widening the inset to $3\delta$ drives the residual below $10^{-3}$, at the cost of a transition band that begins to encroach on facial detail; we retain the $\delta$ inset as the better trade-off and quantify it here for completeness.
+where $I_{\text{face}}$ is the anime-stylized face resized to $w_f \times h_f$ and $I_{\text{bg}}$ is the landscape-processed background at the corresponding region. Note that Eq.~\eqref{eq:composite} is a convex combination: the two weights sum to unity at every pixel, so the operator is energy-preserving and cannot introduce the brightness discontinuity that an additive overlay would produce at the mask boundary. The choice $\sigma = \delta/3$ also makes the operator exact at both ends of the ramp. At the outermost pixel of the pasted rectangle the residual weight is $\bar{\alpha} < 10^{-3}$, so $I_{\text{out}} = I_{\text{bg}}$ there to within one quantisation step and the composite leaves the background bit-identical outside the crop; at depth $2\delta$ and beyond $\hat{M}/255 = 1$, so the stylized face is passed through unattenuated. The seam is therefore removed rather than merely attenuated, and the cost is confined to a band of width $2\delta$ ($16\%$ of the shorter side) in which the two passes are mixed. Because the ramp is contained in the inset, widening $\delta$ trades transition smoothness against facial detail without affecting the boundary residual, which is why $\delta$ can be tuned perceptually and $\sigma$ need not be.
 
 We considered Poisson image editing~\cite{Perez2003Poisson} as an alternative. However, it enforces gradient compatibility between source and target, which \textit{alters the color distribution} of the face region to match the background---destroying the cel-shading palette learned by the generator. It also requires solving a sparse linear system, adding $\sim$200\,ms per face compared to $<$5\,ms for our approach. Section~\ref{subsec:ablation_blend} compares both methods empirically.
 
@@ -509,7 +515,7 @@ Both parameters exhibit a clear interior optimum. Restricting $S_{\max}$ below $
 \subsubsection{Blending Method}
 \label{subsec:ablation_blend}
 
-We compare three compositing strategies for Hybrid Mode: (1)~hard cut-and-paste, (2)~our Feathered Blending ($\delta = 8\%$), and (3)~Poisson image editing~\cite{Perez2003Poisson} as a reference upper bound. Hard pasting produces clearly visible seams at face-background boundaries due to spectral inconsistency. Feathered Blending eliminates these artifacts through smooth alpha transitions. Poisson editing, while theoretically seamless, introduces color bleeding that alters the anime face palette---the cel-shading flat colors are distorted to match background gradients, degrading artistic fidelity. Furthermore, Poisson editing requires solving a large sparse linear system, adding $\sim$200\,ms per face versus $<$5\,ms for our Gaussian-based approach.
+We compare three compositing strategies for Hybrid Mode: (1)~hard cut-and-paste, (2)~our Feathered Blending ($\delta = 8\%$, $\sigma = \delta/3$), and (3)~Poisson image editing~\cite{Perez2003Poisson} as a reference upper bound. Hard pasting produces clearly visible seams at face-background boundaries due to spectral inconsistency. Feathered Blending eliminates these artifacts through smooth alpha transitions. Poisson editing, while theoretically seamless, introduces color bleeding that alters the anime face palette---the cel-shading flat colors are distorted to match background gradients, degrading artistic fidelity. Furthermore, Poisson editing requires solving a large sparse linear system, adding $\sim$200\,ms per face versus $<$5\,ms for our Gaussian-based approach.
 
 \subsubsection{Face Detector}
 
@@ -958,14 +964,17 @@ In Hybrid Mode, the face region is processed at $512 \times 512$ and pasted back
 
 \begin{figure*}[t]
 \centering
-\includegraphics[width=\textwidth]{feathered_blending.png}
-\caption{Feathered Blending, with a composite computed by the deployed implementation rather than illustrated. \textbf{(a)}~The landscape pass renders the whole frame at once, so the face region (dashed) emerges with low effective resolution. \textbf{(b)}~The face pass renders the same region at $512 \times 512$ and resizes it to $w_f \times h_f$. \textbf{(c)}~The alpha mask $\hat{M}$: a binary mask inset by $\delta = \lfloor 0.08 \cdot \min(w_f,h_f) \rfloor$, blurred by a Gaussian of the same radius. \textbf{(d)}~The composite of Eq.~\eqref{eq:composite}. \textbf{(e)--(f)}~Boundary detail at $3\times$ zoom: a hard paste leaves a step edge along the crop border, whereas the feathered mask spreads it over a band of width $\approx 2\delta$. The residual weight at the outermost pixel of the paste rectangle is $\bar{\alpha} \approx 0.18$, not $0$, so the seam is attenuated rather than eliminated; see the discussion following Eq.~\eqref{eq:composite}.}
+\includegraphics[width=\textwidth]{feathered_blending}
+\caption{Feathered Blending, with a composite computed by the deployed implementation rather than illustrated. \textbf{(a)}~The landscape pass renders the whole frame at once, so the face region (dashed) emerges with low effective resolution. \textbf{(b)}~The face pass renders the same region at $512 \times 512$ and resizes it to $w_f \times h_f$. \textbf{(c)}~The alpha mask $\hat{M}$: a binary mask inset by $\delta$ (Eq.~\eqref{eq:delta}), blurred by a Gaussian of bandwidth $\sigma = \delta/3$. \textbf{(d)}~The composite of Eq.~\eqref{eq:composite}. \textbf{(e)--(f)}~Boundary detail at $3\times$ zoom: a hard paste leaves a step edge along the crop border, whereas the feathered mask spreads it over a band of width $\approx 2\delta$. Because $\sigma = \delta/3$, the three-sigma rule confines the ramp to the inset band, so the residual weight at the outermost pixel of the paste rectangle is $\bar{\alpha} < 10^{-3}$ and the background is preserved at the paste boundary; see the discussion following Eq.~\eqref{eq:composite}.}
 \label{fig:feathered_blending}
 \end{figure*}
 
 \textbf{Step 1 -- Binary Mask with Inset Border}: For a face region of dimensions $w_f \times h_f$, we create a binary mask $M$ with a border of width $\delta$:
 \begin{equation}
-\delta = \lfloor 0.08 \cdot \min(w_f, h_f) \rfloor
+\begin{aligned}
+m &= \min(w_f, h_f), \qquad \delta_0 = \lfloor 0.08\, m \rfloor, \\[2pt]
+\delta &= \min\!\left( \max(\delta_0,\, \delta_{\min}),\;\left\lfloor \tfrac{m-1}{4} \right\rfloor \right), \qquad \delta_{\min} = 3
+\end{aligned}
 \label{eq:delta}
 \end{equation}
 \begin{equation}
@@ -973,15 +982,18 @@ M(x,y) = \begin{cases} 255 & \text{if } \delta \leq x < w_f - \delta \text{ and 
 \label{eq:mask}
 \end{equation}
 
-The inset $\delta$ (8\% of the smaller dimension) defines the transition zone. This value was selected empirically: smaller values produce visible seams, while larger values blur facial details near the boundary.
+The inset $\delta$ (8\% of the smaller dimension) defines the transition zone. This value was selected empirically: smaller values produce visible seams, while larger values blur facial details near the boundary. The two clamps in Eq.~\eqref{eq:delta} guard the degenerate regime. The lower bound $\delta_{\min} = 3$ keeps the transition band wide enough to remain perceptually smooth for small crops, while the upper bound $\lfloor (\min(w_f,h_f)-1)/4 \rfloor$ guarantees that the saturated core of the mask retains at least half of the shorter side. Without the upper bound the inset region would meet in the middle for crops narrower than $2\delta_{\min}+1 = 7$ pixels, collapsing $M$ to the all-zero mask and silently discarding the stylized face; the bound is inactive for $\min(w_f,h_f) \geq 13$ and therefore does not affect any result reported in this paper. In deployment we additionally skip the face branch entirely when $\min(w_f,h_f) < 16$, since a $512 \times 512$ upsample of such a crop contributes no detail over the landscape pass.
 
 \textbf{Step 2 -- Gaussian Blur}: The binary mask is smoothed by convolution with a Gaussian kernel:
 \begin{equation}
-\hat{M} = M * G_\delta, \quad G_\delta(x,y) = \frac{1}{2\pi\delta^2} \exp\!\left(-\frac{x^2 + y^2}{2\delta^2}\right)
+\begin{aligned}
+\hat{M} &= M * G_\sigma, \qquad \sigma = \frac{\delta}{3}, \\[2pt]
+G_\sigma(x,y) &= \frac{1}{2\pi\sigma^2} \exp\!\left(-\frac{x^2 + y^2}{2\sigma^2}\right)
+\end{aligned}
 \label{eq:gaussian}
 \end{equation}
 
-This produces a smooth alpha gradient that transitions monotonically from full face contribution at the center to full background contribution at the edges.
+This produces a smooth alpha gradient that transitions monotonically from full face contribution at the center to full background contribution at the edges. The bandwidth is tied to the inset by the \emph{three-sigma rule}: setting $\sigma = \delta/3$ places over $99.7\%$ of the kernel mass within $\pm 3\sigma = \pm\delta$ of the mask edge, so the entire ramp is contained in the inset band and spans a width of $2\delta$. Two properties follow, and we verified both numerically on the deployed implementation. First, $\hat{M} \to 0$ at the outer rectangle, so the background is reproduced exactly at the paste boundary and no step edge survives. Second, $\hat{M} = 255$ everywhere at depth $2\delta$ or more, \emph{including at the four corners}, so no facial detail is attenuated. The naive alternative $\sigma = \delta$ fails on both counts: the measured alpha at the paste border is $\bar{\alpha} \approx 0.18$, and because the two orthogonal edge responses multiply near a corner, the mask peaks at only $0.70$ there, visibly diluting the stylized face at the corners of the crop.
 
 \textbf{Step 3 -- Alpha Compositing}:
 \begin{equation}
@@ -989,7 +1001,7 @@ I_{\text{out}}(x,y) = \frac{\hat{M}(x,y)}{255} \cdot I_{\text{face}}(x,y) + \lef
 \label{eq:composite}
 \end{equation}
 
-where $I_{\text{face}}$ is the anime-stylized face resized to $w_f \times h_f$ and $I_{\text{bg}}$ is the landscape-processed background at the corresponding region. Note that Eq.~\eqref{eq:composite} is a convex combination: the two weights sum to unity at every pixel, so the operator is energy-preserving and cannot introduce the brightness discontinuity that an additive overlay would produce at the mask boundary. One caveat deserves stating precisely. Because the inset and the blur radius are both $\delta$, the Gaussian tail has not fully decayed when it reaches the edge of the pasted rectangle: the residual weight there is $\bar{\alpha} \approx 0.18$ rather than $0$, so a step of that magnitude survives at the paste boundary. The seam is thus attenuated by roughly $82\%$ relative to a hard paste rather than removed outright, which is sufficient for it to fall below the visibility threshold in practice but is not the same as exact background preservation. Widening the inset to $3\delta$ drives the residual below $10^{-3}$, at the cost of a transition band that begins to encroach on facial detail; we retain the $\delta$ inset as the better trade-off and quantify it here for completeness.
+where $I_{\text{face}}$ is the anime-stylized face resized to $w_f \times h_f$ and $I_{\text{bg}}$ is the landscape-processed background at the corresponding region. Note that Eq.~\eqref{eq:composite} is a convex combination: the two weights sum to unity at every pixel, so the operator is energy-preserving and cannot introduce the brightness discontinuity that an additive overlay would produce at the mask boundary. The choice $\sigma = \delta/3$ also makes the operator exact at both ends of the ramp. At the outermost pixel of the pasted rectangle the residual weight is $\bar{\alpha} < 10^{-3}$, so $I_{\text{out}} = I_{\text{bg}}$ there to within one quantisation step and the composite leaves the background bit-identical outside the crop; at depth $2\delta$ and beyond $\hat{M}/255 = 1$, so the stylized face is passed through unattenuated. The seam is therefore removed rather than merely attenuated, and the cost is confined to a band of width $2\delta$ ($16\%$ of the shorter side) in which the two passes are mixed. Because the ramp is contained in the inset, widening $\delta$ trades transition smoothness against facial detail without affecting the boundary residual, which is why $\delta$ can be tuned perceptually and $\sigma$ need not be.
 
 We considered Poisson image editing~\cite{Perez2003Poisson} as an alternative. However, it enforces gradient compatibility between source and target, which \textit{alters the color distribution} of the face region to match the background---destroying the cel-shading palette learned by the generator. It also requires solving a sparse linear system, adding $\sim$200\,ms per face compared to $<$5\,ms for our approach. Section~\ref{subsec:ablation_blend} compares both methods empirically.
 
@@ -1180,7 +1192,7 @@ Both parameters exhibit a clear interior optimum. Restricting $S_{\max}$ below $
 \subsubsection{Blending Method}
 \label{subsec:ablation_blend}
 
-We compare three compositing strategies for Hybrid Mode: (1)~hard cut-and-paste, (2)~our Feathered Blending ($\delta = 8\%$), and (3)~Poisson image editing~\cite{Perez2003Poisson} as a reference upper bound. Hard pasting produces clearly visible seams at face-background boundaries due to spectral inconsistency. Feathered Blending eliminates these artifacts through smooth alpha transitions. Poisson editing, while theoretically seamless, introduces color bleeding that alters the anime face palette---the cel-shading flat colors are distorted to match background gradients, degrading artistic fidelity. Furthermore, Poisson editing requires solving a large sparse linear system, adding $\sim$200\,ms per face versus $<$5\,ms for our Gaussian-based approach.
+We compare three compositing strategies for Hybrid Mode: (1)~hard cut-and-paste, (2)~our Feathered Blending ($\delta = 8\%$, $\sigma = \delta/3$), and (3)~Poisson image editing~\cite{Perez2003Poisson} as a reference upper bound. Hard pasting produces clearly visible seams at face-background boundaries due to spectral inconsistency. Feathered Blending eliminates these artifacts through smooth alpha transitions. Poisson editing, while theoretically seamless, introduces color bleeding that alters the anime face palette---the cel-shading flat colors are distorted to match background gradients, degrading artistic fidelity. Furthermore, Poisson editing requires solving a large sparse linear system, adding $\sim$200\,ms per face versus $<$5\,ms for our Gaussian-based approach.
 
 \subsubsection{Face Detector}
 
