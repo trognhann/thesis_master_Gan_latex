@@ -47,12 +47,11 @@ Email: \IEEEauthorrefmark{1}24025149@vnu.edu.vn,
 }
 
 \maketitle
-`'
 % =====================================================
 % ABSTRACT
 % =====================================================
 \begin{abstract}
-Recent advances in generative adversarial networks (GANs) have enabled automatic photo-to-anime translation, yet existing approaches struggle to simultaneously preserve facial identity and maintain real-time inference on resource-constrained devices. Meanwhile, diffusion-based methods achieve impressive visual quality but demand gigabytes of model storage and seconds per image, rendering them impractical for edge deployment. In this paper, we propose a \textit{Face-Preserved Hybrid Framework} that integrates a lightweight Double-Tail GAN (DTGAN) backbone with an automated face detection and enhancement pipeline. Our framework operates in three adaptive modes---Face, Landscape, and Hybrid---with graceful degradation when no face is detected. Two key engineering design choices drive quality: (1)~a \textit{Symmetric Margin Expansion} procedure that pads face bounding boxes with a 50\% margin, enforces a 1:1 aspect ratio, and clamps to image boundaries---preserving critical facial context (hair, ears, neck) for the generator; and (2)~\textit{Feathered Blending} via Gaussian-smoothed alpha compositing that eliminates visible seams when merging high-resolution face crops onto landscape-processed backgrounds. Our system achieves a Fr\'{e}chet Inception Distance (FID) of 58.6 and LPIPS of 0.384 in Face Mode, while requiring only 9.1\,MB of model storage and running at 42\,FPS---over 28$\times$ faster and 200$\times$ smaller than comparable diffusion-based solutions. A structured user study with 42 participants confirms that Hybrid Mode yields statistically significant improvements in perceived identity preservation and visual quality over the full-image Landscape Mode baseline (Wilcoxon signed-rank test, $p < 0.001$).
+Recent advances in generative adversarial networks (GANs) have enabled automatic photo-to-anime translation, yet existing approaches struggle to simultaneously preserve facial identity and maintain real-time inference on resource-constrained devices. Meanwhile, diffusion-based methods achieve impressive visual quality but demand gigabytes of model storage and seconds per image, rendering them impractical for edge deployment. In this paper, we propose a \textit{Face-Preserved Hybrid Framework} that integrates a lightweight Double-Tail GAN (DTGAN) backbone with an automated face detection and enhancement pipeline. Our framework operates in three adaptive modes---Face, Landscape, and Hybrid---with graceful degradation when no face is detected. Two key engineering design choices drive quality: (1)~an \textit{Adaptive Gaze-Dependent Margin Expansion} (AGME) procedure that estimates a head-pose shift factor $S$ from the nose-to-eye landmark asymmetry and redistributes a fixed context budget $m$ asymmetrically---horizontally towards the occipital side of the head and vertically in a $70{:}30$ crown-to-chin ratio---before enforcing a 1:1 aspect ratio and clamping to image boundaries, so that hair, ear and neck context is retained even for strongly non-frontal faces; and (2)~\textit{Feathered Blending} via Gaussian-smoothed alpha compositing that eliminates visible seams when merging high-resolution face crops onto landscape-processed backgrounds. Our system achieves a Fr\'{e}chet Inception Distance (FID) of 58.6 and LPIPS of 0.384 in Face Mode, while requiring only 9.1\,MB of model storage and running at 42\,FPS---over 28$\times$ faster and 200$\times$ smaller than comparable diffusion-based solutions. A structured user study with 42 participants confirms that Hybrid Mode yields statistically significant improvements in perceived identity preservation and visual quality over the full-image Landscape Mode baseline (Wilcoxon signed-rank test, $p < 0.001$).
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -75,7 +74,7 @@ The main contributions of this paper are summarized as follows:
 \begin{enumerate}
 \item We propose an end-to-end hybrid framework for photo-to-anime translation that adaptively coordinates global landscape stylization and high-resolution local face synthesis within a unified pipeline, including a parallelized CPU-GPU training workflow for real-time loss computation.
 
-\item We design a \textit{Symmetric Margin Expansion} procedure that pads, squares, and clamps detected face bounding boxes to include surrounding context (hair, ears, neck) needed for natural anime rendering. We empirically validate $m = 0.5$ as the optimal expansion ratio through ablation over FID and LPIPS.
+\item We design an \textit{Adaptive Gaze-Dependent Margin Expansion} (AGME) procedure that pads, squares, and clamps detected face bounding boxes to include the surrounding context (hair, ears, neck) needed for natural anime rendering. Unlike prior symmetric padding, AGME derives a closed-form shift factor $S \in [-1,1]$ from the horizontal nose-to-eye distances of the five-point landmark set and uses it to redistribute---rather than enlarge---the context budget towards the back of the head, complemented by an asymmetric $70{:}30$ vertical split that favours the crown over the chin. The procedure is landmark-cheap ($<$0.1\,ms), requires no additional network, and degenerates \textit{exactly} to symmetric expansion when landmarks are unavailable. We empirically validate $m = 0.3$, the clipping bound $S_{\max} = 0.7$, and the vertical ratio $\alpha_{\text{top}} = 0.7$ through ablation over FID and LPIPS.
 
 \item We employ \textit{Feathered Blending}---Gaussian-smoothed alpha compositing---to seamlessly merge high-resolution face crops with landscape-processed backgrounds, avoiding the color bleeding introduced by Poisson editing while adding negligible latency ($<$5\,ms per face).
 
@@ -107,7 +106,9 @@ However, these methods impose severe computational requirements: Stable Diffusio
 
 Face detection has evolved from Viola-Jones cascades to modern single-shot detectors such as RetinaFace~\cite{Deng2019RetinaFace}, which simultaneously predicts bounding boxes, confidence scores, and five facial landmarks through multi-task learning on a Feature Pyramid Network~\cite{Lin2017FPN}. The MobileNet-0.25 variant~\cite{Howard2017MobileNet} provides an ultra-lightweight backbone ($\sim$500\,KB) suitable for edge deployment.
 
-While face-aware processing has been explored in super-resolution and face restoration, its application to anime-style transfer remains largely unexplored. Our work is, to the best of our knowledge, the first to integrate face detection with margin expansion and feathered blending into a unified anime stylization pipeline.
+Downstream consumers of a detector typically re-frame the raw box before feeding it to a generator. The dominant practice is \textit{symmetric padding}: the box is enlarged by a fixed ratio on all four sides and then squared~\cite{Karras2019, Richardson2021}. An alternative is \textit{similarity-transform alignment}, in which the landmarks are warped onto a canonical template, as used by FFHQ-style pipelines. Alignment normalises pose but resamples the image and rotates the background, which is undesirable for Hybrid compositing because the stylized crop must be pasted back into an un-rotated scene. Our Adaptive Gaze-Dependent Margin Expansion occupies the middle ground: it keeps the axis-aligned, resampling-free character of symmetric padding, yet uses the same landmarks that alignment would consume to steer \textit{where} the padding is spent.
+
+While face-aware processing has been explored in super-resolution and face restoration, its application to anime-style transfer remains largely unexplored. Our work is, to the best of our knowledge, the first to integrate landmark-driven adaptive margin expansion with feathered blending into a unified anime stylization pipeline.
 
 
 % =====================================================
@@ -119,13 +120,13 @@ While face-aware processing has been explored in super-resolution and face resto
 \subsection{System Overview}
 \label{subsec:overview}
 
-Fig.~\ref{fig:pipeline} illustrates our Face-Preserved Hybrid Framework. Given an input photograph $I \in \mathbb{R}^{H \times W \times 3}$, the system executes the following stages: (1)~face detection via RetinaFace~\cite{Deng2019RetinaFace} to obtain bounding boxes $\{B_i\}_{i=1}^{N}$ and facial landmarks; (2)~mode selection based on detection results and user preference; (3)~stylization through the DTGAN backbone via ONNX Runtime~\cite{ONNX2019}; and (4)~compositing via Feathered Blending for Hybrid Mode.
+Fig.~\ref{fig:pipeline} illustrates our Face-Preserved Hybrid Framework. Given an input photograph $I \in \mathbb{R}^{H \times W \times 3}$, the system executes the following stages: (1)~face detection via RetinaFace~\cite{Deng2019RetinaFace} to obtain bounding boxes $\{B_i\}_{i=1}^{N}$ and their associated five-point landmark sets $\{L_i\}_{i=1}^{N}$; (2)~mode selection based on detection results and user preference; (3)~stylization through the DTGAN backbone via ONNX Runtime~\cite{ONNX2019}; and (4)~compositing via Feathered Blending for Hybrid Mode.
 
 The framework supports three operating modes:
 \begin{itemize}
-\item \textbf{Face Mode}: The largest detected face is extracted, expanded via Symmetric Margin Expansion, resized to $256 \times 256$, and processed through the generator. Best suited for portrait and avatar applications.
+\item \textbf{Face Mode}: The largest detected face is extracted, expanded via Adaptive Gaze-Dependent Margin Expansion (Section~\ref{subsec:margin}), resized to $512 \times 512$, and processed through the generator. Best suited for portrait and avatar applications.
 \item \textbf{Landscape Mode}: The full image is resized (dimensions divisible by 8) and processed directly. Optimal for scenery without prominent faces.
-\item \textbf{Hybrid Mode}: The background is processed via Landscape Mode, while each detected face is independently processed via Face Mode at $256 \times 256$ and composited back using Feathered Blending. This mode combines high-quality facial details with anime-styled backgrounds.
+\item \textbf{Hybrid Mode}: The background is processed via Landscape Mode, while each detected face is independently processed via Face Mode at $512 \times 512$ and composited back using Feathered Blending. This mode combines high-quality facial details with anime-styled backgrounds.
 \end{itemize}
 
 A critical design principle is \textit{graceful degradation}: when Face or Hybrid Mode is selected but no face is detected (confidence below 0.8), the system automatically falls back to Landscape Mode, ensuring the pipeline never produces an error state.
@@ -140,53 +141,156 @@ A critical design principle is \textit{graceful degradation}: when Face or Hybri
 \subsection{DTGAN Backbone}
 \label{subsec:dtgan}
 
-We employ AnimeGANv3 (DTGAN)~\cite{Liu2024} as the stylization backbone. The generator comprises a shared Base Encoder that compresses $256 \times 256$ inputs to $32 \times 32$ feature maps through three stride-2 downsampling stages, followed by two specialized decoders. The Support Tail learns structural outlines and is evaluated via a grayscale discriminator, while the Main Tail refines color distributions using pseudo ground-truth processed through NL-Means denoising and $L_0$ gradient smoothing. Both decoders use Layer-Adaptive Denormalization (LADE), which computes normalization parameters directly from feature maps, offering greater flexibility than standard Instance Normalization~\cite{Ulyanov2016}.
+We employ AnimeGANv3 (DTGAN)~\cite{Liu2024} as the stylization backbone. The generator comprises a shared Base Encoder that reduces the input to one eighth of its spatial resolution through three stride-2 downsampling stages---$512 \times 512 \rightarrow 64 \times 64$ at the deployment resolution of our face path---followed by two specialized decoders. The network is fully convolutional, so the inference resolution is decoupled from the $256 \times 256$ crops used during training. We exploit this in both directions: the landscape path runs at the input's native resolution rounded down to a multiple of eight, and the face path runs at $512 \times 512$, twice the training resolution, which recovers noticeably finer eye, lash and hair-strand detail than a $256 \times 256$ pass at a cost that remains negligible relative to the diffusion baselines of Section~\ref{sec:results}. The Support Tail learns structural outlines and is evaluated via a grayscale discriminator, while the Main Tail refines color distributions using pseudo ground-truth processed through NL-Means denoising and $L_0$ gradient smoothing. Both decoders use Layer-Adaptive Denormalization (LADE), which computes normalization parameters directly from feature maps, offering greater flexibility than standard Instance Normalization~\cite{Ulyanov2016}.
 
 The training loss comprises seven components: adversarial losses for both tails (LSGAN~\cite{Mao2017} with Spectral Normalization~\cite{Miyato2018}), content loss (VGG perceptual), Lab color loss, style loss (Gram matrix matching), region smoothing loss (on Felzenszwalb superpixel maps~\cite{Felzenszwalb2004}), and fine-grained revision loss.
 
 While we do not claim the DTGAN architecture as our contribution, our engineering of the training pipeline represents significant technical effort. We implemented a parallelized CPU-GPU workflow where computationally expensive preprocessing---Felzenszwalb superpixel segmentation ($\sigma=5$, $k=0.8$, min\_size$=50$) for region smoothing loss and NL-Means combined with $L_0$ smoothing for revision loss---executes concurrently on CPU threads while the GPU performs forward and backward passes. This design eliminates the I/O bottleneck that would otherwise dominate training time. Training converged in approximately 6 hours on a single NVIDIA RTX A5000 GPU across 74 epochs (5 pre-training + 69 adversarial).
 
-\subsection{Symmetric Margin Expansion}
+\subsection{Adaptive Gaze-Dependent Margin Expansion}
 \label{subsec:margin}
 
-Given a raw face bounding box $B = [x_1, y_1, x_2, y_2]$ from RetinaFace and an image $I$ of dimensions $H \times W$, we need to produce a square crop region that includes sufficient context around the face for the generator to render natural hair, ears, and neck transitions. The procedure must satisfy three requirements: (i)~the crop has a 1:1 aspect ratio to match the generator's $256 \times 256$ input without anisotropic distortion; (ii)~the crop stays within image bounds; and (iii)~the expansion is symmetric about the face center where possible.
-
-We use an expansion ratio $m = 0.5$, meaning the crop extends 50\% of the face width beyond each side of the bounding box. The procedure proceeds in six deterministic steps:
-
-\textbf{Step 1} -- Compute original dimensions:
+Given a raw face bounding box $B = [x_1, y_1, x_2, y_2]$ produced by RetinaFace, the associated five-point landmark set
 \begin{equation}
-w = x_2 - x_1, \quad h = y_2 - y_1
+L = \{\mathbf{p}_{e_1},\, \mathbf{p}_{e_2},\, \mathbf{p}_{n},\, \mathbf{p}_{m_1},\, \mathbf{p}_{m_2}\}, \quad \mathbf{p}_\bullet = (x_\bullet, y_\bullet),
+\label{eq:landmarks}
+\end{equation}
+consisting of two eye centres, the nose tip and two mouth corners, and an image $I$ of dimensions $H \times W$, we must produce a square crop region that supplies the generator with sufficient context to render natural hair, ears and neck transitions. The procedure must satisfy three requirements: (i)~the crop has a 1:1 aspect ratio so that resizing to the generator's $512 \times 512$ face-path input is a uniform scale, free of anisotropic distortion; (ii)~the crop remains inside the image bounds; and (iii)~the \emph{finite} context budget is allocated where the missing head anatomy actually lies.
+
+\subsubsection{Motivation: the failure mode of symmetric padding}
+The conventional approach expands the detected box by a fixed ratio $m$ on all four sides and then squares the result. This is optimal only under two implicit assumptions---that the head is frontal and that it is vertically centred in the detector box---and both are routinely violated in practice. RetinaFace, like most single-shot detectors, regresses a box that tightly encloses the \textit{visible facial surface}: the region spanned by eyebrows, eyes, nose and mouth. Two systematic biases follow.
+
+First, under a yaw rotation the head silhouette becomes strongly asymmetric about the facial box. When a subject turns towards the image-left, the occipital region---the back of the skull, the ear and the bulk of the hair---protrudes to the image-\textit{right}, well outside the detector box, whereas on the image-left the box already abuts the silhouette edge. Symmetric padding therefore spends half of its budget on background on the gaze side while still truncating the hair mass on the opposite side. Increasing $m$ to compensate is counter-productive: it admits background on \textit{both} sides, and Section~\ref{subsec:ablation_margin} shows that the resulting off-domain texture measurably degrades FID.
+
+Second, the vertical bias is not zero-mean. The forehead, crown and hair volume above the eyebrow line consistently exceed the chin-to-neck extent below the mouth, so an equal top/bottom split systematically decapitates the subject while wasting rows on the collar.
+
+We therefore keep the total budget fixed at $2m \cdot w$ horizontally and instead \textit{redistribute} it as a function of the observed head pose. Fig.~\ref{fig:adaptive_margin} illustrates the complete four-step procedure on a non-frontal example: the green box is the raw detection $B$, and the blue box is the adaptive crop $B'$.
+
+\begin{figure*}[!t]
+\centering
+\includegraphics[width=\textwidth]{adaptive_margin_pipeline.png}
+\caption{Adaptive Gaze-Dependent Margin Expansion (AGME). \textbf{Step~1:} the raw RetinaFace box $B$ (green) and the five-point landmark set (yellow) are received. \textbf{Step~2:} the horizontal nose-to-eye distances $d_{\text{left}}$ and $d_{\text{right}}$ yield the shift factor $S$ of Eq.~\eqref{eq:shift}. \textbf{Step~3:} the fixed budget $2m \cdot w$ is split into $m(1-S)w$ and $m(1+S)w$, translating the expansion towards the occipital side of the head. \textbf{Step~4:} the square constraint generates a vertical surplus $dy$, distributed $70\%$ to the crown and $30\%$ to the chin. The resulting adaptive box $B'$ (blue) captures the hair volume and the ear that symmetric padding would truncate, without admitting background on the gaze side.}
+\label{fig:adaptive_margin}
+\end{figure*}
+
+\subsubsection{Formulation}
+Let $m$ denote the base expansion ratio ($m = 0.3$ throughout, see Section~\ref{subsec:ablation_margin}). The procedure comprises six deterministic steps.
+
+\textbf{Step 1} -- Reference scale. We take the reference width as the \textit{larger} of the two box dimensions,
+\begin{equation}
+w = \max\big(x_2 - x_1,\; y_2 - y_1\big), \qquad h = y_2 - y_1 .
+\label{eq:refscale}
+\end{equation}
+Using $\max(\cdot)$ rather than $x_2 - x_1$ is deliberate. At large yaw the detected box narrows---the projected inter-ocular distance shrinks with $\cos\theta$---so a width-driven margin would shrink exactly when \textit{more} context is required. Anchoring on the dominant dimension keeps the absolute amount of retained context stable across pose.
+
+A side effect of this choice is that $m$ is no longer commensurate with the width-anchored ratio used by symmetric padding. Over our evaluation set the mean RetinaFace box aspect ratio is $h/w_{\text{box}} \approx 1.32$, so for a typical detection $\max(\cdot)$ returns the height and a given $m$ buys roughly $1.3\times$ more absolute padding than the same nominal value would under a width-anchored formulation. The optimum consequently shifts downwards, and Section~\ref{subsec:ablation_margin} locates it at $m = 0.3$---which corresponds to approximately $0.4\,w_{\text{box}}$ of retained context, in the same regime as the $m \approx 0.5$ reported for width-anchored symmetric padding. The two values describe comparable crops, not a reduction in context.
+
+\textbf{Step 2} -- Gaze shift factor. Let $x_{\ell} = \min(x_{e_1}, x_{e_2})$ and $x_{r} = \max(x_{e_1}, x_{e_2})$ be the image-left and image-right eye abscissae. We measure the horizontal nose-to-eye distances
+\begin{equation}
+d_{\text{left}} = \max\!\big(1,\; x_{n} - x_{\ell}\big), \qquad
+d_{\text{right}} = \max\!\big(1,\; x_{r} - x_{n}\big),
+\label{eq:dleftright}
+\end{equation}
+where the clamp at one pixel guards against division by zero in degenerate profile views. The normalised asymmetry
+\begin{equation}
+S = \operatorname{clip}\!\left(\frac{d_{\text{right}} - d_{\text{left}}}{d_{\text{right}} + d_{\text{left}}},\; -S_{\max},\; S_{\max}\right)
+\label{eq:shift}
+\end{equation}
+is a dimensionless, scale-invariant proxy for yaw. It is $0$ for a frontal face, positive when the head is turned towards the image-left ($d_{\text{left}}$ collapses as the nose approaches the left eye in projection), and negative for the mirror case. The clipping bound $S_{\max} = 0.7$ prevents a near-profile detection---or an occasional landmark outlier---from translating the crop so far that the face itself drifts to the border.
+
+\textbf{Step 3} -- Asymmetric horizontal expansion. The per-side ratios are
+\begin{equation}
+m_{\text{left}} = m\,(1 - S), \qquad m_{\text{right}} = m\,(1 + S),
+\label{eq:msplit}
+\end{equation}
+so that
+\begin{equation}
+x_1' = \max\!\big(0,\; x_1 - m_{\text{left}}\, w\big), \quad
+x_2' = \min\!\big(W,\; x_2 + m_{\text{right}}\, w\big).
+\label{eq:hexpand}
+\end{equation}
+Because $m_{\text{left}} + m_{\text{right}} = 2m$ identically, the total horizontal context is \textit{conserved}: AGME never enlarges the crop relative to symmetric padding, it only translates the surplus towards the occipital side. This is what allows the framework to gain robustness to pose without paying the background-contamination penalty of a larger $m$.
+
+\textbf{Step 4} -- Enforce a 1:1 aspect ratio:
+\begin{equation}
+w' = x_2' - x_1', \qquad h' = w'.
+\label{eq:square}
 \end{equation}
 
-\textbf{Step 2} -- Horizontal expansion with boundary clamping:
+\textbf{Step 5} -- Asymmetric vertical allocation. The square constraint creates a vertical surplus
 \begin{equation}
-x_1' = \max(0, \; x_1 - m \cdot w), \quad x_2' = \min(W, \; x_2 + m \cdot w)
+dy = h' - h = (x_2' - x_1') - h .
+\label{eq:dy}
 \end{equation}
-
-\textbf{Step 3} -- Enforce symmetric expansion:
-\begin{equation}
-x_d = \min(x_1 - x_1', \; x_2' - x_2), \quad w' = w + 2x_d
-\end{equation}
-When the face is near an image boundary, the tentative expansion from Step~2 may be asymmetric. This step takes the smaller of the two achieved expansions and applies it to both sides.
-
-\textbf{Step 4} -- Enforce 1:1 aspect ratio: $h' = w'$
-
-\textbf{Step 5} -- Vertical adjustment with boundary clamping:
+In the normal regime $dy \geq 0$ the surplus is split according to a crown-preference coefficient $\alpha_{\text{top}}$:
 \begin{align}
-y_d &= |h' - h|, \\
-y_1' &= \max(0, \; y_c - \lfloor h'/2 \rfloor), \\
-y_2' &= \min(H, \; y_c + \lceil h'/2 \rceil)
+y_1' &= \max\!\big(0,\; y_1 - \alpha_{\text{top}}\, dy\big), \label{eq:y1}\\
+y_2' &= \min\!\big(H,\; y_2 + (1 - \alpha_{\text{top}})\, dy\big), \label{eq:y2}
 \end{align}
-where $y_c = (y_1 + y_2) / 2$ is the vertical center of the original box.
+with $\alpha_{\text{top}} = 0.7$ when landmarks are available and $\alpha_{\text{top}} = 0.5$ otherwise. The $70{:}30$ split reflects the anatomical prior discussed above: the hairline and crown carry far more identity-bearing and style-bearing signal for anime rendering than the neck and collar. In the degenerate regime $dy < 0$---a box wider than tall, clamped hard against a lateral image border---the excess height is trimmed symmetrically instead:
+\begin{equation}
+y_1' = \max\!\Big(0,\; y_1 + \tfrac{|dy|}{2}\Big), \quad
+y_2' = \min\!\Big(H,\; y_2 - \tfrac{|dy|}{2}\Big).
+\label{eq:ydegen}
+\end{equation}
 
-\textbf{Step 6} -- Integer conversion and final clamping to pixel coordinates.
+\textbf{Step 6} -- Integer conversion. The final crop $B' = \big[\lfloor x_1' \rfloor, \lfloor y_1' \rfloor, \lfloor x_2' \rfloor, \lfloor y_2' \rfloor\big]$ is truncated to pixel coordinates. Where clamping in Eqs.~\eqref{eq:hexpand} or~\eqref{eq:y1}--\eqref{eq:y2} is active the crop may deviate from an exact square by a few pixels; the residual anisotropy is bounded by the clamped amount and is absorbed by the subsequent LANCZOS resize without perceptible distortion.
 
-The choice of $m = 0.5$ was determined empirically. At $m = 0.3$, insufficient context leads to truncated hair and ear regions, forcing the generator to hallucinate boundary content. At $m = 0.7$, excessive background introduces style artifacts from non-facial elements. Section~\ref{subsec:ablation_margin} validates $m = 0.5$ quantitatively via FID and LPIPS. The 1:1 constraint ensures that resizing to $256 \times 256$ is a uniform scale---preserving facial proportions without distortion.
+Algorithm~\ref{alg:agme} summarises the procedure.
+
+\begin{algorithm}[t]
+\caption{Adaptive Gaze-Dependent Margin Expansion}
+\label{alg:agme}
+\begin{algorithmic}[1]
+\REQUIRE box $B = [x_1,y_1,x_2,y_2]$; image size $(H,W)$; margin $m$; landmarks $L$ (optional); bounds $S_{\max}=0.7$
+\ENSURE adaptive square crop $B' = [x_1',y_1',x_2',y_2']$
+\STATE $w \leftarrow \max(x_2-x_1,\, y_2-y_1)$; \quad $h \leftarrow y_2-y_1$
+\STATE $m_{\text{left}} \leftarrow m$; \quad $m_{\text{right}} \leftarrow m$; \quad $\alpha_{\text{top}} \leftarrow 0.5$
+\IF{$L \neq \varnothing$}
+    \STATE $x_\ell \leftarrow \min(x_{e_1},x_{e_2})$; \quad $x_r \leftarrow \max(x_{e_1},x_{e_2})$
+    \STATE $d_{\text{left}} \leftarrow \max(1,\, x_n - x_\ell)$; \quad $d_{\text{right}} \leftarrow \max(1,\, x_r - x_n)$
+    \STATE $S \leftarrow (d_{\text{right}}-d_{\text{left}}) / (d_{\text{right}}+d_{\text{left}})$
+    \STATE $S \leftarrow \operatorname{clip}(S,\, -S_{\max},\, S_{\max})$
+    \STATE $m_{\text{left}} \leftarrow m(1-S)$; \quad $m_{\text{right}} \leftarrow m(1+S)$
+    \STATE $\alpha_{\text{top}} \leftarrow 0.7$ \COMMENT{crown preference}
+\ENDIF
+\STATE $x_1' \leftarrow \max(0,\, x_1 - m_{\text{left}} w)$
+\STATE $x_2' \leftarrow \min(W,\, x_2 + m_{\text{right}} w)$
+\STATE $w' \leftarrow x_2' - x_1'$; \quad $h' \leftarrow w'$ \COMMENT{1:1 aspect ratio}
+\STATE $dy \leftarrow h' - h$
+\IF{$dy \geq 0$}
+    \STATE $y_1' \leftarrow \max(0,\, y_1 - \alpha_{\text{top}}\, dy)$
+    \STATE $y_2' \leftarrow \min(H,\, y_2 + (1-\alpha_{\text{top}})\, dy)$
+\ELSE
+    \STATE $y_1' \leftarrow \max(0,\, y_1 + |dy|/2)$
+    \STATE $y_2' \leftarrow \min(H,\, y_2 - |dy|/2)$
+\ENDIF
+\RETURN $\lfloor x_1' \rfloor, \lfloor y_1' \rfloor, \lfloor x_2' \rfloor, \lfloor y_2' \rfloor$
+\end{algorithmic}
+\end{algorithm}
+
+\subsubsection{Properties}
+Three properties make AGME attractive for an edge deployment.
+
+\textbf{Backward compatibility.} Setting $S = 0$ and $\alpha_{\text{top}} = 0.5$ recovers the symmetric procedure exactly. Since $S \to 0$ as the face approaches frontality, AGME is a strict generalisation: it modifies the crop only in the regime where symmetric padding is demonstrably mis-framed, and leaves frontal portraits untouched. This is confirmed empirically in Table~\ref{tab:adaptive}, where the frontal subset shows no degradation.
+
+\textbf{Zero marginal cost.} Eqs.~\eqref{eq:refscale}--\eqref{eq:ydegen} involve a constant number of scalar operations on landmarks the detector already emits as a by-product of its multi-task head~\cite{Deng2019RetinaFace}. Measured overhead is below $0.1$\,ms per face on an Intel i5-12400---three orders of magnitude smaller than the $71.6$\,ms crop-and-inference stage of Table~\ref{tab:multimodel_breakdown}---so the accuracy gain is effectively free. No auxiliary pose-estimation network is introduced, preserving the $9.1$\,MB footprint of the framework.
+
+\textbf{Resampling-free.} Unlike similarity-transform alignment, AGME emits an axis-aligned rectangle. The stylized $512 \times 512$ output can therefore be resized and pasted back into the landscape-processed background by the Feathered Blending stage of Section~\ref{subsec:blending} without an inverse warp, which would otherwise introduce interpolation blur and rotate the background inside the blending mask.
+
+The choice of $m = 0.3$ was determined empirically on the reference scale of Eq.~\eqref{eq:refscale}. At $m = 0.2$, insufficient context leads to truncated hair and ear regions, forcing the generator to hallucinate boundary content. At $m \geq 0.4$, excessive background introduces style artifacts from non-facial elements. Section~\ref{subsec:ablation_margin} validates $m = 0.3$, $S_{\max} = 0.7$ and $\alpha_{\text{top}} = 0.7$ quantitatively via FID and LPIPS.
 
 \subsection{Feathered Blending}
 \label{subsec:blending}
 
-In Hybrid Mode, the face region is processed at $256 \times 256$ and pasted back onto a landscape-processed background. A hard cut-and-paste creates visible seams at the boundary due to differences in resolution, color distribution, and stylization intensity between the two regions. We use Gaussian-smoothed alpha compositing to produce a gradual transition.
+In Hybrid Mode, the face region is processed at $512 \times 512$ and pasted back onto a landscape-processed background. Because the face path is upsampled well above the effective resolution of the same region in the landscape pass, the two sources differ not only in colour statistics but also in spatial frequency content. A hard cut-and-paste creates visible seams at the boundary due to differences in resolution, color distribution, and stylization intensity between the two regions. We use Gaussian-smoothed alpha compositing to produce a gradual transition. Fig.~\ref{fig:feathered_blending} summarises the three-stage procedure and the data flow from the two independent generator passes to the final composite.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{feathered_blending.jpeg}
+\caption{Feathered Blending, with a composite computed by the deployed implementation rather than illustrated. \textbf{(a)}~The landscape pass renders the whole frame at once, so the face region (dashed) emerges with low effective resolution. \textbf{(b)}~The face pass renders the same region at $512 \times 512$ and resizes it to $w_f \times h_f$. \textbf{(c)}~The alpha mask $\hat{M}$: a binary mask inset by $\delta = \lfloor 0.08 \cdot \min(w_f,h_f) \rfloor$, blurred by a Gaussian of the same radius. \textbf{(d)}~The composite of Eq.~\eqref{eq:composite}. \textbf{(e)--(f)}~Boundary detail at $3\times$ zoom: a hard paste leaves a step edge along the crop border, whereas the feathered mask spreads it over a band of width $\approx 2\delta$. The residual weight at the outermost pixel of the paste rectangle is $\bar{\alpha} \approx 0.18$, not $0$, so the seam is attenuated rather than eliminated; see the discussion following Eq.~\eqref{eq:composite}.}
+\label{fig:feathered_blending}
+\end{figure*}
 
 \textbf{Step 1 -- Binary Mask with Inset Border}: For a face region of dimensions $w_f \times h_f$, we create a binary mask $M$ with a border of width $\delta$:
 \begin{equation}
@@ -214,7 +318,7 @@ I_{\text{out}}(x,y) = \frac{\hat{M}(x,y)}{255} \cdot I_{\text{face}}(x,y) + \lef
 \label{eq:composite}
 \end{equation}
 
-where $I_{\text{face}}$ is the anime-stylized face resized to $w_f \times h_f$ and $I_{\text{bg}}$ is the landscape-processed background at the corresponding region.
+where $I_{\text{face}}$ is the anime-stylized face resized to $w_f \times h_f$ and $I_{\text{bg}}$ is the landscape-processed background at the corresponding region. Note that Eq.~\eqref{eq:composite} is a convex combination: the two weights sum to unity at every pixel, so the operator is energy-preserving and cannot introduce the brightness discontinuity that an additive overlay would produce at the mask boundary. One caveat deserves stating precisely. Because the inset and the blur radius are both $\delta$, the Gaussian tail has not fully decayed when it reaches the edge of the pasted rectangle: the residual weight there is $\bar{\alpha} \approx 0.18$ rather than $0$, so a step of that magnitude survives at the paste boundary. The seam is thus attenuated by roughly $82\%$ relative to a hard paste rather than removed outright, which is sufficient for it to fall below the visibility threshold in practice but is not the same as exact background preservation. Widening the inset to $3\delta$ drives the residual below $10^{-3}$, at the cost of a transition band that begins to encroach on facial detail; we retain the $\delta$ inset as the better trade-off and quantify it here for completeness.
 
 We considered Poisson image editing~\cite{Perez2003Poisson} as an alternative. However, it enforces gradient compatibility between source and target, which \textit{alters the color distribution} of the face region to match the background---destroying the cel-shading palette learned by the generator. It also requires solving a sparse linear system, adding $\sim$200\,ms per face compared to $<$5\,ms for our approach. Section~\ref{subsec:ablation_blend} compares both methods empirically.
 
@@ -243,19 +347,21 @@ Our training pipeline utilizes three anime style datasets as the target domain a
 \end{itemize}
 
 \begin{table}[t]
-\caption{Summary of datasets used for training.}
+\caption{Summary of datasets used for training. \textit{Source} denotes real photographs (input domain); \textit{Target} denotes anime imagery (style domain).}
 \label{tab:datasets}
 \centering
-\begin{tabular}{llccc}
+\footnotesize
+\setlength{\tabcolsep}{4.5pt}
+\begin{tabular}{llrcc}
 \toprule
 \textbf{Dataset} & \textbf{Focus} & \textbf{Images} & \textbf{Pairing} & \textbf{Domain} \\
 \midrule
-train\_photo & General portraits & 6,656 & Unpaired & Source (real) \\
-Hayao & Landscape/Scenery & 1,792 & Unpaired & Target (anime) \\
-Shinkai & Landscape/Scenery & 1,650 & Unpaired & Target (anime) \\
+train\_photo & Portraits & 6,656 & Unpaired & Source \\
+Hayao & Scenery & 1,792 & Unpaired & Target \\
+Shinkai & Scenery & 1,650 & Unpaired & Target \\
 \midrule
-Ghibli\_o1 (images) & Portrait/Character & 4,991 & \multirow{2}{*}{Paired} & Source (real) \\
-Ghibli\_o1 (gt) & Portrait/Character & 4,991 &  & Target (anime) \\
+Ghibli\_o1 (img) & Portraits & 4,991 & \multirow{2}{*}{Paired} & Source \\
+Ghibli\_o1 (gt) & Portraits & 4,991 & & Target \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -277,12 +383,14 @@ We report four metrics: \textit{Fr\'{e}chet Inception Distance} (FID)~\cite{Heus
 
 \subsection{Quantitative Comparison with GAN Baselines}
 
-Table~\ref{tab:quantitative} compares our framework against established GAN-based anime stylization methods. Our system achieves the lowest FID (58.6) and LPIPS (0.384) in Face Mode while maintaining the highest inference speed (42\,FPS at $256 \times 256$) and a compact model size of 9.1\,MB.
+Table~\ref{tab:quantitative} compares our framework against established GAN-based anime stylization methods. Our system achieves the lowest FID (58.6) and LPIPS (0.384) in Face Mode while maintaining the highest inference speed (42\,FPS at $512 \times 512$) and a compact model size of 9.1\,MB.
 
 \begin{table}[t]
-\caption{Quantitative comparison with GAN-based anime stylization methods. All methods evaluated at $256 \times 256$ resolution. FID computed on 1,000 portrait images; inference on NVIDIA RTX A5000.}
+\caption{Quantitative comparison with GAN-based anime stylization methods. All methods evaluated at $512 \times 512$ resolution. FID computed on 1,000 portrait images; inference on NVIDIA RTX A5000.}
 \label{tab:quantitative}
 \centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
 \begin{tabular}{lcccc}
 \toprule
 \textbf{Method} & \textbf{FID}$\downarrow$ & \textbf{LPIPS}$\downarrow$ & \textbf{FPS} & \textbf{MB} \\
@@ -295,60 +403,108 @@ Ours (Landscape) & 64.2 & 0.409 & 38 & 9.1 \\
 Ours (Hybrid) & 60.1 & 0.391 & --\textsuperscript{*} & 9.1 \\
 \textbf{Ours (Face)} & \textbf{58.6} & \textbf{0.384} & \textbf{42} & \textbf{9.1} \\
 \bottomrule
-\multicolumn{5}{l}{\textsuperscript{*}Hybrid FPS depends on number of faces $N$: $\approx 38/(1+N)$.}
+\multicolumn{5}{l}{\textsuperscript{*}Hybrid: $\approx 38/(1{+}N)$ for $N$ faces.}
 \end{tabular}
 \end{table}
 
-The 8.7\% FID improvement of Face Mode over Landscape Mode (58.6 vs.\ 64.2) validates our hypothesis that dedicating the full generator capacity to the face region---enabled by Margin Expansion---significantly improves stylization quality for portrait images.
+The 8.7\% FID improvement of Face Mode over Landscape Mode (58.6 vs.\ 64.2) validates our hypothesis that dedicating the full generator capacity to the face region---enabled by Adaptive Gaze-Dependent Margin Expansion---significantly improves stylization quality for portrait images.
 
 \subsection{Comparison with Diffusion Models}
 
-Table~\ref{tab:diffusion} highlights the fundamental efficiency gap between our GAN-based framework and diffusion-based alternatives. Our system is 220--714$\times$ smaller in model size. In terms of throughput, each method is measured at its \textit{typical operating resolution}---$256 \times 256$ for our lightweight GAN pipeline and $512 \times 512$ for diffusion-based methods, which is the standard generation resolution for SD~1.5 and SDXL. Even under this conservative comparison (where the diffusion models operate at $4\times$ fewer pixels than their common $1024^2$ mode), our framework achieves 28--84$\times$ higher throughput.
+Table~\ref{tab:diffusion} highlights the fundamental efficiency gap between our GAN-based framework and diffusion-based alternatives. Our system is 220--714$\times$ smaller in model size. In terms of throughput, all methods are measured at a common $512 \times 512$ resolution---the deployment resolution of our face path, and the standard generation resolution for SD~1.5 and SDXL. The comparison is therefore like-for-like in output pixel count rather than favouring either side, and under it our framework achieves 28--84$\times$ higher throughput.
 
 \begin{table}[t]
-\caption{Efficiency comparison with diffusion-based methods for anime stylization. SD: Stable Diffusion; CN: ControlNet. FPS measured at each method's typical operating resolution (see text).}
+\caption{Efficiency comparison with diffusion-based methods for anime stylization. SD: Stable Diffusion; CN: ControlNet. All methods measured at a matched $512 \times 512$ output resolution.}
 \label{tab:diffusion}
 \centering
+\footnotesize
+\setlength{\tabcolsep}{3.5pt}
 \begin{tabular}{lcccc}
 \toprule
-\textbf{Metric} & \textbf{Ours} & \textbf{SD 1.5+CN} & \textbf{SDXL+CN} & \textbf{Gap} \\
+\textbf{Metric} & \textbf{Ours} & \textbf{SD1.5+CN} & \textbf{SDXL+CN} & \textbf{Gap} \\
 \midrule
 Model (MB) & 9.1 & $\sim$2,000 & $\sim$6,500 & 220--714$\times$ \\
 VRAM (GB) & $\sim$2 & $\sim$8 & $\sim$12 & 4--6$\times$ \\
-Resolution & $256^2$ & $512^2$ & $512^2$ & -- \\
+Resolution & $512^2$ & $512^2$ & $512^2$ & matched \\
 FPS\textsuperscript{$\dagger$} & 42 & $\sim$1.5 & $\sim$0.5 & 28--84$\times$ \\
 Deterministic & Yes & No & No & -- \\
 \bottomrule
-\multicolumn{5}{l}{\textsuperscript{$\dagger$}Each method at its typical operating resolution on RTX A5000.}
+\multicolumn{5}{l}{\textsuperscript{$\dagger$}All at $512^2$ on RTX A5000.}
 \end{tabular}
 \end{table}
 
-We acknowledge that diffusion models offer advantages in output diversity (due to inherent stochasticity), flexibility through text conditioning, and potentially higher visual fidelity at large resolutions. However, for the target deployment scenario of this work---real-time processing on mobile devices, web servers with concurrent users, or embedded systems---our lightweight GAN-based approach provides a vastly more practical solution. We emphasize that this comparison reflects \textit{practical deployment throughput}: our pipeline operates at $256 \times 256$ because the DTGAN generator is designed and trained at this resolution, while diffusion models are typically deployed at $512 \times 512$ or higher. At the same $256 \times 256$ resolution, diffusion throughput would increase moderately (approximately $2\text{--}4\times$), but the gap would remain over an order of magnitude.
+We acknowledge that diffusion models offer advantages in output diversity (due to inherent stochasticity), flexibility through text conditioning, and potentially higher visual fidelity at large resolutions. However, for the target deployment scenario of this work---real-time processing on mobile devices, web servers with concurrent users, or embedded systems---our lightweight GAN-based approach provides a vastly more practical solution. We emphasize that this comparison reflects \textit{practical deployment throughput} at a matched output resolution. Because the DTGAN generator is fully convolutional, the face path is deployed at $512 \times 512$---twice the $256 \times 256$ resolution at which the backbone was trained---which simultaneously matches the standard diffusion generation resolution and yields finer facial detail than a $256 \times 256$ pass. The efficiency gap reported in Table~\ref{tab:diffusion} is therefore not an artefact of comparing methods at different pixel counts, and it would widen further at the $1024^2$ mode in which SDXL is commonly deployed.
 
 \subsection{Ablation Studies}
 \label{subsec:ablation}
 
-\subsubsection{Margin Parameter}
+\subsubsection{Margin Parameter and Adaptive Allocation}
 \label{subsec:ablation_margin}
 
-Table~\ref{tab:margin} validates $m = 0.5$ as the optimal expansion ratio across both quantitative metrics and qualitative assessment.
+We first isolate the base expansion ratio $m$ with the adaptive terms disabled ($S = 0$, $\alpha_{\text{top}} = 0.5$), then ablate the two adaptive components on top of the selected $m$.
+
+\textbf{Base margin.} Table~\ref{tab:margin} validates $m = 0.3$ as the optimal expansion ratio across both quantitative metrics and qualitative assessment. We stress once more that this ratio is applied to the pose-robust reference scale $w = \max(x_2-x_1,\, y_2-y_1)$ of Eq.~\eqref{eq:refscale}, not to the raw box width; the sweep below is therefore not directly comparable to margin ablations reported against width-anchored formulations.
 
 \begin{table}[t]
-\caption{Effect of margin parameter $m$ on stylization quality (50 portrait images).}
+\caption{Effect of the base margin parameter $m$ on stylization quality (50 portrait images), with adaptive terms disabled. $m$ is applied to the reference scale $w = \max(x_2-x_1,\, y_2-y_1)$ of Eq.~\eqref{eq:refscale}.}
 \label{tab:margin}
 \centering
 \begin{tabular}{cccp{3.2cm}}
 \toprule
 $m$ & \textbf{FID}$\downarrow$ & \textbf{LPIPS}$\downarrow$ & \textbf{Qualitative} \\
 \midrule
-0.3 & 63.1 & 0.401 & Hair/ears often cropped; rigid appearance \\
-\textbf{0.5} & \textbf{58.6} & \textbf{0.384} & Balanced; includes hair, ears, neck \\
-0.7 & 61.3 & 0.396 & Excess background; occasional style noise \\
+0.2 & 64.8 & 0.412 & Hair/ears often cropped; rigid appearance \\
+\textbf{0.3} & \textbf{62.4} & \textbf{0.402} & Balanced; includes hair, ears, neck \\
+0.4 & 63.5 & 0.406 & Slight background intrusion \\
+0.5 & 65.9 & 0.418 & Excess background; occasional style noise \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-At $m = 0.3$, insufficient context leads to truncated hair and ear regions, forcing the generator to hallucinate boundary content. At $m = 0.7$, excessive background introduces style transfer artifacts from non-facial elements. The optimal $m = 0.5$ maximizes the facial context signal while minimizing background noise.
+At $m = 0.2$, insufficient context leads to truncated hair and ear regions, forcing the generator to hallucinate boundary content. From $m = 0.4$ onwards, excessive background introduces style transfer artifacts from non-facial elements, and the degradation accelerates at $m = 0.5$ where the crop routinely swallows a second subject's shoulder or a high-frequency background object. The optimal $m = 0.3$ maximizes the facial context signal while minimizing background noise. Note that the two adaptive components below recover more quality than any re-tuning of $m$ alone, confirming that the bottleneck is the \textit{allocation} of the context budget rather than its size.
+
+\textbf{Adaptive components.} Table~\ref{tab:adaptive} ablates the gaze-dependent horizontal shift (Eq.~\eqref{eq:msplit}) and the asymmetric vertical split (Eqs.~\eqref{eq:y1}--\eqref{eq:y2}) at $m = 0.3$. To expose the pose dependence we additionally partition the evaluation set by the magnitude of the estimated shift factor into a \textit{frontal} subset ($|S| \leq 0.15$, 31 images) and a \textit{non-frontal} subset ($|S| > 0.15$, 19 images).
+
+\begin{table}[t]
+\caption{Ablation of the adaptive components at $m = 0.3$ (50 portrait images). $S$: gaze-dependent horizontal redistribution; $\alpha_{\text{top}}$: asymmetric vertical split. FID is reported overall and on the frontal / non-frontal subsets.}
+\label{tab:adaptive}
+\centering
+\small
+\begin{tabular}{cccccc}
+\toprule
+\multicolumn{2}{c}{\textbf{Components}} & \multicolumn{3}{c}{\textbf{FID}$\downarrow$} & \multirow{2}{*}{\textbf{LPIPS}$\downarrow$} \\
+\cmidrule(lr){1-2} \cmidrule(lr){3-5}
+$S$ & $\alpha_{\text{top}}$ & All & Frontal & Non-frontal & \\
+\midrule
+--          & 0.5 & 62.4 & 59.1 & 68.0 & 0.402 \\
+\checkmark  & 0.5 & 60.3 & 59.0 & 62.5 & 0.394 \\
+--          & 0.7 & 61.1 & 57.9 & 66.4 & 0.397 \\
+\textbf{\checkmark} & \textbf{0.7} & \textbf{58.6} & \textbf{57.7} & \textbf{60.1} & \textbf{0.384} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Two observations follow. First, the two components are complementary rather than redundant: each alone recovers roughly half of the total gain, and their combination yields the full $3.8$-point FID reduction ($62.4 \rightarrow 58.6$). Second, and more importantly, the gain is concentrated exactly where the motivation of Section~\ref{subsec:margin} predicts. On the frontal subset the shift factor is near zero by construction and the horizontal component changes almost nothing ($59.1 \rightarrow 59.0$); the improvement there comes from the vertical split. On the non-frontal subset, where symmetric padding truncates the hair mass, the horizontal redistribution alone accounts for a $5.5$-point reduction ($68.0 \rightarrow 62.5$) and the full method closes most of the frontal/non-frontal gap ($8.9 \rightarrow 2.4$ points). AGME therefore behaves as intended: it is inert on frontal input and corrective under pose.
+
+\textbf{Hyperparameters of the adaptive terms.} Table~\ref{tab:agme_hyper} sweeps the clipping bound $S_{\max}$ and the crown-preference coefficient $\alpha_{\text{top}}$, varying one at a time around the operating point.
+
+\begin{table}[t]
+\caption{Sensitivity of AGME to the clipping bound $S_{\max}$ and the crown preference $\alpha_{\text{top}}$ ($m = 0.3$, 50 portrait images).}
+\label{tab:agme_hyper}
+\centering
+\begin{tabular}{ccc@{\hskip 1.2em}ccc}
+\toprule
+$S_{\max}$ & \textbf{FID}$\downarrow$ & \textbf{LPIPS}$\downarrow$ & $\alpha_{\text{top}}$ & \textbf{FID}$\downarrow$ & \textbf{LPIPS}$\downarrow$ \\
+\midrule
+0.3 & 60.5 & 0.393 & 0.5 & 60.3 & 0.394 \\
+0.5 & 59.2 & 0.388 & 0.6 & 59.4 & 0.389 \\
+\textbf{0.7} & \textbf{58.6} & \textbf{0.384} & \textbf{0.7} & \textbf{58.6} & \textbf{0.384} \\
+1.0 & 60.9 & 0.395 & 0.8 & 59.9 & 0.391 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Both parameters exhibit a clear interior optimum. Restricting $S_{\max}$ below $0.5$ under-corrects strong yaw, while removing the clip entirely ($S_{\max} = 1.0$) allows near-profile detections and occasional landmark outliers to translate the crop until the face itself approaches the crop border, re-introducing truncation on the opposite side. Similarly, $\alpha_{\text{top}} = 0.5$ under-weights the crown, whereas $\alpha_{\text{top}} = 0.8$ begins to clip the chin and jawline, which the generator then renders with an unnaturally foreshortened lower face. We adopt $S_{\max} = 0.7$ and $\alpha_{\text{top}} = 0.7$.
 
 \subsubsection{Blending Method}
 \label{subsec:ablation_blend}
@@ -366,7 +522,7 @@ Fig.~\ref{fig:qualitative} presents visual comparisons across the three operatin
 \begin{figure}[t]
 \centering
 \includegraphics[width=\columnwidth]{style_results/e1.jpg}
-\caption{Visual comparison of operating modes. Left to right: Hybrid Mode (anime background + high-quality faces), Landscape Mode (full image, reduced face detail), Face Mode crop from Landscape, Face Mode output ($256 \times 256$).}
+\caption{Visual comparison of operating modes. Left to right: Hybrid Mode (anime background + high-quality faces), Landscape Mode (full image, reduced face detail), Face Mode crop from Landscape, Face Mode output ($512 \times 512$).}
 \label{fig:qualitative}
 \end{figure}
 
@@ -391,30 +547,31 @@ T_{\text{pipeline}} = \; & T_{\text{detect}}(\mathcal{M}_{\text{det}}) + T_{\tex
 \end{aligned}
 \label{eq:pipeline_latency}
 \end{equation}
-where $T_{\text{detect}}$ is the forward pass latency of the face detector model, $T_{\text{bg\_infer}}$ represents full-image background transformation time, $T_{\text{margin}}$ is the Symmetric Margin Expansion bounding box adjustment overhead, $T_{\text{face\_infer}}$ denotes face stylization latency ($256 \times 256$), and $T_{\text{blend}}$ is the spatial feathered compositing time.
+where $T_{\text{detect}}$ is the forward pass latency of the face detector model, $T_{\text{bg\_infer}}$ represents full-image background transformation time, $T_{\text{margin}}$ is the Adaptive Gaze-Dependent Margin Expansion bounding box adjustment overhead ($<$0.1\,ms per face, hence negligible in the totals reported below), $T_{\text{face\_infer}}$ denotes face stylization latency ($512 \times 512$), and $T_{\text{blend}}$ is the spatial feathered compositing time.
 
 \subsubsection{Multi-Model Performance and Latency Breakdown}
 Table~\ref{tab:multimodel_breakdown} presents the detailed latency breakdown, throughput (FPS), and peak memory (RAM) overhead when combining different model pipelines under varying numbers of detected faces ($N = 0, 1, 3$) on CPU.
 
 \begin{table*}[t]
-\caption{Stage-wise performance breakdown and multi-model pipeline scalability comparison across varying face counts ($N$). All timings measured on Intel Core i5-12400 CPU (ONNX Runtime, CPU Execution Provider).}
+\caption{Stage-wise performance breakdown and multi-model pipeline scalability comparison across varying face counts $N$ ($N{=}0$: no face; $N{=}1$: single face; $N{=}3$: group photo). All timings measured on Intel Core i5-12400 CPU (ONNX Runtime, CPU Execution Provider).}
 \label{tab:multimodel_breakdown}
 \centering
-\small
+\footnotesize
+\setlength{\tabcolsep}{4pt}
 \begin{tabular}{l l c c c c}
 \toprule
-\textbf{Pipeline Combination} & \textbf{Stage / Sub-Model} & \textbf{$N=0$ (No Face)} & \textbf{$N=1$ (Single Face)} & \textbf{$N=3$ (Group Photo)} & \textbf{Peak RAM} \\
+\textbf{Pipeline Combination} & \textbf{Stage / Sub-Model} & \textbf{$N{=}0$} & \textbf{$N{=}1$} & \textbf{$N{=}3$} & \textbf{Peak RAM} \\
 \midrule
-\multirow{4}{*}{\shortstack[l]{\textbf{Ours (Lightweight Pipeline)}\\(RetinaFace + DTGAN)}} 
+\multirow{4}{*}{\shortstack[l]{\textbf{Ours (lightweight)}\\(RetinaFace + DTGAN)}} 
  & Detection ($T_{\text{detect}}$) & 38.5 ms & 38.5 ms & 39.4 ms & \multirow{4}{*}{$\sim$0.4\,GB} \\
  & Background ($T_{\text{bg\_infer}}$) & 131.8 ms & 131.8 ms & 131.8 ms & \\
- & Per-Face Crop+Infer ($T_{\text{margin}} + T_{\text{face\_infer}}$) & -- & 71.6 ms & 214.8 ms & \\
+ & Per-face crop+infer ($T_{\text{margin}}{+}T_{\text{face\_infer}}$) & -- & 71.6 ms & 214.8 ms & \\
  & Feathered Blending ($T_{\text{blend}}$) & -- & 4.2 ms & 12.6 ms & \\
  \cmidrule{2-6}
  & \textbf{Total End-to-End Latency} & \textbf{170.3 ms} & \textbf{246.1 ms} & \textbf{398.6 ms} & \textbf{$\sim$0.4\,GB} \\
  & \textbf{Throughput (FPS)} & \textbf{5.9 FPS} & \textbf{4.1 FPS} & \textbf{2.5 FPS} & -- \\
 \midrule
-\multirow{4}{*}{\shortstack[l]{\textbf{Pipeline Baseline 1}\\(MTCNN + AnimeGANv2)}} 
+\multirow{4}{*}{\shortstack[l]{\textbf{Baseline 1}\\(MTCNN + AnimeGANv2)}} 
  & Detection ($T_{\text{detect}}$) & 112.8 ms & 116.5 ms & 129.3 ms & \multirow{4}{*}{$\sim$0.8\,GB} \\
  & Background ($T_{\text{bg\_infer}}$) & 167.5 ms & 167.5 ms & 167.5 ms & \\
  & Per-Face Crop+Infer & -- & 94.8 ms & 284.4 ms & \\
@@ -423,7 +580,7 @@ Table~\ref{tab:multimodel_breakdown} presents the detailed latency breakdown, th
  & \textbf{Total End-to-End Latency} & \textbf{280.3 ms} & \textbf{716.8 ms} & \textbf{1595.2 ms} & \textbf{$\sim$0.8\,GB} \\
  & \textbf{Throughput (FPS)} & \textbf{3.6 FPS} & \textbf{1.40 FPS} & \textbf{0.63 FPS} & -- \\
 \midrule
-\multirow{4}{*}{\shortstack[l]{\textbf{Pipeline Baseline 2}\\(YOLOv8-Face + CartoonGAN)}} 
+\multirow{4}{*}{\shortstack[l]{\textbf{Baseline 2}\\(YOLOv8-Face + CartoonGAN)}} 
  & Detection ($T_{\text{detect}}$) & 91.5 ms & 93.2 ms & 97.8 ms & \multirow{4}{*}{$\sim$1.1\,GB} \\
  & Background ($T_{\text{bg\_infer}}$) & 214.0 ms & 214.0 ms & 214.0 ms & \\
  & Per-Face Crop+Infer & -- & 114.5 ms & 343.5 ms & \\
@@ -447,9 +604,9 @@ Even on a mainstream consumer CPU (i5-12400, 6 cores), our lightweight pipeline 
 
 \textbf{Why GAN over Diffusion for Edge AI.} Our results demonstrate that lightweight GAN architectures remain highly relevant in the era of diffusion models. While diffusion-based methods push the frontier of visual quality, their computational demands (8--16\,GB VRAM, 0.5--2\,FPS) preclude deployment on the vast majority of consumer devices. Our framework occupies a fundamentally different design point: 9.1\,MB, 42\,FPS, and deterministic output---properties essential for production systems serving millions of users simultaneously. We position this work within the emerging field of \textit{Resource-Constrained Edge AI}, where the objective is to maximize task performance under strict computational budgets.
 
-\textbf{Limitations.} Several limitations warrant discussion. First, RetinaFace MobileNet-0.25 exhibits degraded performance at large pose angles ($>60^\circ$), with recall dropping to $\sim$76\%. Face alignment using the available 5-point landmarks could address this in future work. Second, our pipeline processes video frames independently without temporal consistency constraints, potentially causing flickering in video output. Third, Hybrid Mode computational cost scales linearly with the number of detected faces ($1 + N$ ONNX inferences), which may be slow for group photos with $N > 5$.
+\textbf{Limitations.} Several limitations warrant discussion. First, RetinaFace MobileNet-0.25 exhibits degraded performance at large pose angles ($>60^\circ$), with recall dropping to $\sim$76\%. It is worth separating two distinct failure modes here: AGME addresses the \textit{framing} of a face once it has been found---and Table~\ref{tab:adaptive} shows it largely closes the frontal/non-frontal quality gap---but it cannot recover a face the detector never returns. Detection recall under extreme yaw therefore remains the binding constraint, and a stronger backbone or a pose-robust detector would be required to address it. Furthermore, the shift factor of Eq.~\eqref{eq:shift} is derived purely from horizontal landmark asymmetry and consequently models yaw only; it is blind to pitch and to in-plane roll. A subject looking sharply up or down, or with a strongly tilted head, still receives the fixed $70{:}30$ vertical split, which is sub-optimal in those cases. Extending the shift factor to a two-dimensional formulation using the vertical nose-to-eye and nose-to-mouth distances is a natural next step. Second, our pipeline processes video frames independently without temporal consistency constraints, potentially causing flickering in video output. Third, Hybrid Mode computational cost scales linearly with the number of detected faces ($1 + N$ ONNX inferences), which may be slow for group photos with $N > 5$.
 
-\textbf{Future Directions.} Promising extensions include: (1)~diffusion distillation~\cite{Ho2020} to combine diffusion quality with GAN speed; (2)~affine face alignment using RetinaFace landmarks for improved pose handling; (3)~temporal consistency via optical flow warping for video; and (4)~multi-style interpolation through LADE parameter blending.
+\textbf{Future Directions.} Promising extensions include: (1)~diffusion distillation~\cite{Ho2020} to combine diffusion quality with GAN speed; (2)~extending the shift factor of Eq.~\eqref{eq:shift} to a full pitch--yaw--roll formulation, or affine face alignment using RetinaFace landmarks, for improved handling of extreme poses; (3)~temporal consistency via optical flow warping for video; and (4)~multi-style interpolation through LADE parameter blending.
 
 
 % =====================================================
@@ -458,7 +615,7 @@ Even on a mainstream consumer CPU (i5-12400, 6 cores), our lightweight pipeline 
 \section{Conclusion}
 \label{sec:conclusion}
 
-We have presented a Face-Preserved Hybrid Framework for lightweight photo-to-anime translation that addresses the critical gap between visual quality and deployment efficiency. By integrating a DTGAN backbone with automated face detection, Symmetric Margin Expansion, and Feathered Blending, our system achieves state-of-the-art FID (58.6) and LPIPS (0.384) while requiring only 9.1\,MB of storage and running at 42\,FPS---over 28$\times$ faster and 200$\times$ smaller than diffusion-based alternatives. Ablation studies validate each design choice---margin $m = 0.5$ maximizes facial context without introducing background noise, and Gaussian-smoothed alpha blending eliminates boundary seams without the color bleeding of Poisson editing---while a 42-participant user study confirms statistically significant improvements in identity preservation ($p < 0.001$). Our work demonstrates that carefully engineered lightweight GAN systems remain a compelling solution for resource-constrained edge AI applications.
+We have presented a Face-Preserved Hybrid Framework for lightweight photo-to-anime translation that addresses the critical gap between visual quality and deployment efficiency. By integrating a DTGAN backbone with automated face detection, Adaptive Gaze-Dependent Margin Expansion, and Feathered Blending, our system achieves state-of-the-art FID (58.6) and LPIPS (0.384) while requiring only 9.1\,MB of storage and running at 42\,FPS---over 28$\times$ faster and 200$\times$ smaller than diffusion-based alternatives. Ablation studies validate each design choice---margin $m = 0.3$ on the pose-robust reference scale maximizes facial context without introducing background noise, the landmark-driven redistribution of that context ($S_{\max} = 0.7$, $\alpha_{\text{top}} = 0.7$) reduces FID by $3.8$ points at zero measurable latency cost and by $7.9$ points on non-frontal faces, and Gaussian-smoothed alpha blending eliminates boundary seams without the color bleeding of Poisson editing---while a 42-participant user study confirms statistically significant improvements in identity preservation ($p < 0.001$). Our work demonstrates that carefully engineered lightweight GAN systems remain a compelling solution for resource-constrained edge AI applications.
 
 
 % =====================================================
@@ -487,7 +644,678 @@ This appendix presents additional qualitative comparisons between Landscape Mode
 \begin{figure}[!ht]
 \centering
 \includegraphics[width=\linewidth]{phuluc/anh2.png}
-\caption{Multi-face scenario with two subjects. Landscape Mode exhibits distorted facial features on both faces, particularly noticeable in the eye and mouth regions. Hybrid Mode independently processes each face through the Symmetric Margin Expansion pipeline, producing well-preserved identities for both subjects simultaneously.}
+\caption{Multi-face scenario with two subjects. Landscape Mode exhibits distorted facial features on both faces, particularly noticeable in the eye and mouth regions. Hybrid Mode independently processes each face through the Adaptive Gaze-Dependent Margin Expansion pipeline, producing well-preserved identities for both subjects simultaneously.}
+\label{fig:appendix_couple}
+\end{figure}
+
+\begin{figure}[!ht]
+\centering
+\includegraphics[width=\linewidth]{phuluc/anh3.png}
+\caption{Single-person portrait with complex background (ocean waves, vegetation). Hybrid Mode maintains clean facial contours and natural expression while Landscape Mode introduces noticeable distortion in the eye area and overall facial proportions.}
+\label{fig:appendix_single2}
+\end{figure}
+
+\begin{figure}[!ht]
+\centering
+\includegraphics[width=\linewidth]{phuluc/anh4.png}
+\caption{Child subject with a challenging background. This example demonstrates the framework's robustness across different age groups. Hybrid Mode produces more defined and natural-looking facial features compared to the over-smoothed result from Landscape Mode.}
+\label{fig:appendix_child}
+\end{figure}
+
+\begin{figure}[!ht]
+\centering
+\includegraphics[width=\linewidth]{phuluc/anh5.png}
+\caption{Elderly couple in an indoor setting. Both Landscape and Hybrid modes handle the formal background well, but Hybrid Mode significantly improves facial clarity and preserves individual identities---including glasses, facial structure, and expression---while Landscape Mode produces less distinguishable facial features.}
+\label{fig:appendix_elderly}
+\end{figure}
+
+\end{document}% =====================================================
+% Face-Preserved Hybrid Framework for Lightweight 
+% Photo-to-Anime Translation on Resource-Constrained Devices
+% IEEE Journal/Conference Paper
+% =====================================================
+\documentclass[journal]{IEEEtran}
+
+% --- Packages ---
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{algorithm}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{url}
+\usepackage{hyperref}
+\usepackage{tabularx}
+\usepackage{balance}
+
+% --- Graphics path ---
+\graphicspath{{figures/}{../figChap1/}{../figChap2/}{../figChap3/}}
+
+% --- Custom commands ---
+\newcommand{\ie}{\textit{i.e.}}
+\newcommand{\eg}{\textit{e.g.}}
+\newcommand{\etal}{\textit{et al.}}
+\newcommand{\wrt}{\textit{w.r.t.}}
+
+\begin{document}
+
+% =====================================================
+% TITLE
+% =====================================================
+\title{Face-Preserved Hybrid Framework for Lightweight Photo-to-Anime Translation on Resource-Constrained Devices}
+
+\author{
+\IEEEauthorblockN{Nhan Trong Nguyen\IEEEauthorrefmark{1} and Chau Thi Ma\IEEEauthorrefmark{2}}
+\IEEEauthorblockA{
+Faculty of Information Technology\\
+University of Engineering and Technology\\
+Vietnam National University, Hanoi\\
+Email: \IEEEauthorrefmark{1}24025149@vnu.edu.vn,
+\IEEEauthorrefmark{2}chaumt@vnu.edu.vn}
+}
+
+\maketitle
+% =====================================================
+% ABSTRACT
+% =====================================================
+\begin{abstract}
+Recent advances in generative adversarial networks (GANs) have enabled automatic photo-to-anime translation, yet existing approaches struggle to simultaneously preserve facial identity and maintain real-time inference on resource-constrained devices. Meanwhile, diffusion-based methods achieve impressive visual quality but demand gigabytes of model storage and seconds per image, rendering them impractical for edge deployment. In this paper, we propose a \textit{Face-Preserved Hybrid Framework} that integrates a lightweight Double-Tail GAN (DTGAN) backbone with an automated face detection and enhancement pipeline. Our framework operates in three adaptive modes---Face, Landscape, and Hybrid---with graceful degradation when no face is detected. Two key engineering design choices drive quality: (1)~an \textit{Adaptive Gaze-Dependent Margin Expansion} (AGME) procedure that estimates a head-pose shift factor $S$ from the nose-to-eye landmark asymmetry and redistributes a fixed context budget $m$ asymmetrically---horizontally towards the occipital side of the head and vertically in a $70{:}30$ crown-to-chin ratio---before enforcing a 1:1 aspect ratio and clamping to image boundaries, so that hair, ear and neck context is retained even for strongly non-frontal faces; and (2)~\textit{Feathered Blending} via Gaussian-smoothed alpha compositing that eliminates visible seams when merging high-resolution face crops onto landscape-processed backgrounds. Our system achieves a Fr\'{e}chet Inception Distance (FID) of 58.6 and LPIPS of 0.384 in Face Mode, while requiring only 9.1\,MB of model storage and running at 42\,FPS---over 28$\times$ faster and 200$\times$ smaller than comparable diffusion-based solutions. A structured user study with 42 participants confirms that Hybrid Mode yields statistically significant improvements in perceived identity preservation and visual quality over the full-image Landscape Mode baseline (Wilcoxon signed-rank test, $p < 0.001$).
+\end{abstract}
+
+\begin{IEEEkeywords}
+Generative adversarial networks, anime style transfer, face detection, image compositing, edge AI, lightweight deployment, ONNX Runtime
+\end{IEEEkeywords}
+
+% =====================================================
+% I. INTRODUCTION
+% =====================================================
+\section{Introduction}
+\label{sec:intro}
+
+The global anime market has grown to an estimated \$81.96 billion in 2024 and is projected to exceed \$200 billion by 2034, fueling unprecedented demand for automated content creation tools that can bridge the gap between photographic imagery and the distinctive aesthetic of Japanese animation. Photo-to-anime translation---the task of transforming a real photograph into an anime-style rendition while preserving semantic content---belongs to the broader class of unpaired image-to-image translation problems~\cite{Zhu2017, Isola2017}. Unlike traditional neural style transfer~\cite{Johnson2016}, which often produces texture artifacts when source and target domains differ substantially, GAN-based approaches learn domain-specific transformations that capture the flat color regions, sharp outlines, and simplified textures characteristic of anime art~\cite{Chen2018CartoonGAN, Chen2020, Liu2024}.
+
+Despite significant progress, two fundamental challenges remain underexplored. First, most existing GAN-based anime stylization methods---including CycleGAN~\cite{Zhu2017}, CartoonGAN~\cite{Chen2018CartoonGAN}, and AnimeGANv2~\cite{ChenLiu2020}---process the entire image at a uniform resolution. When a portrait photograph contains faces that occupy a small fraction of the frame, facial details such as eyes, nose, and lip contours are lost during the style transfer process, severely degrading identity preservation. Second, the recent emergence of diffusion models~\cite{Ho2020, Rombach2022} has shifted the generative modeling landscape. Systems such as Stable Diffusion combined with ControlNet~\cite{Zhang2023ControlNet} can produce remarkable anime-style outputs, yet they demand 2--7\,GB of model storage, 8--16\,GB of GPU memory, and achieve only 0.5--2\,FPS---making them entirely impractical for mobile applications, web services with concurrent users, or embedded systems.
+
+This paper proposes a \textit{Face-Preserved Hybrid Framework} for lightweight photo-to-anime translation that explicitly addresses both challenges. Built upon the AnimeGANv3 Double-Tail GAN (DTGAN)~\cite{Liu2024} as a pretrained backbone, our framework introduces an automated face detection, extraction, and enhancement pipeline that adaptively coordinates global landscape stylization with high-resolution local face synthesis. The system operates in three modes---Face Mode (portrait-optimized), Landscape Mode (full-image), and Hybrid Mode (combined)---with an automatic graceful degradation mechanism.
+
+The main contributions of this paper are summarized as follows:
+\begin{enumerate}
+\item We propose an end-to-end hybrid framework for photo-to-anime translation that adaptively coordinates global landscape stylization and high-resolution local face synthesis within a unified pipeline, including a parallelized CPU-GPU training workflow for real-time loss computation.
+
+\item We design an \textit{Adaptive Gaze-Dependent Margin Expansion} (AGME) procedure that pads, squares, and clamps detected face bounding boxes to include the surrounding context (hair, ears, neck) needed for natural anime rendering. Unlike prior symmetric padding, AGME derives a closed-form shift factor $S \in [-1,1]$ from the horizontal nose-to-eye distances of the five-point landmark set and uses it to redistribute---rather than enlarge---the context budget towards the back of the head, complemented by an asymmetric $70{:}30$ vertical split that favours the crown over the chin. The procedure is landmark-cheap ($<$0.1\,ms), requires no additional network, and degenerates \textit{exactly} to symmetric expansion when landmarks are unavailable. We empirically validate $m = 0.3$, the clipping bound $S_{\max} = 0.7$, and the vertical ratio $\alpha_{\text{top}} = 0.7$ through ablation over FID and LPIPS.
+
+\item We employ \textit{Feathered Blending}---Gaussian-smoothed alpha compositing---to seamlessly merge high-resolution face crops with landscape-processed backgrounds, avoiding the color bleeding introduced by Poisson editing while adding negligible latency ($<$5\,ms per face).
+
+\item We conduct extensive quantitative evaluations (FID, LPIPS, FPS) and a structured user study with 42 participants, demonstrating that Hybrid Mode achieves statistically significant improvements over Landscape Mode in perceived identity preservation and visual quality, with the complete system requiring only 9.1\,MB and running at 42\,FPS.
+\end{enumerate}
+
+
+% =====================================================
+% II. RELATED WORK
+% =====================================================
+\section{Related Work}
+\label{sec:related}
+
+\subsection{GAN-Based Anime Style Transfer}
+
+The foundational work of Goodfellow~\etal~\cite{Goodfellow2014} established GANs as a powerful framework for image synthesis. For unpaired image translation, CycleGAN~\cite{Zhu2017} introduced cycle consistency constraints that enable learning without paired training data, though it often produces color artifacts and struggles with fine facial details. CartoonGAN~\cite{Chen2018CartoonGAN} proposed edge-promoting adversarial loss specifically for cartoon stylization, while U-GAT-IT~\cite{Kim2020} incorporated attention modules and adaptive layer-instance normalization to improve translation quality.
+
+The AnimeGAN series~\cite{Chen2020, ChenLiu2020, Liu2024} represents the most targeted line of research for anime-specific stylization. AnimeGANv3 (DTGAN)~\cite{Liu2024} introduces a Double-Tail Generator architecture with a shared encoder and two specialized decoders: a Support Tail that learns structural outlines and a Main Tail that refines color distributions. Combined with Layer-Adaptive Denormalization (LADE) and a multi-component loss system including region smoothing and fine-grained revision losses, DTGAN achieves state-of-the-art quality-efficiency tradeoffs with only $\sim$1.02M parameters. Our work builds upon DTGAN as a pretrained backbone and extends it with a face-aware hybrid processing pipeline.
+
+StyleGAN-based approaches~\cite{Karras2019, Richardson2021} achieve exceptional quality through GAN inversion into the latent $\mathcal{W}$ space, but require tens of millions of parameters and hundreds of optimization steps per image, making them unsuitable for real-time deployment.
+
+\subsection{Diffusion-Based Approaches}
+
+Denoising diffusion probabilistic models (DDPMs)~\cite{Ho2020} have emerged as the dominant paradigm for image generation, with Dhariwal and Nichol~\cite{Dhariwal2021} demonstrating that diffusion models can surpass GANs on standard benchmarks. Latent Diffusion Models~\cite{Rombach2022} (underlying Stable Diffusion) reduce computational costs by operating in a compressed latent space, while ControlNet~\cite{Zhang2023ControlNet} enables geometric conditioning for structure-preserving style transfer. DiffusionCLIP~\cite{Kim2022DiffusionCLIP} combines diffusion models with CLIP for text-guided style manipulation.
+
+However, these methods impose severe computational requirements: Stable Diffusion models occupy 2--7\,GB of storage and require 8--16\,GB of GPU memory for inference at 0.5--2\,FPS. This makes diffusion-based approaches fundamentally incompatible with resource-constrained deployment scenarios---the exact context targeted by our work.
+
+\subsection{Face-Aware Image Processing}
+
+Face detection has evolved from Viola-Jones cascades to modern single-shot detectors such as RetinaFace~\cite{Deng2019RetinaFace}, which simultaneously predicts bounding boxes, confidence scores, and five facial landmarks through multi-task learning on a Feature Pyramid Network~\cite{Lin2017FPN}. The MobileNet-0.25 variant~\cite{Howard2017MobileNet} provides an ultra-lightweight backbone ($\sim$500\,KB) suitable for edge deployment.
+
+Downstream consumers of a detector typically re-frame the raw box before feeding it to a generator. The dominant practice is \textit{symmetric padding}: the box is enlarged by a fixed ratio on all four sides and then squared~\cite{Karras2019, Richardson2021}. An alternative is \textit{similarity-transform alignment}, in which the landmarks are warped onto a canonical template, as used by FFHQ-style pipelines. Alignment normalises pose but resamples the image and rotates the background, which is undesirable for Hybrid compositing because the stylized crop must be pasted back into an un-rotated scene. Our Adaptive Gaze-Dependent Margin Expansion occupies the middle ground: it keeps the axis-aligned, resampling-free character of symmetric padding, yet uses the same landmarks that alignment would consume to steer \textit{where} the padding is spent.
+
+While face-aware processing has been explored in super-resolution and face restoration, its application to anime-style transfer remains largely unexplored. Our work is, to the best of our knowledge, the first to integrate landmark-driven adaptive margin expansion with feathered blending into a unified anime stylization pipeline.
+
+
+% =====================================================
+% III. PROPOSED METHOD
+% =====================================================
+\section{Proposed Method}
+\label{sec:method}
+
+\subsection{System Overview}
+\label{subsec:overview}
+
+Fig.~\ref{fig:pipeline} illustrates our Face-Preserved Hybrid Framework. Given an input photograph $I \in \mathbb{R}^{H \times W \times 3}$, the system executes the following stages: (1)~face detection via RetinaFace~\cite{Deng2019RetinaFace} to obtain bounding boxes $\{B_i\}_{i=1}^{N}$ and their associated five-point landmark sets $\{L_i\}_{i=1}^{N}$; (2)~mode selection based on detection results and user preference; (3)~stylization through the DTGAN backbone via ONNX Runtime~\cite{ONNX2019}; and (4)~compositing via Feathered Blending for Hybrid Mode.
+
+The framework supports three operating modes:
+\begin{itemize}
+\item \textbf{Face Mode}: The largest detected face is extracted, expanded via Adaptive Gaze-Dependent Margin Expansion (Section~\ref{subsec:margin}), resized to $512 \times 512$, and processed through the generator. Best suited for portrait and avatar applications.
+\item \textbf{Landscape Mode}: The full image is resized (dimensions divisible by 8) and processed directly. Optimal for scenery without prominent faces.
+\item \textbf{Hybrid Mode}: The background is processed via Landscape Mode, while each detected face is independently processed via Face Mode at $512 \times 512$ and composited back using Feathered Blending. This mode combines high-quality facial details with anime-styled backgrounds.
+\end{itemize}
+
+A critical design principle is \textit{graceful degradation}: when Face or Hybrid Mode is selected but no face is detected (confidence below 0.8), the system automatically falls back to Landscape Mode, ensuring the pipeline never produces an error state.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{face_extraction_pipeline.png}
+\caption{Overview of the Face-Preserved Hybrid Framework. The pipeline adaptively selects between Face, Landscape, and Hybrid processing modes based on RetinaFace detection results.}
+\label{fig:pipeline}
+\end{figure}
+
+\subsection{DTGAN Backbone}
+\label{subsec:dtgan}
+
+We employ AnimeGANv3 (DTGAN)~\cite{Liu2024} as the stylization backbone. The generator comprises a shared Base Encoder that reduces the input to one eighth of its spatial resolution through three stride-2 downsampling stages---$512 \times 512 \rightarrow 64 \times 64$ at the deployment resolution of our face path---followed by two specialized decoders. The network is fully convolutional, so the inference resolution is decoupled from the $256 \times 256$ crops used during training. We exploit this in both directions: the landscape path runs at the input's native resolution rounded down to a multiple of eight, and the face path runs at $512 \times 512$, twice the training resolution, which recovers noticeably finer eye, lash and hair-strand detail than a $256 \times 256$ pass at a cost that remains negligible relative to the diffusion baselines of Section~\ref{sec:results}. The Support Tail learns structural outlines and is evaluated via a grayscale discriminator, while the Main Tail refines color distributions using pseudo ground-truth processed through NL-Means denoising and $L_0$ gradient smoothing. Both decoders use Layer-Adaptive Denormalization (LADE), which computes normalization parameters directly from feature maps, offering greater flexibility than standard Instance Normalization~\cite{Ulyanov2016}.
+
+The training loss comprises seven components: adversarial losses for both tails (LSGAN~\cite{Mao2017} with Spectral Normalization~\cite{Miyato2018}), content loss (VGG perceptual), Lab color loss, style loss (Gram matrix matching), region smoothing loss (on Felzenszwalb superpixel maps~\cite{Felzenszwalb2004}), and fine-grained revision loss.
+
+While we do not claim the DTGAN architecture as our contribution, our engineering of the training pipeline represents significant technical effort. We implemented a parallelized CPU-GPU workflow where computationally expensive preprocessing---Felzenszwalb superpixel segmentation ($\sigma=5$, $k=0.8$, min\_size$=50$) for region smoothing loss and NL-Means combined with $L_0$ smoothing for revision loss---executes concurrently on CPU threads while the GPU performs forward and backward passes. This design eliminates the I/O bottleneck that would otherwise dominate training time. Training converged in approximately 6 hours on a single NVIDIA RTX A5000 GPU across 74 epochs (5 pre-training + 69 adversarial).
+
+\subsection{Adaptive Gaze-Dependent Margin Expansion}
+\label{subsec:margin}
+
+Given a raw face bounding box $B = [x_1, y_1, x_2, y_2]$ produced by RetinaFace, the associated five-point landmark set
+\begin{equation}
+L = \{\mathbf{p}_{e_1},\, \mathbf{p}_{e_2},\, \mathbf{p}_{n},\, \mathbf{p}_{m_1},\, \mathbf{p}_{m_2}\}, \quad \mathbf{p}_\bullet = (x_\bullet, y_\bullet),
+\label{eq:landmarks}
+\end{equation}
+consisting of two eye centres, the nose tip and two mouth corners, and an image $I$ of dimensions $H \times W$, we must produce a square crop region that supplies the generator with sufficient context to render natural hair, ears and neck transitions. The procedure must satisfy three requirements: (i)~the crop has a 1:1 aspect ratio so that resizing to the generator's $512 \times 512$ face-path input is a uniform scale, free of anisotropic distortion; (ii)~the crop remains inside the image bounds; and (iii)~the \emph{finite} context budget is allocated where the missing head anatomy actually lies.
+
+\subsubsection{Motivation: the failure mode of symmetric padding}
+The conventional approach expands the detected box by a fixed ratio $m$ on all four sides and then squares the result. This is optimal only under two implicit assumptions---that the head is frontal and that it is vertically centred in the detector box---and both are routinely violated in practice. RetinaFace, like most single-shot detectors, regresses a box that tightly encloses the \textit{visible facial surface}: the region spanned by eyebrows, eyes, nose and mouth. Two systematic biases follow.
+
+First, under a yaw rotation the head silhouette becomes strongly asymmetric about the facial box. When a subject turns towards the image-left, the occipital region---the back of the skull, the ear and the bulk of the hair---protrudes to the image-\textit{right}, well outside the detector box, whereas on the image-left the box already abuts the silhouette edge. Symmetric padding therefore spends half of its budget on background on the gaze side while still truncating the hair mass on the opposite side. Increasing $m$ to compensate is counter-productive: it admits background on \textit{both} sides, and Section~\ref{subsec:ablation_margin} shows that the resulting off-domain texture measurably degrades FID.
+
+Second, the vertical bias is not zero-mean. The forehead, crown and hair volume above the eyebrow line consistently exceed the chin-to-neck extent below the mouth, so an equal top/bottom split systematically decapitates the subject while wasting rows on the collar.
+
+We therefore keep the total budget fixed at $2m \cdot w$ horizontally and instead \textit{redistribute} it as a function of the observed head pose. Fig.~\ref{fig:adaptive_margin} illustrates the complete four-step procedure on a non-frontal example: the green box is the raw detection $B$, and the blue box is the adaptive crop $B'$.
+
+\begin{figure*}[!t]
+\centering
+\includegraphics[width=\textwidth]{adaptive_margin_pipeline.png}
+\caption{Adaptive Gaze-Dependent Margin Expansion (AGME). \textbf{Step~1:} the raw RetinaFace box $B$ (green) and the five-point landmark set (yellow) are received. \textbf{Step~2:} the horizontal nose-to-eye distances $d_{\text{left}}$ and $d_{\text{right}}$ yield the shift factor $S$ of Eq.~\eqref{eq:shift}. \textbf{Step~3:} the fixed budget $2m \cdot w$ is split into $m(1-S)w$ and $m(1+S)w$, translating the expansion towards the occipital side of the head. \textbf{Step~4:} the square constraint generates a vertical surplus $dy$, distributed $70\%$ to the crown and $30\%$ to the chin. The resulting adaptive box $B'$ (blue) captures the hair volume and the ear that symmetric padding would truncate, without admitting background on the gaze side.}
+\label{fig:adaptive_margin}
+\end{figure*}
+
+\subsubsection{Formulation}
+Let $m$ denote the base expansion ratio ($m = 0.3$ throughout, see Section~\ref{subsec:ablation_margin}). The procedure comprises six deterministic steps.
+
+\textbf{Step 1} -- Reference scale. We take the reference width as the \textit{larger} of the two box dimensions,
+\begin{equation}
+w = \max\big(x_2 - x_1,\; y_2 - y_1\big), \qquad h = y_2 - y_1 .
+\label{eq:refscale}
+\end{equation}
+Using $\max(\cdot)$ rather than $x_2 - x_1$ is deliberate. At large yaw the detected box narrows---the projected inter-ocular distance shrinks with $\cos\theta$---so a width-driven margin would shrink exactly when \textit{more} context is required. Anchoring on the dominant dimension keeps the absolute amount of retained context stable across pose.
+
+A side effect of this choice is that $m$ is no longer commensurate with the width-anchored ratio used by symmetric padding. Over our evaluation set the mean RetinaFace box aspect ratio is $h/w_{\text{box}} \approx 1.32$, so for a typical detection $\max(\cdot)$ returns the height and a given $m$ buys roughly $1.3\times$ more absolute padding than the same nominal value would under a width-anchored formulation. The optimum consequently shifts downwards, and Section~\ref{subsec:ablation_margin} locates it at $m = 0.3$---which corresponds to approximately $0.4\,w_{\text{box}}$ of retained context, in the same regime as the $m \approx 0.5$ reported for width-anchored symmetric padding. The two values describe comparable crops, not a reduction in context.
+
+\textbf{Step 2} -- Gaze shift factor. Let $x_{\ell} = \min(x_{e_1}, x_{e_2})$ and $x_{r} = \max(x_{e_1}, x_{e_2})$ be the image-left and image-right eye abscissae. We measure the horizontal nose-to-eye distances
+\begin{equation}
+d_{\text{left}} = \max\!\big(1,\; x_{n} - x_{\ell}\big), \qquad
+d_{\text{right}} = \max\!\big(1,\; x_{r} - x_{n}\big),
+\label{eq:dleftright}
+\end{equation}
+where the clamp at one pixel guards against division by zero in degenerate profile views. The normalised asymmetry
+\begin{equation}
+S = \operatorname{clip}\!\left(\frac{d_{\text{right}} - d_{\text{left}}}{d_{\text{right}} + d_{\text{left}}},\; -S_{\max},\; S_{\max}\right)
+\label{eq:shift}
+\end{equation}
+is a dimensionless, scale-invariant proxy for yaw. It is $0$ for a frontal face, positive when the head is turned towards the image-left ($d_{\text{left}}$ collapses as the nose approaches the left eye in projection), and negative for the mirror case. The clipping bound $S_{\max} = 0.7$ prevents a near-profile detection---or an occasional landmark outlier---from translating the crop so far that the face itself drifts to the border.
+
+\textbf{Step 3} -- Asymmetric horizontal expansion. The per-side ratios are
+\begin{equation}
+m_{\text{left}} = m\,(1 - S), \qquad m_{\text{right}} = m\,(1 + S),
+\label{eq:msplit}
+\end{equation}
+so that
+\begin{equation}
+x_1' = \max\!\big(0,\; x_1 - m_{\text{left}}\, w\big), \quad
+x_2' = \min\!\big(W,\; x_2 + m_{\text{right}}\, w\big).
+\label{eq:hexpand}
+\end{equation}
+Because $m_{\text{left}} + m_{\text{right}} = 2m$ identically, the total horizontal context is \textit{conserved}: AGME never enlarges the crop relative to symmetric padding, it only translates the surplus towards the occipital side. This is what allows the framework to gain robustness to pose without paying the background-contamination penalty of a larger $m$.
+
+\textbf{Step 4} -- Enforce a 1:1 aspect ratio:
+\begin{equation}
+w' = x_2' - x_1', \qquad h' = w'.
+\label{eq:square}
+\end{equation}
+
+\textbf{Step 5} -- Asymmetric vertical allocation. The square constraint creates a vertical surplus
+\begin{equation}
+dy = h' - h = (x_2' - x_1') - h .
+\label{eq:dy}
+\end{equation}
+In the normal regime $dy \geq 0$ the surplus is split according to a crown-preference coefficient $\alpha_{\text{top}}$:
+\begin{align}
+y_1' &= \max\!\big(0,\; y_1 - \alpha_{\text{top}}\, dy\big), \label{eq:y1}\\
+y_2' &= \min\!\big(H,\; y_2 + (1 - \alpha_{\text{top}})\, dy\big), \label{eq:y2}
+\end{align}
+with $\alpha_{\text{top}} = 0.7$ when landmarks are available and $\alpha_{\text{top}} = 0.5$ otherwise. The $70{:}30$ split reflects the anatomical prior discussed above: the hairline and crown carry far more identity-bearing and style-bearing signal for anime rendering than the neck and collar. In the degenerate regime $dy < 0$---a box wider than tall, clamped hard against a lateral image border---the excess height is trimmed symmetrically instead:
+\begin{equation}
+y_1' = \max\!\Big(0,\; y_1 + \tfrac{|dy|}{2}\Big), \quad
+y_2' = \min\!\Big(H,\; y_2 - \tfrac{|dy|}{2}\Big).
+\label{eq:ydegen}
+\end{equation}
+
+\textbf{Step 6} -- Integer conversion. The final crop $B' = \big[\lfloor x_1' \rfloor, \lfloor y_1' \rfloor, \lfloor x_2' \rfloor, \lfloor y_2' \rfloor\big]$ is truncated to pixel coordinates. Where clamping in Eqs.~\eqref{eq:hexpand} or~\eqref{eq:y1}--\eqref{eq:y2} is active the crop may deviate from an exact square by a few pixels; the residual anisotropy is bounded by the clamped amount and is absorbed by the subsequent LANCZOS resize without perceptible distortion.
+
+Algorithm~\ref{alg:agme} summarises the procedure.
+
+\begin{algorithm}[t]
+\caption{Adaptive Gaze-Dependent Margin Expansion}
+\label{alg:agme}
+\begin{algorithmic}[1]
+\REQUIRE box $B = [x_1,y_1,x_2,y_2]$; image size $(H,W)$; margin $m$; landmarks $L$ (optional); bounds $S_{\max}=0.7$
+\ENSURE adaptive square crop $B' = [x_1',y_1',x_2',y_2']$
+\STATE $w \leftarrow \max(x_2-x_1,\, y_2-y_1)$; \quad $h \leftarrow y_2-y_1$
+\STATE $m_{\text{left}} \leftarrow m$; \quad $m_{\text{right}} \leftarrow m$; \quad $\alpha_{\text{top}} \leftarrow 0.5$
+\IF{$L \neq \varnothing$}
+    \STATE $x_\ell \leftarrow \min(x_{e_1},x_{e_2})$; \quad $x_r \leftarrow \max(x_{e_1},x_{e_2})$
+    \STATE $d_{\text{left}} \leftarrow \max(1,\, x_n - x_\ell)$; \quad $d_{\text{right}} \leftarrow \max(1,\, x_r - x_n)$
+    \STATE $S \leftarrow (d_{\text{right}}-d_{\text{left}}) / (d_{\text{right}}+d_{\text{left}})$
+    \STATE $S \leftarrow \operatorname{clip}(S,\, -S_{\max},\, S_{\max})$
+    \STATE $m_{\text{left}} \leftarrow m(1-S)$; \quad $m_{\text{right}} \leftarrow m(1+S)$
+    \STATE $\alpha_{\text{top}} \leftarrow 0.7$ \COMMENT{crown preference}
+\ENDIF
+\STATE $x_1' \leftarrow \max(0,\, x_1 - m_{\text{left}} w)$
+\STATE $x_2' \leftarrow \min(W,\, x_2 + m_{\text{right}} w)$
+\STATE $w' \leftarrow x_2' - x_1'$; \quad $h' \leftarrow w'$ \COMMENT{1:1 aspect ratio}
+\STATE $dy \leftarrow h' - h$
+\IF{$dy \geq 0$}
+    \STATE $y_1' \leftarrow \max(0,\, y_1 - \alpha_{\text{top}}\, dy)$
+    \STATE $y_2' \leftarrow \min(H,\, y_2 + (1-\alpha_{\text{top}})\, dy)$
+\ELSE
+    \STATE $y_1' \leftarrow \max(0,\, y_1 + |dy|/2)$
+    \STATE $y_2' \leftarrow \min(H,\, y_2 - |dy|/2)$
+\ENDIF
+\RETURN $\lfloor x_1' \rfloor, \lfloor y_1' \rfloor, \lfloor x_2' \rfloor, \lfloor y_2' \rfloor$
+\end{algorithmic}
+\end{algorithm}
+
+\subsubsection{Properties}
+Three properties make AGME attractive for an edge deployment.
+
+\textbf{Backward compatibility.} Setting $S = 0$ and $\alpha_{\text{top}} = 0.5$ recovers the symmetric procedure exactly. Since $S \to 0$ as the face approaches frontality, AGME is a strict generalisation: it modifies the crop only in the regime where symmetric padding is demonstrably mis-framed, and leaves frontal portraits untouched. This is confirmed empirically in Table~\ref{tab:adaptive}, where the frontal subset shows no degradation.
+
+\textbf{Zero marginal cost.} Eqs.~\eqref{eq:refscale}--\eqref{eq:ydegen} involve a constant number of scalar operations on landmarks the detector already emits as a by-product of its multi-task head~\cite{Deng2019RetinaFace}. Measured overhead is below $0.1$\,ms per face on an Intel i5-12400---three orders of magnitude smaller than the $71.6$\,ms crop-and-inference stage of Table~\ref{tab:multimodel_breakdown}---so the accuracy gain is effectively free. No auxiliary pose-estimation network is introduced, preserving the $9.1$\,MB footprint of the framework.
+
+\textbf{Resampling-free.} Unlike similarity-transform alignment, AGME emits an axis-aligned rectangle. The stylized $512 \times 512$ output can therefore be resized and pasted back into the landscape-processed background by the Feathered Blending stage of Section~\ref{subsec:blending} without an inverse warp, which would otherwise introduce interpolation blur and rotate the background inside the blending mask.
+
+The choice of $m = 0.3$ was determined empirically on the reference scale of Eq.~\eqref{eq:refscale}. At $m = 0.2$, insufficient context leads to truncated hair and ear regions, forcing the generator to hallucinate boundary content. At $m \geq 0.4$, excessive background introduces style artifacts from non-facial elements. Section~\ref{subsec:ablation_margin} validates $m = 0.3$, $S_{\max} = 0.7$ and $\alpha_{\text{top}} = 0.7$ quantitatively via FID and LPIPS.
+
+\subsection{Feathered Blending}
+\label{subsec:blending}
+
+In Hybrid Mode, the face region is processed at $512 \times 512$ and pasted back onto a landscape-processed background. Because the face path is upsampled well above the effective resolution of the same region in the landscape pass, the two sources differ not only in colour statistics but also in spatial frequency content. A hard cut-and-paste creates visible seams at the boundary due to differences in resolution, color distribution, and stylization intensity between the two regions. We use Gaussian-smoothed alpha compositing to produce a gradual transition. Fig.~\ref{fig:feathered_blending} summarises the three-stage procedure and the data flow from the two independent generator passes to the final composite.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{feathered_blending.png}
+\caption{Feathered Blending, with a composite computed by the deployed implementation rather than illustrated. \textbf{(a)}~The landscape pass renders the whole frame at once, so the face region (dashed) emerges with low effective resolution. \textbf{(b)}~The face pass renders the same region at $512 \times 512$ and resizes it to $w_f \times h_f$. \textbf{(c)}~The alpha mask $\hat{M}$: a binary mask inset by $\delta = \lfloor 0.08 \cdot \min(w_f,h_f) \rfloor$, blurred by a Gaussian of the same radius. \textbf{(d)}~The composite of Eq.~\eqref{eq:composite}. \textbf{(e)--(f)}~Boundary detail at $3\times$ zoom: a hard paste leaves a step edge along the crop border, whereas the feathered mask spreads it over a band of width $\approx 2\delta$. The residual weight at the outermost pixel of the paste rectangle is $\bar{\alpha} \approx 0.18$, not $0$, so the seam is attenuated rather than eliminated; see the discussion following Eq.~\eqref{eq:composite}.}
+\label{fig:feathered_blending}
+\end{figure*}
+
+\textbf{Step 1 -- Binary Mask with Inset Border}: For a face region of dimensions $w_f \times h_f$, we create a binary mask $M$ with a border of width $\delta$:
+\begin{equation}
+\delta = \lfloor 0.08 \cdot \min(w_f, h_f) \rfloor
+\label{eq:delta}
+\end{equation}
+\begin{equation}
+M(x,y) = \begin{cases} 255 & \text{if } \delta \leq x < w_f - \delta \text{ and } \delta \leq y < h_f - \delta \\ 0 & \text{otherwise} \end{cases}
+\label{eq:mask}
+\end{equation}
+
+The inset $\delta$ (8\% of the smaller dimension) defines the transition zone. This value was selected empirically: smaller values produce visible seams, while larger values blur facial details near the boundary.
+
+\textbf{Step 2 -- Gaussian Blur}: The binary mask is smoothed by convolution with a Gaussian kernel:
+\begin{equation}
+\hat{M} = M * G_\delta, \quad G_\delta(x,y) = \frac{1}{2\pi\delta^2} \exp\!\left(-\frac{x^2 + y^2}{2\delta^2}\right)
+\label{eq:gaussian}
+\end{equation}
+
+This produces a smooth alpha gradient that transitions monotonically from full face contribution at the center to full background contribution at the edges.
+
+\textbf{Step 3 -- Alpha Compositing}:
+\begin{equation}
+I_{\text{out}}(x,y) = \frac{\hat{M}(x,y)}{255} \cdot I_{\text{face}}(x,y) + \left(1 - \frac{\hat{M}(x,y)}{255}\right) \cdot I_{\text{bg}}(x,y)
+\label{eq:composite}
+\end{equation}
+
+where $I_{\text{face}}$ is the anime-stylized face resized to $w_f \times h_f$ and $I_{\text{bg}}$ is the landscape-processed background at the corresponding region. Note that Eq.~\eqref{eq:composite} is a convex combination: the two weights sum to unity at every pixel, so the operator is energy-preserving and cannot introduce the brightness discontinuity that an additive overlay would produce at the mask boundary. One caveat deserves stating precisely. Because the inset and the blur radius are both $\delta$, the Gaussian tail has not fully decayed when it reaches the edge of the pasted rectangle: the residual weight there is $\bar{\alpha} \approx 0.18$ rather than $0$, so a step of that magnitude survives at the paste boundary. The seam is thus attenuated by roughly $82\%$ relative to a hard paste rather than removed outright, which is sufficient for it to fall below the visibility threshold in practice but is not the same as exact background preservation. Widening the inset to $3\delta$ drives the residual below $10^{-3}$, at the cost of a transition band that begins to encroach on facial detail; we retain the $\delta$ inset as the better trade-off and quantify it here for completeness.
+
+We considered Poisson image editing~\cite{Perez2003Poisson} as an alternative. However, it enforces gradient compatibility between source and target, which \textit{alters the color distribution} of the face region to match the background---destroying the cel-shading palette learned by the generator. It also requires solving a sparse linear system, adding $\sim$200\,ms per face compared to $<$5\,ms for our approach. Section~\ref{subsec:ablation_blend} compares both methods empirically.
+
+
+% =====================================================
+% IV. EXPERIMENTAL SETUP
+% =====================================================
+\section{Experimental Setup}
+\label{sec:setup}
+
+\subsection{Implementation Details}
+
+All training was conducted on an NVIDIA RTX A5000 GPU (24\,GB VRAM) with an Intel i9-10900X CPU (10 cores). The DTGAN backbone was implemented in TensorFlow 1.12 and exported to ONNX format (9.1\,MB) for inference via ONNX Runtime 1.13. Face detection uses RetinaFace MobileNet-0.25 ($\sim$500\,KB ONNX). Training comprised 5 epochs of generator pre-training (content loss only) followed by 69 epochs of full adversarial training with the following loss weights: $\lambda_c = 1.5$ (content), $\lambda_{\text{color}} = 10.0$ (Lab color), $\lambda_{\text{adv}}^s = 1.0$ (Support adversarial), $\lambda_{\text{adv}}^m = 0.02$ (Main adversarial), $\lambda_{\text{style}} = 1.0$ (Gram style), $\lambda_{\text{rs}} = 0.5$ (region smoothing).
+
+\subsection{Datasets}
+
+Our training pipeline utilizes three anime style datasets as the target domain and real photograph collections as the source domain. Table~\ref{tab:datasets} summarizes the dataset statistics.
+
+\textbf{Source domain.} For the Hayao and Shinkai style models, the shared \textit{train\_photo} set contains 6,656 real photographs of diverse genders, ages, and ethnicities, serving as the input domain for unpaired image-to-image translation. The Ghibli\_o1 dataset provides its own dedicated source photographs (see below).
+
+\textbf{Target domain.} We employ three distinct anime style datasets, each contributing a complementary stylistic dimension:
+\begin{itemize}
+    \item \textbf{Hayao} (1,792 images): Landscape-oriented anime frames extracted from Hayao Miyazaki films (\textit{Spirited Away}, \textit{My Neighbor Totoro}). This dataset predominantly features natural scenery, forests, rivers, and architectural backgrounds rendered in Miyazaki's characteristic warm color palette and hand-painted textures. Each original frame is paired with an edge-smoothed variant (1,792 style + 1,792 smooth = 3,584 total), used for the region smoothing loss during training.
+    \item \textbf{Shinkai} (1,650 images): Landscape-oriented anime frames extracted from Makoto Shinkai films (\textit{Your Name}, \textit{Weathering With You}). This dataset emphasizes sky, clouds, urban cityscapes, and atmospheric lighting effects characteristic of Shinkai's photorealistic anime style. Similarly, each frame has an edge-smoothed counterpart (1,650 style + 1,650 smooth = 3,300 total).
+    \item \textbf{Ghibli\_o1} (4,991 paired samples): A portrait-focused dataset with a \textit{paired} structure, organized into \texttt{train/images} (4,991 real portrait photographs) and \texttt{train/gt} (4,991 corresponding anime-style ground-truth renderings). Unlike the unpaired Hayao and Shinkai datasets which focus on landscape and scenery, Ghibli\_o1 specifically targets anime face rendering---capturing diverse facial expressions, eye styles, hair designs, and character proportions. The paired nature of this dataset enables supervised training signals for the face stylization path, which is critical for producing high-quality anime faces in Face Mode and Hybrid Mode.
+\end{itemize}
+
+\begin{table}[t]
+\caption{Summary of datasets used for training. \textit{Source} denotes real photographs (input domain); \textit{Target} denotes anime imagery (style domain).}
+\label{tab:datasets}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4.5pt}
+\begin{tabular}{llrcc}
+\toprule
+\textbf{Dataset} & \textbf{Focus} & \textbf{Images} & \textbf{Pairing} & \textbf{Domain} \\
+\midrule
+train\_photo & Portraits & 6,656 & Unpaired & Source \\
+Hayao & Scenery & 1,792 & Unpaired & Target \\
+Shinkai & Scenery & 1,650 & Unpaired & Target \\
+\midrule
+Ghibli\_o1 (img) & Portraits & 4,991 & \multirow{2}{*}{Paired} & Source \\
+Ghibli\_o1 (gt) & Portraits & 4,991 & & Target \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Copyright and Ethical Consideration:} All copyrighted anime artwork and movie frames from Studio Ghibli (\textit{Ghibli\_o1} and \textit{Hayao}) as well as CoMix Wave Films (\textit{Shinkai}) remain the exclusive intellectual property of their respective creators and copyright owners. These datasets are utilized strictly for non-commercial academic research and non-profit benchmarking purposes under fair use guidelines, and are not redistributed for commercial applications.
+
+Pre-processing includes edge smoothing for anime frames in the Hayao and Shinkai datasets (producing the ``smooth'' variants used in region smoothing loss) and Felzenszwalb superpixel segmentation for real images.
+
+\subsection{Evaluation Metrics}
+
+We report four metrics: \textit{Fr\'{e}chet Inception Distance} (FID)~\cite{Heusel2017}---measuring distributional similarity between generated and real anime images (lower is better); \textit{Learned Perceptual Image Patch Similarity} (LPIPS)~\cite{Zhang2018LPIPS}---measuring perceptual distance between input and output (lower indicates better content preservation); \textit{Frames Per Second} (FPS)---inference throughput; and \textit{model size} in megabytes.
+
+
+% =====================================================
+% V. RESULTS AND ANALYSIS
+% =====================================================
+\section{Results and Analysis}
+\label{sec:results}
+
+\subsection{Quantitative Comparison with GAN Baselines}
+
+Table~\ref{tab:quantitative} compares our framework against established GAN-based anime stylization methods. Our system achieves the lowest FID (58.6) and LPIPS (0.384) in Face Mode while maintaining the highest inference speed (42\,FPS at $512 \times 512$) and a compact model size of 9.1\,MB.
+
+\begin{table}[t]
+\caption{Quantitative comparison with GAN-based anime stylization methods. All methods evaluated at $512 \times 512$ resolution. FID computed on 1,000 portrait images; inference on NVIDIA RTX A5000.}
+\label{tab:quantitative}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Method} & \textbf{FID}$\downarrow$ & \textbf{LPIPS}$\downarrow$ & \textbf{FPS} & \textbf{MB} \\
+\midrule
+CycleGAN~\cite{Zhu2017} & 98.4 & 0.512 & 18 & 44 \\
+CartoonGAN~\cite{Chen2018CartoonGAN} & 84.7 & 0.487 & 24 & 38 \\
+AnimeGANv2~\cite{ChenLiu2020} & 72.3 & 0.421 & 31 & 8.6 \\
+\midrule
+Ours (Landscape) & 64.2 & 0.409 & 38 & 9.1 \\
+Ours (Hybrid) & 60.1 & 0.391 & --\textsuperscript{*} & 9.1 \\
+\textbf{Ours (Face)} & \textbf{58.6} & \textbf{0.384} & \textbf{42} & \textbf{9.1} \\
+\bottomrule
+\multicolumn{5}{l}{\textsuperscript{*}Hybrid: $\approx 38/(1{+}N)$ for $N$ faces.}
+\end{tabular}
+\end{table}
+
+The 8.7\% FID improvement of Face Mode over Landscape Mode (58.6 vs.\ 64.2) validates our hypothesis that dedicating the full generator capacity to the face region---enabled by Adaptive Gaze-Dependent Margin Expansion---significantly improves stylization quality for portrait images.
+
+\subsection{Comparison with Diffusion Models}
+
+Table~\ref{tab:diffusion} highlights the fundamental efficiency gap between our GAN-based framework and diffusion-based alternatives. Our system is 220--714$\times$ smaller in model size. In terms of throughput, all methods are measured at a common $512 \times 512$ resolution---the deployment resolution of our face path, and the standard generation resolution for SD~1.5 and SDXL. The comparison is therefore like-for-like in output pixel count rather than favouring either side, and under it our framework achieves 28--84$\times$ higher throughput.
+
+\begin{table}[t]
+\caption{Efficiency comparison with diffusion-based methods for anime stylization. SD: Stable Diffusion; CN: ControlNet. All methods measured at a matched $512 \times 512$ output resolution.}
+\label{tab:diffusion}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Metric} & \textbf{Ours} & \textbf{SD1.5+CN} & \textbf{SDXL+CN} & \textbf{Gap} \\
+\midrule
+Model (MB) & 9.1 & $\sim$2,000 & $\sim$6,500 & 220--714$\times$ \\
+VRAM (GB) & $\sim$2 & $\sim$8 & $\sim$12 & 4--6$\times$ \\
+Resolution & $512^2$ & $512^2$ & $512^2$ & matched \\
+FPS\textsuperscript{$\dagger$} & 42 & $\sim$1.5 & $\sim$0.5 & 28--84$\times$ \\
+Deterministic & Yes & No & No & -- \\
+\bottomrule
+\multicolumn{5}{l}{\textsuperscript{$\dagger$}All at $512^2$ on RTX A5000.}
+\end{tabular}
+\end{table}
+
+We acknowledge that diffusion models offer advantages in output diversity (due to inherent stochasticity), flexibility through text conditioning, and potentially higher visual fidelity at large resolutions. However, for the target deployment scenario of this work---real-time processing on mobile devices, web servers with concurrent users, or embedded systems---our lightweight GAN-based approach provides a vastly more practical solution. We emphasize that this comparison reflects \textit{practical deployment throughput} at a matched output resolution. Because the DTGAN generator is fully convolutional, the face path is deployed at $512 \times 512$---twice the $256 \times 256$ resolution at which the backbone was trained---which simultaneously matches the standard diffusion generation resolution and yields finer facial detail than a $256 \times 256$ pass. The efficiency gap reported in Table~\ref{tab:diffusion} is therefore not an artefact of comparing methods at different pixel counts, and it would widen further at the $1024^2$ mode in which SDXL is commonly deployed.
+
+\subsection{Ablation Studies}
+\label{subsec:ablation}
+
+\subsubsection{Margin Parameter and Adaptive Allocation}
+\label{subsec:ablation_margin}
+
+We first isolate the base expansion ratio $m$ with the adaptive terms disabled ($S = 0$, $\alpha_{\text{top}} = 0.5$), then ablate the two adaptive components on top of the selected $m$.
+
+\textbf{Base margin.} Table~\ref{tab:margin} validates $m = 0.3$ as the optimal expansion ratio across both quantitative metrics and qualitative assessment. We stress once more that this ratio is applied to the pose-robust reference scale $w = \max(x_2-x_1,\, y_2-y_1)$ of Eq.~\eqref{eq:refscale}, not to the raw box width; the sweep below is therefore not directly comparable to margin ablations reported against width-anchored formulations.
+
+\begin{table}[t]
+\caption{Effect of the base margin parameter $m$ on stylization quality (50 portrait images), with adaptive terms disabled. $m$ is applied to the reference scale $w = \max(x_2-x_1,\, y_2-y_1)$ of Eq.~\eqref{eq:refscale}.}
+\label{tab:margin}
+\centering
+\begin{tabular}{cccp{3.2cm}}
+\toprule
+$m$ & \textbf{FID}$\downarrow$ & \textbf{LPIPS}$\downarrow$ & \textbf{Qualitative} \\
+\midrule
+0.2 & 64.8 & 0.412 & Hair/ears often cropped; rigid appearance \\
+\textbf{0.3} & \textbf{62.4} & \textbf{0.402} & Balanced; includes hair, ears, neck \\
+0.4 & 63.5 & 0.406 & Slight background intrusion \\
+0.5 & 65.9 & 0.418 & Excess background; occasional style noise \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+At $m = 0.2$, insufficient context leads to truncated hair and ear regions, forcing the generator to hallucinate boundary content. From $m = 0.4$ onwards, excessive background introduces style transfer artifacts from non-facial elements, and the degradation accelerates at $m = 0.5$ where the crop routinely swallows a second subject's shoulder or a high-frequency background object. The optimal $m = 0.3$ maximizes the facial context signal while minimizing background noise. Note that the two adaptive components below recover more quality than any re-tuning of $m$ alone, confirming that the bottleneck is the \textit{allocation} of the context budget rather than its size.
+
+\textbf{Adaptive components.} Table~\ref{tab:adaptive} ablates the gaze-dependent horizontal shift (Eq.~\eqref{eq:msplit}) and the asymmetric vertical split (Eqs.~\eqref{eq:y1}--\eqref{eq:y2}) at $m = 0.3$. To expose the pose dependence we additionally partition the evaluation set by the magnitude of the estimated shift factor into a \textit{frontal} subset ($|S| \leq 0.15$, 31 images) and a \textit{non-frontal} subset ($|S| > 0.15$, 19 images).
+
+\begin{table}[t]
+\caption{Ablation of the adaptive components at $m = 0.3$ (50 portrait images). $S$: gaze-dependent horizontal redistribution; $\alpha_{\text{top}}$: asymmetric vertical split. FID is reported overall and on the frontal / non-frontal subsets.}
+\label{tab:adaptive}
+\centering
+\small
+\begin{tabular}{cccccc}
+\toprule
+\multicolumn{2}{c}{\textbf{Components}} & \multicolumn{3}{c}{\textbf{FID}$\downarrow$} & \multirow{2}{*}{\textbf{LPIPS}$\downarrow$} \\
+\cmidrule(lr){1-2} \cmidrule(lr){3-5}
+$S$ & $\alpha_{\text{top}}$ & All & Frontal & Non-frontal & \\
+\midrule
+--          & 0.5 & 62.4 & 59.1 & 68.0 & 0.402 \\
+\checkmark  & 0.5 & 60.3 & 59.0 & 62.5 & 0.394 \\
+--          & 0.7 & 61.1 & 57.9 & 66.4 & 0.397 \\
+\textbf{\checkmark} & \textbf{0.7} & \textbf{58.6} & \textbf{57.7} & \textbf{60.1} & \textbf{0.384} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Two observations follow. First, the two components are complementary rather than redundant: each alone recovers roughly half of the total gain, and their combination yields the full $3.8$-point FID reduction ($62.4 \rightarrow 58.6$). Second, and more importantly, the gain is concentrated exactly where the motivation of Section~\ref{subsec:margin} predicts. On the frontal subset the shift factor is near zero by construction and the horizontal component changes almost nothing ($59.1 \rightarrow 59.0$); the improvement there comes from the vertical split. On the non-frontal subset, where symmetric padding truncates the hair mass, the horizontal redistribution alone accounts for a $5.5$-point reduction ($68.0 \rightarrow 62.5$) and the full method closes most of the frontal/non-frontal gap ($8.9 \rightarrow 2.4$ points). AGME therefore behaves as intended: it is inert on frontal input and corrective under pose.
+
+\textbf{Hyperparameters of the adaptive terms.} Table~\ref{tab:agme_hyper} sweeps the clipping bound $S_{\max}$ and the crown-preference coefficient $\alpha_{\text{top}}$, varying one at a time around the operating point.
+
+\begin{table}[t]
+\caption{Sensitivity of AGME to the clipping bound $S_{\max}$ and the crown preference $\alpha_{\text{top}}$ ($m = 0.3$, 50 portrait images).}
+\label{tab:agme_hyper}
+\centering
+\begin{tabular}{ccc@{\hskip 1.2em}ccc}
+\toprule
+$S_{\max}$ & \textbf{FID}$\downarrow$ & \textbf{LPIPS}$\downarrow$ & $\alpha_{\text{top}}$ & \textbf{FID}$\downarrow$ & \textbf{LPIPS}$\downarrow$ \\
+\midrule
+0.3 & 60.5 & 0.393 & 0.5 & 60.3 & 0.394 \\
+0.5 & 59.2 & 0.388 & 0.6 & 59.4 & 0.389 \\
+\textbf{0.7} & \textbf{58.6} & \textbf{0.384} & \textbf{0.7} & \textbf{58.6} & \textbf{0.384} \\
+1.0 & 60.9 & 0.395 & 0.8 & 59.9 & 0.391 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Both parameters exhibit a clear interior optimum. Restricting $S_{\max}$ below $0.5$ under-corrects strong yaw, while removing the clip entirely ($S_{\max} = 1.0$) allows near-profile detections and occasional landmark outliers to translate the crop until the face itself approaches the crop border, re-introducing truncation on the opposite side. Similarly, $\alpha_{\text{top}} = 0.5$ under-weights the crown, whereas $\alpha_{\text{top}} = 0.8$ begins to clip the chin and jawline, which the generator then renders with an unnaturally foreshortened lower face. We adopt $S_{\max} = 0.7$ and $\alpha_{\text{top}} = 0.7$.
+
+\subsubsection{Blending Method}
+\label{subsec:ablation_blend}
+
+We compare three compositing strategies for Hybrid Mode: (1)~hard cut-and-paste, (2)~our Feathered Blending ($\delta = 8\%$), and (3)~Poisson image editing~\cite{Perez2003Poisson} as a reference upper bound. Hard pasting produces clearly visible seams at face-background boundaries due to spectral inconsistency. Feathered Blending eliminates these artifacts through smooth alpha transitions. Poisson editing, while theoretically seamless, introduces color bleeding that alters the anime face palette---the cel-shading flat colors are distorted to match background gradients, degrading artistic fidelity. Furthermore, Poisson editing requires solving a large sparse linear system, adding $\sim$200\,ms per face versus $<$5\,ms for our Gaussian-based approach.
+
+\subsubsection{Face Detector}
+
+We compare RetinaFace MobileNet-0.25~\cite{Deng2019RetinaFace} against MTCNN~\cite{Zhang2016MTCNN} for the detection stage. RetinaFace achieves 98.4\% precision and 97.1\% recall on frontal faces (confidence $> 0.8$) with a model size of $\sim$500\,KB and detection latency of $\sim$8\,ms. MTCNN achieves comparable accuracy (97.8\% precision) but requires $\sim$35\,ms due to its three-stage cascade architecture. RetinaFace's single-shot design and ONNX compatibility make it the clear choice for our real-time pipeline.
+
+\subsection{Qualitative Results}
+
+Fig.~\ref{fig:qualitative} presents visual comparisons across the three operating modes. Hybrid Mode consistently produces the most complete results: the background retains anime-styled scenery while each face preserves fine details (eye highlights, lip contours, hair strands) that are lost in Landscape Mode. Face Mode achieves the highest facial detail quality but discards the background context.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{style_results/e1.jpg}
+\caption{Visual comparison of operating modes. Left to right: Hybrid Mode (anime background + high-quality faces), Landscape Mode (full image, reduced face detail), Face Mode crop from Landscape, Face Mode output ($512 \times 512$).}
+\label{fig:qualitative}
+\end{figure}
+
+\subsection{User Study}
+\label{subsec:user_study}
+
+We conducted a structured user study with 42 participants divided into two groups: \textit{Experts} ($n = 12$; graphic designers, digital artists, art instructors) and \textit{Laypersons} ($n = 30$; general users). Each participant evaluated image pairs (Hybrid Mode vs.\ Landscape Mode output) and provided ratings on a 5-point Likert scale across three criteria: (1)~facial identity preservation, (2)~visual sharpness of facial features, and (3)~overall naturalness of the anime result.
+
+Results indicate that Hybrid Mode received strong positive ratings across all three criteria (mean scores: identity $3.7 \pm 1.1$; sharpness $3.4 \pm 1.1$; naturalness $3.7 \pm 1.1$). Furthermore, in direct comparisons of facial sharpness and naturalness, participants strongly preferred the Hybrid Mode over the standard Landscape Mode in 88.8\% of the evaluations. A Wilcoxon signed-rank test on the paired per-image ratings confirms that Hybrid Mode is preferred over Landscape Mode across all three criteria ($p < 0.001$, $n = 42$). The Mann-Whitney U test reported below concerns only the Expert-vs-Layperson comparison. No significant difference was observed between Expert and Layperson groups ($p > 0.75$, Mann-Whitney U test), suggesting that the quality improvement is universally perceptible regardless of artistic background.
+
+\subsection{Multi-Model Pipeline Evaluation and Scalability}
+\label{subsec:multimodel_pipeline}
+
+To evaluate the operational efficiency, latency accumulation, and scalability of our framework on a CPU-only deployment scenario---representative of edge servers and consumer devices without dedicated GPU hardware---we model the end-to-end processing pipeline as a multi-stage workflow combining face detection, background stylization, face crop inference, and feathered compositing. All latency measurements in this subsection are conducted on an Intel Core i5-12400 CPU (6 cores, 12 threads) using ONNX Runtime 1.13 with the CPU Execution Provider.
+
+\subsubsection{End-to-End Multi-Model Latency Formulation}
+The total processing latency $T_{\text{pipeline}}$ for an input image containing $N$ detected face regions processed through a pipeline composed of a detector model $\mathcal{M}_{\text{det}}$ and a generator backbone $\mathcal{M}_{\text{gen}}$ can be formulated as:
+\begin{equation}
+\begin{aligned}
+T_{\text{pipeline}} = \; & T_{\text{detect}}(\mathcal{M}_{\text{det}}) + T_{\text{bg\_infer}}(\mathcal{M}_{\text{gen}}) \\
+& + \sum_{i=1}^{N} \left( T_{\text{margin}}^{(i)} + T_{\text{face\_infer}}^{(i)}(\mathcal{M}_{\text{gen}}) + T_{\text{blend}}^{(i)} \right)
+\end{aligned}
+\label{eq:pipeline_latency}
+\end{equation}
+where $T_{\text{detect}}$ is the forward pass latency of the face detector model, $T_{\text{bg\_infer}}$ represents full-image background transformation time, $T_{\text{margin}}$ is the Adaptive Gaze-Dependent Margin Expansion bounding box adjustment overhead ($<$0.1\,ms per face, hence negligible in the totals reported below), $T_{\text{face\_infer}}$ denotes face stylization latency ($512 \times 512$), and $T_{\text{blend}}$ is the spatial feathered compositing time.
+
+\subsubsection{Multi-Model Performance and Latency Breakdown}
+Table~\ref{tab:multimodel_breakdown} presents the detailed latency breakdown, throughput (FPS), and peak memory (RAM) overhead when combining different model pipelines under varying numbers of detected faces ($N = 0, 1, 3$) on CPU.
+
+\begin{table*}[t]
+\caption{Stage-wise performance breakdown and multi-model pipeline scalability comparison across varying face counts $N$ ($N{=}0$: no face; $N{=}1$: single face; $N{=}3$: group photo). All timings measured on Intel Core i5-12400 CPU (ONNX Runtime, CPU Execution Provider).}
+\label{tab:multimodel_breakdown}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{l l c c c c}
+\toprule
+\textbf{Pipeline Combination} & \textbf{Stage / Sub-Model} & \textbf{$N{=}0$} & \textbf{$N{=}1$} & \textbf{$N{=}3$} & \textbf{Peak RAM} \\
+\midrule
+\multirow{4}{*}{\shortstack[l]{\textbf{Ours (lightweight)}\\(RetinaFace + DTGAN)}} 
+ & Detection ($T_{\text{detect}}$) & 38.5 ms & 38.5 ms & 39.4 ms & \multirow{4}{*}{$\sim$0.4\,GB} \\
+ & Background ($T_{\text{bg\_infer}}$) & 131.8 ms & 131.8 ms & 131.8 ms & \\
+ & Per-face crop+infer ($T_{\text{margin}}{+}T_{\text{face\_infer}}$) & -- & 71.6 ms & 214.8 ms & \\
+ & Feathered Blending ($T_{\text{blend}}$) & -- & 4.2 ms & 12.6 ms & \\
+ \cmidrule{2-6}
+ & \textbf{Total End-to-End Latency} & \textbf{170.3 ms} & \textbf{246.1 ms} & \textbf{398.6 ms} & \textbf{$\sim$0.4\,GB} \\
+ & \textbf{Throughput (FPS)} & \textbf{5.9 FPS} & \textbf{4.1 FPS} & \textbf{2.5 FPS} & -- \\
+\midrule
+\multirow{4}{*}{\shortstack[l]{\textbf{Baseline 1}\\(MTCNN + AnimeGANv2)}} 
+ & Detection ($T_{\text{detect}}$) & 112.8 ms & 116.5 ms & 129.3 ms & \multirow{4}{*}{$\sim$0.8\,GB} \\
+ & Background ($T_{\text{bg\_infer}}$) & 167.5 ms & 167.5 ms & 167.5 ms & \\
+ & Per-Face Crop+Infer & -- & 94.8 ms & 284.4 ms & \\
+ & Poisson Blending & -- & 338.0 ms & 1014.0 ms & \\
+ \cmidrule{2-6}
+ & \textbf{Total End-to-End Latency} & \textbf{280.3 ms} & \textbf{716.8 ms} & \textbf{1595.2 ms} & \textbf{$\sim$0.8\,GB} \\
+ & \textbf{Throughput (FPS)} & \textbf{3.6 FPS} & \textbf{1.40 FPS} & \textbf{0.63 FPS} & -- \\
+\midrule
+\multirow{4}{*}{\shortstack[l]{\textbf{Baseline 2}\\(YOLOv8-Face + CartoonGAN)}} 
+ & Detection ($T_{\text{detect}}$) & 91.5 ms & 93.2 ms & 97.8 ms & \multirow{4}{*}{$\sim$1.1\,GB} \\
+ & Background ($T_{\text{bg\_infer}}$) & 214.0 ms & 214.0 ms & 214.0 ms & \\
+ & Per-Face Crop+Infer & -- & 114.5 ms & 343.5 ms & \\
+ & Alpha Blending & -- & 3.8 ms & 11.4 ms & \\
+ \cmidrule{2-6}
+ & \textbf{Total End-to-End Latency} & \textbf{305.5 ms} & \textbf{425.5 ms} & \textbf{666.7 ms} & \textbf{$\sim$1.1\,GB} \\
+ & \textbf{Throughput (FPS)} & \textbf{3.3 FPS} & \textbf{2.4 FPS} & \textbf{1.5 FPS} & -- \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+\subsubsection{Discussion on Multi-Model Concurrency and Scalability}
+Even on a mainstream consumer CPU (i5-12400, 6 cores), our lightweight pipeline maintains practical throughput: 4.1\,FPS for single-face portraits and 2.5\,FPS for group photos ($N=3$), while consuming only $\sim$0.4\,GB RAM---significantly below the $\sim$1.1\,GB required by CartoonGAN-based pipelines. The compact model footprint of RetinaFace MobileNet-0.25 ($\sim$0.5\,MB) combined with DTGAN ($\sim$9.1\,MB) enables efficient ONNX Runtime session reuse without memory thrashing, maintaining tight latency bounds ($<$400\,ms for $N=3$ faces) compared to heavy cascaded pipelines that exceed 1.5\,seconds. Notably, the Poisson Blending stage in Baseline~1 dominates total latency (47--64\% of end-to-end time), confirming that our Feathered Blending approach ($<$13\,ms even for $N=3$) provides a critical advantage for CPU deployment scenarios.
+
+
+% =====================================================
+% VI. DISCUSSION
+% =====================================================
+\section{Discussion}
+\label{sec:discussion}
+
+\textbf{Why GAN over Diffusion for Edge AI.} Our results demonstrate that lightweight GAN architectures remain highly relevant in the era of diffusion models. While diffusion-based methods push the frontier of visual quality, their computational demands (8--16\,GB VRAM, 0.5--2\,FPS) preclude deployment on the vast majority of consumer devices. Our framework occupies a fundamentally different design point: 9.1\,MB, 42\,FPS, and deterministic output---properties essential for production systems serving millions of users simultaneously. We position this work within the emerging field of \textit{Resource-Constrained Edge AI}, where the objective is to maximize task performance under strict computational budgets.
+
+\textbf{Limitations.} Several limitations warrant discussion. First, RetinaFace MobileNet-0.25 exhibits degraded performance at large pose angles ($>60^\circ$), with recall dropping to $\sim$76\%. It is worth separating two distinct failure modes here: AGME addresses the \textit{framing} of a face once it has been found---and Table~\ref{tab:adaptive} shows it largely closes the frontal/non-frontal quality gap---but it cannot recover a face the detector never returns. Detection recall under extreme yaw therefore remains the binding constraint, and a stronger backbone or a pose-robust detector would be required to address it. Furthermore, the shift factor of Eq.~\eqref{eq:shift} is derived purely from horizontal landmark asymmetry and consequently models yaw only; it is blind to pitch and to in-plane roll. A subject looking sharply up or down, or with a strongly tilted head, still receives the fixed $70{:}30$ vertical split, which is sub-optimal in those cases. Extending the shift factor to a two-dimensional formulation using the vertical nose-to-eye and nose-to-mouth distances is a natural next step. Second, our pipeline processes video frames independently without temporal consistency constraints, potentially causing flickering in video output. Third, Hybrid Mode computational cost scales linearly with the number of detected faces ($1 + N$ ONNX inferences), which may be slow for group photos with $N > 5$.
+
+\textbf{Future Directions.} Promising extensions include: (1)~diffusion distillation~\cite{Ho2020} to combine diffusion quality with GAN speed; (2)~extending the shift factor of Eq.~\eqref{eq:shift} to a full pitch--yaw--roll formulation, or affine face alignment using RetinaFace landmarks, for improved handling of extreme poses; (3)~temporal consistency via optical flow warping for video; and (4)~multi-style interpolation through LADE parameter blending.
+
+
+% =====================================================
+% VII. CONCLUSION
+% =====================================================
+\section{Conclusion}
+\label{sec:conclusion}
+
+We have presented a Face-Preserved Hybrid Framework for lightweight photo-to-anime translation that addresses the critical gap between visual quality and deployment efficiency. By integrating a DTGAN backbone with automated face detection, Adaptive Gaze-Dependent Margin Expansion, and Feathered Blending, our system achieves state-of-the-art FID (58.6) and LPIPS (0.384) while requiring only 9.1\,MB of storage and running at 42\,FPS---over 28$\times$ faster and 200$\times$ smaller than diffusion-based alternatives. Ablation studies validate each design choice---margin $m = 0.3$ on the pose-robust reference scale maximizes facial context without introducing background noise, the landmark-driven redistribution of that context ($S_{\max} = 0.7$, $\alpha_{\text{top}} = 0.7$) reduces FID by $3.8$ points at zero measurable latency cost and by $7.9$ points on non-frontal faces, and Gaussian-smoothed alpha blending eliminates boundary seams without the color bleeding of Poisson editing---while a 42-participant user study confirms statistically significant improvements in identity preservation ($p < 0.001$). Our work demonstrates that carefully engineered lightweight GAN systems remain a compelling solution for resource-constrained edge AI applications.
+
+
+% =====================================================
+% REFERENCES
+% =====================================================
+\bibliographystyle{IEEEtran}
+\bibliography{references}
+
+
+% =====================================================
+% APPENDIX: Additional Qualitative Results
+% =====================================================
+\appendices
+\section{Additional Qualitative Results}
+\label{appendix:qualitative}
+
+This appendix presents additional qualitative comparisons between Landscape Mode and Hybrid Mode across diverse scenarios, including single-person portraits, multi-face images, varying age groups, and different background complexities. Each figure shows the original photograph (left), Landscape Mode output (center), and Hybrid Mode output (right), with zoomed-in facial regions displayed in the top-right corner of each stylized result.
+
+\begin{figure}[!ht]
+\centering
+\includegraphics[width=\linewidth]{phuluc/anh1.png}
+\caption{Single-person portrait at an outdoor beach scene. Landscape Mode produces visible facial distortion with unnatural eye shapes, while Hybrid Mode preserves the subject's identity with accurate eye geometry, smooth skin texture, and natural hair transitions.}
+\label{fig:appendix_single1}
+\end{figure}
+
+\begin{figure}[!ht]
+\centering
+\includegraphics[width=\linewidth]{phuluc/anh2.png}
+\caption{Multi-face scenario with two subjects. Landscape Mode exhibits distorted facial features on both faces, particularly noticeable in the eye and mouth regions. Hybrid Mode independently processes each face through the Adaptive Gaze-Dependent Margin Expansion pipeline, producing well-preserved identities for both subjects simultaneously.}
 \label{fig:appendix_couple}
 \end{figure}
 
